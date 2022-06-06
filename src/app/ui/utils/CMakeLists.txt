@@ -1,0 +1,15 @@
+target_sources(calibmar_app PRIVATE
+	auto_reset_signal.cpp
+	auto_reset_signal.h
+	blocking_queue.h
+	cancellation_token.h
+	flow_layout.cpp
+	flow_layout.h
+	files_calibration_runner.cpp
+	files_calibration_runner.h
+	livestream_calibration_runner.cpp
+	livestream_calibration_runner.h	
+	manual_reset_signal.cpp
+	manual_reset_signal.h
+	render.cpp
+	render.h)

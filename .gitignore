@@ -1,0 +1,12 @@
+# Cmake Generated
+/src/calibmar/version.h
+
+# Build Output
+bin/
+out/
+build/
+
+# IDEs
+.vscode/
+.vs/
+

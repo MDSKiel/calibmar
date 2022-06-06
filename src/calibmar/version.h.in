@@ -1,0 +1,8 @@
+#pragma once
+
+namespace calibmar {
+
+const static std::string CALIBMAR_VERSION = "@calibmar_VERSION_MAJOR@.@calibmar_VERSION_MINOR@";
+const static int CALIBMAR_VERSION_MAJOR = @calibmar_VERSION_MAJOR@;
+const static int CALIBMAR_VERSION_MINOR = @calibmar_VERSION_MINOR@;
+}
