@@ -2,7 +2,7 @@ find_package(Boost COMPONENTS unit_test_framework REQUIRED)
 
 add_executable(calibmar_tests tests.cpp)
 add_subdirectory(calibrators)
-add_subdirectory(evaluation)
+add_subdirectory(evaluation EXCLUDE_FROM_ALL)
 add_subdirectory(extractors)
 add_subdirectory(pose_suggestion)
 add_subdirectory(report)

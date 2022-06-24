@@ -1,43 +1,69 @@
-﻿{
-  "version": 2,
-  "configurePresets": [
-    {
-      "name": "windows-default-vcpkg-debug",
-      "displayName": "Windows x64 Debug using vcpkg toolchain",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-      "cacheVariables": {
-		"CUDA_ENABLED": "OFF",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "CMAKE_TOOLCHAIN_FILE": {
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-          "type": "FILEPATH"
+{
+    "version": 2,
+    "configurePresets": [
+        {
+            "name": "windows-default-vcpkg-debug",
+            "displayName": "Windows x64 Debug using vcpkg toolchain",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CUDA_ENABLED": "OFF",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "TESTS_ENABLED": "ON",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_TOOLCHAIN_FILE": {
+                    "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                    "type": "FILEPATH"
+                }
+            }
+        },
+        {
+            "name": "windows-default-vcpkg-release",
+            "displayName": "Windows x64 Release using vcpkg toolchain",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "architecture": {
+                "value": "x64",
+                "strategy": "external"
+            },
+            "cacheVariables": {
+                "CUDA_ENABLED": "OFF",
+                "CMAKE_BUILD_TYPE": "Release",
+                "TESTS_ENABLED": "ON",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_TOOLCHAIN_FILE": {
+                    "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+                    "type": "FILEPATH"
+                }
+            }
+        },
+        {
+            "name": "linux-default-debug",
+            "displayName": "Linux x64 Debug",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CUDA_ENABLED": "OFF",
+                "TESTS_ENABLED": "ON",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        },
+        {
+            "name": "linux-default-release",
+            "displayName": "Linux x64 Release",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CUDA_ENABLED": "OFF",
+                "TESTS_ENABLED": "ON",
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
         }
-      }
-    },
-    {
-      "name": "windows-default-vcpkg-release",
-      "displayName": "Windows x64 Release using vcpkg toolchain",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/out/build/${presetName}",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
-      "cacheVariables": {
-		"CUDA_ENABLED": "OFF",
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-        "CMAKE_TOOLCHAIN_FILE": {
-          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-          "type": "FILEPATH"
-        }
-      }
-    }
-  ]
+    ]
 }

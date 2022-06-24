@@ -117,11 +117,13 @@ BOOST_AUTO_TEST_CASE(CostFunction_Reference) {
   Eigen::SparseMatrix<double> ac_mat(540, 540);
   pose_suggestion::ComputeCornerUncertaintyAutoCorrMat(points2D, 2, {10, 9}, ac_mat);
 
+  std::pair<int,int> size = std::make_pair(10, 9);
+
   pose_suggestion::CostFunctionData data{
       calibration,
       jacobian,
       ac_mat,
-      std::make_pair(10, 9),
+      size,
   };
 
   double trace = pose_suggestion::CostFunction({0, 0, 0, -0.042591, -0.082253, 0.40899}, &data);
