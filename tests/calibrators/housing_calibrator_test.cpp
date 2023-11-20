@@ -3,18 +3,48 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include "utils/test_helpers.h"
+
 using namespace calibmar;
 
 namespace {
   std::pair<int, int> image_size{2048, 1536};
 
-  void PrepareCalibration(Calibration& calibration);
-  std::vector<double> GetExpectedParams(CameraModelType model);
+  void PrepareCalibrationDomePort(Calibration& calibration);
+  void PrepareCalibrationFlatPort(Calibration& calibration, std::pair<int, int> image_size, CameraModelType camera_model,
+                                  HousingInterfaceType housing_interface, std::vector<double> camera_params,
+                                  std::vector<double> housing_params);
 }
 
-BOOST_AUTO_TEST_CASE(BasicHousingCalibration) {
+BOOST_AUTO_TEST_CASE(BasicHousingCalibrationFlat) {
   Calibration calibration;
-  PrepareCalibration(calibration);
+  HousingCalibrator::Options options;
+  Eigen::Vector3d normal(0.1, 0.1, 1);
+  normal.normalize();
+  std::vector<double> expected_params = {normal.x(), normal.y(), normal.z(), 0.02, 0.014, 1.003, 1.473, 1.333};
+  options.camera_params = {864.91, 640, 512};
+  options.initial_housing_params = {0, 0, 1, 0.04, 0.014, 1.003, 1.473, 1.333};  // intentionally wrong distance
+  options.camera_model = CameraModelType::SimplePinholeCameraModel;
+  options.housing_interface = HousingInterfaceType::DoubleLayerPlanarRefractive;
+  options.pattern_cols_rows = {8, 7};
+  options.image_size = {1280, 1024};
+  HousingCalibrator calibrator(options);
+  PrepareCalibrationFlatPort(calibration, options.image_size, options.camera_model, options.housing_interface,
+                             options.camera_params, expected_params);
+
+  calibrator.Calibrate(calibration);
+
+  std::vector<double> actual_params = calibration.Camera().RefracParams();
+  double tolerance = 0.002;
+  BOOST_TEST(abs(actual_params[0] - expected_params[0]) < tolerance);
+  BOOST_TEST(abs(actual_params[1] - expected_params[1]) < tolerance);
+  BOOST_TEST(abs(actual_params[2] - expected_params[2]) < tolerance);
+  BOOST_TEST(abs(actual_params[3] - expected_params[3]) < tolerance);
+}
+
+BOOST_AUTO_TEST_CASE(BasicHousingCalibrationDome) {
+  Calibration calibration;
+  PrepareCalibrationDomePort(calibration);
   HousingCalibrator::Options options;
   options.camera_params = {1024, 1024, 1024, 768, 0, 0, 0, 0};
   options.initial_housing_params = {0, 0, 0, 0.0501, 0.007, 1.003, 1.473, 1.333};
@@ -30,15 +60,15 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibration) {
   std::vector<double> params = calibration.Camera().RefracParams();
   std::vector<double> expected_params = {7.3261e-10, 7.49404e-09, -0.03, 0.0501, 0.007, 1.003, 1.473, 1.333};
   double tolerance = 0.001;
-  BOOST_TEST(abs(params[0] - params[0]) < tolerance);
-  BOOST_TEST(abs(params[1] - params[1]) < tolerance);
-  BOOST_TEST(abs(params[2] - params[2]) < tolerance);
+  BOOST_TEST(abs(params[0] - expected_params[0]) < tolerance);
+  BOOST_TEST(abs(params[1] - expected_params[1]) < tolerance);
+  BOOST_TEST(abs(params[2] - expected_params[2]) < tolerance);
 }
 
 // A regression test, correct values are not known.
 BOOST_AUTO_TEST_CASE(BasicHousingCalibrationCalculatesRmsAndStdDeviations) {
   Calibration calibration;
-  PrepareCalibration(calibration);
+  PrepareCalibrationDomePort(calibration);
   HousingCalibrator::Options options;
   options.camera_params = {1024, 1024, 1024, 768, 0, 0, 0, 0};
   options.initial_housing_params = {0, 0, 0, 0.0501, 0.007, 1.003, 1.473, 1.333};
@@ -53,26 +83,26 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationCalculatesRmsAndStdDeviations) {
 
   double rms = calibration.CalibrationRms();
   std::vector<double> std_deviations = calibration.HousingParamsStdDeviations();
-  std::vector<double> expected_deviations = {1.2084768013573610, 1.1771700144501325, 2.2518913826046525, 0, 0, 0, 0, 0};
+  std::vector<double> expected_deviations = {
+      0.00063600567604551659, 0.00061898976187972881, 0.0012159999919902228, 0, 0, 0, 0, 0};
   Eigen::Map<Eigen::VectorXd> actual(std_deviations.data(), std_deviations.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_deviations.data(), expected_deviations.size());
-  BOOST_TEST(abs(rms - 0.24358256799712524) < 0.00001);
-  BOOST_TEST((actual-expected).isMuchSmallerThan(0.00001));
+  BOOST_TEST(abs(rms - 0.24220783389794076) < 0.00001);
+  BOOST_TEST(ElementWiseClose(actual, expected, 0.00001));
 }
 
 namespace {
-
   extern std::vector<Eigen::Vector3d> points3D;
-  extern std::vector<std::vector<Eigen::Vector2d>> point2DSets;
+  extern std::vector<std::vector<Eigen::Vector2d>> point2DSetsDome;
+  extern std::vector<std::vector<double>> test_poses;
 
-  void PrepareCalibration(Calibration& calibration) {
+  void PrepareCalibrationDomePort(Calibration& calibration) {
     for (auto& point3D : points3D) {
       calibration.AddPoint3D(point3D * 0.04);
     }
 
-    for (auto& set : point2DSets) {
+    for (auto& set : point2DSetsDome) {
       Image image;
-
       image.SetPoints2D(set);
 
       for (size_t i = 0; i < set.size(); i++) {
@@ -83,9 +113,150 @@ namespace {
     }
   }
 
-  std::vector<double> GetExpectedParams(CameraModelType model) {
-    return {};
+  void PrepareCalibrationFlatPort(Calibration& calibration, std::pair<int, int> image_size, CameraModelType camera_model,
+                                  HousingInterfaceType housing_interface, std::vector<double> camera_params,
+                                  std::vector<double> housing_params) {
+    std::default_random_engine generator;
+    // With this setup (perhaps the poses arent too great?) the reconstruction doesn't tolerate too much pixel-error
+    std::normal_distribution<double> error_dist(0, 0.125);
+
+    colmap::Camera camera;
+    camera.SetWidth(image_size.first);
+    camera.SetHeight(image_size.second);
+    camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(camera_model).model_name);
+    camera.SetRefracModelIdFromName(calibmar::HousingInterface::HousingInterfaces().at(housing_interface).model_name);
+    camera.SetParams(camera_params);
+    camera.SetRefracParams(housing_params);
+
+    for (auto& point3D : points3D) {
+      calibration.AddPoint3D(point3D);
+    }
+    // for each test pose artificially create a image point to calibrate from
+    for (auto& pose : test_poses) {
+      Eigen::Quaterniond rot(pose[3], pose[0], pose[1], pose[2]);
+      Eigen::Vector3d trans(pose[4], pose[5], pose[6]);
+      rot.normalize();
+
+      std::unordered_map<int, int> correspondences;
+      std::vector<Eigen::Vector2d> points2D;
+      for (auto& calibrationPoint3D : calibration.Points3D()) {
+        Eigen::Vector3d& point3D = calibrationPoint3D.second;
+
+        Eigen::Vector3d local_point = rot * point3D + trans;
+        Eigen::Vector2d image_point = camera.ImgFromCamRefrac(local_point);
+        // add some noise
+        Eigen::Vector2d noise_dir(error_dist(generator), error_dist(generator));
+        noise_dir.normalize();
+        image_point += noise_dir * error_dist(generator);
+
+        if (image_point.x() < 0 || image_point.x() > camera.Width() || image_point.y() < 0 || image_point.y() > camera.Height() ||
+            std::isnan(image_point.x()) || std::isnan(image_point.y())) {
+          continue;  // ignore points which did not project into the image
+        }
+        points2D.push_back(image_point);
+        correspondences[calibrationPoint3D.first] = points2D.size() - 1;
+      }
+
+      Image image;
+      image.SetPoints2D(points2D);
+      for (auto& correspondence : correspondences) {
+        image.SetPoint3DforPoint2D(correspondence.first, correspondence.second);
+      }
+      calibration.AddImage(image);
+    }
   }
+
+  // in format  {quat, trans} => {x, y, z, w, x, y, z}
+  std::vector<std::vector<double>> test_poses = {{
+                                                     -0.5673,
+                                                     -0.001805,
+                                                     0.8235,
+                                                     -0.005699,
+                                                     -2.82,
+                                                     3.054,
+                                                     16.32,
+                                                 },
+                                                 {
+                                                     -0.1591,
+                                                     0.1589,
+                                                     0.689,
+                                                     0.689,
+                                                     3.22,
+                                                     -2.34,
+                                                     11.1,
+                                                 },
+                                                 {
+                                                     0.1915,
+                                                     0.286,
+                                                     0.9381,
+                                                     -0.03859,
+                                                     2.223,
+                                                     1.838,
+                                                     9.16,
+                                                 },
+                                                 {
+                                                     0.186,
+                                                     0.09415,
+                                                     0.978,
+                                                     -0.008112,
+                                                     7.89,
+                                                     1.188,
+                                                     19.66,
+                                                 },
+                                                 {
+                                                     0.0001447,
+                                                     -8.19e-06,
+                                                     1,
+                                                     -2.287e-05,
+                                                     1.076,
+                                                     3.037,
+                                                     10.76,
+                                                 },
+                                                 {
+                                                     -0.07786,
+                                                     -0.01013,
+                                                     0.9905,
+                                                     0.1127,
+                                                     -1.719,
+                                                     -0.3717,
+                                                     22.02,
+                                                 },
+                                                 {
+                                                     0.12,
+                                                     -0.08275,
+                                                     0.9893,
+                                                     0.006299,
+                                                     4.62,
+                                                     3.504,
+                                                     12.75,
+                                                 },
+                                                 {
+                                                     -0.02629,
+                                                     0.06526,
+                                                     0.9975,
+                                                     -0.01062,
+                                                     0.5062,
+                                                     3.065,
+                                                     12.41,
+                                                 },
+                                                 {
+                                                     -0.1228,
+                                                     0.1225,
+                                                     0.6964,
+                                                     0.6964,
+                                                     2.97,
+                                                     -3.191,
+                                                     10.86,
+                                                 },
+                                                 {
+                                                     -0.0001644,
+                                                     0.0003252,
+                                                     1,
+                                                     -1.264e-05,
+                                                     3.825,
+                                                     3.037,
+                                                     10.76,
+                                                 }};
 
   std::vector<Eigen::Vector3d> points3D = {
       {1.0, 1.0, 0}, {2.0, 1.0, 0}, {3.0, 1.0, 0}, {4.0, 1.0, 0}, {5.0, 1.0, 0}, {6.0, 1.0, 0}, {1.0, 2.0, 0},
@@ -95,7 +266,7 @@ namespace {
       {5.0, 5.0, 0}, {6.0, 5.0, 0}, {1.0, 6.0, 0}, {2.0, 6.0, 0}, {3.0, 6.0, 0}, {4.0, 6.0, 0}, {5.0, 6.0, 0},
       {6.0, 6.0, 0}, {1.0, 7.0, 0}, {2.0, 7.0, 0}, {3.0, 7.0, 0}, {4.0, 7.0, 0}, {5.0, 7.0, 0}, {6.0, 7.0, 0}};
 
-  std::vector<std::vector<Eigen::Vector2d>> point2DSets = {
+  std::vector<std::vector<Eigen::Vector2d>> point2DSetsDome = {
       {
           {916.147, 834.654}, {846.94, 850.674},  {775.302, 867.357}, {700.657, 884.635}, {622.947, 902.791}, {541.586, 921.696},
           {899.964, 767.07},  {830.986, 781.925}, {759.519, 797.272}, {685.082, 813.038}, {607.587, 829.625}, {526.556, 846.939},
