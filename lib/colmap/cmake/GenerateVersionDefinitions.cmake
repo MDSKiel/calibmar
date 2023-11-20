@@ -1,4 +1,4 @@
-# Copyright (c) 2018, ETH Zurich and UNC Chapel Hill.
+# Copyright (c) 2023, ETH Zurich and UNC Chapel Hill.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,7 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-#
-# Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)
+
 
 if (DEFINED GIT_COMMIT_ID OR DEFINED GIT_COMMIT_DATE)
     message(STATUS "Using custom-defined GIT_COMMIT_ID (${GIT_COMMIT_ID}) "
@@ -49,5 +48,5 @@ else()
     set(GIT_COMMIT_DATE "Unknown")
 endif()
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/util/version.h.in"
-               "${CMAKE_CURRENT_SOURCE_DIR}/src/util/version.h")
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/src/colmap/util/version.cc.in"
+               "${CMAKE_CURRENT_SOURCE_DIR}/src/colmap/util/version.cc")

@@ -6,7 +6,7 @@ namespace {
   void CalibrateCamera(std::vector<calibmar::Image>& images, colmap::Camera& camera, bool use_intrinsic_guess,
                        const std::vector<std::vector<Eigen::Vector2d>>& point_sets_2D,
                        const std::vector<std::vector<Eigen::Vector3d>>& point_sets_3D) {
-    std::vector<Eigen::Vector4d*> rotation_vecs;
+    std::vector<Eigen::Quaterniond*> rotation_vecs;
     std::vector<Eigen::Vector3d*> translation_vecs;
     for (auto& image : images) {
       rotation_vecs.push_back(&image.Rotation());
@@ -54,7 +54,7 @@ namespace calibmar {
     camera.SetWidth(options_.image_size.first);
     camera.SetHeight(options_.image_size.second);
     camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
-    camera.SetNonSvpModelIdFromName(calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
+    camera.SetRefracModelIdFromName(calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
 
     std::vector<std::vector<Eigen::Vector2d>> point_sets_2D;
     std::vector<std::vector<Eigen::Vector3d>> point_sets_3D;
@@ -62,10 +62,9 @@ namespace calibmar {
     std::vector<Image>& images = calibration.Images();
 
     camera.SetParams(options_.camera_params);
-    camera.SetNonSvpParams(options_.initial_housing_params);
+    camera.SetRefracParams(options_.initial_housing_params);
 
-    if (options_.estimate_initial_dome_offset &&
-        camera.NonSvpModelId() != colmap::DoubleLayerPlanarRefractiveInterface::kNonSvpModelId) {
+    if (options_.estimate_initial_dome_offset && camera.RefracModelId() == colmap::DomePort::kRefracModelId) {
       non_svp_calibration::EstimateInitialDomeOffset(
           point_sets_3D[0], point_sets_2D[0],
           {options_.pattern_cols_rows.first - 1,
@@ -78,12 +77,12 @@ namespace calibmar {
       std::vector<Eigen::Vector2d>& points2D = point_sets_2D[i];
       std::vector<Eigen::Vector3d>& points3D = point_sets_3D[i];
 
-      non_svp_calibration::EstimateAbsolutePoseNonSvpCamera(points3D, points2D, &image.Rotation(), &image.Translation(), &camera,
-                                                            false);
+      non_svp_calibration::EstimateAbsolutePoseRefractiveCamera(points3D, points2D, &image.Rotation(), &image.Translation(),
+                                                                &camera, false);
     }
 
     std::vector<double>& housing_params_std = calibration.HousingParamsStdDeviations();
-    non_svp_calibration::OptimizeNonSvpCamera(calibration, housing_params_std);
+    non_svp_calibration::OptimizeRefractiveCamera(calibration, housing_params_std);
 
     calibration.SetCalibrationRms(sqrt(non_svp_calibration::CalculateOverallMSE(calibration)));
   }

@@ -2,8 +2,8 @@
 #include "ui/widgets/image_widget.h"
 
 #include <QtWidgets>
-#include <colmap/src/estimators/pose.h>
-#include <colmap/src/util/misc.h>
+#include <colmap/estimators/pose.h>
+#include <colmap/util/misc.h>
 #include <filesystem>
 #include <iostream>
 #include <opencv2/calib3d.hpp>

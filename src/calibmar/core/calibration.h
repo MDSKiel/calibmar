@@ -2,7 +2,7 @@
 
 #include "calibmar/core/image.h"
 
-#include <colmap/src/base/camera.h>
+#include <colmap/scene/camera.h>
 #include <unordered_map>
 
 namespace calibmar {

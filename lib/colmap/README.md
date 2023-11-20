@@ -1,27 +1,6 @@
 COLMAP
 ======
 
-Installation 
-------------
-
-Install Ceres solver
-http://ceres-solver.org/installation.html
-
-In case of problems with Cuda & Ubuntu 20.04
-
-```
-sudo apt -y install gcc-8 g++-8
-update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
-update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8
-```
-
-```
-cmake -DCMAKE_C_COMPILER=$(which gcc-8) ..
-make
-```
-
-https://github.com/espressomd/espresso/issues/3654
-
 About
 -----
 
@@ -87,18 +66,19 @@ The documentation is available at https://colmap.github.io/.
 Support
 -------
 
-Please, use the COLMAP Google Group at
-https://groups.google.com/forum/#!forum/colmap (colmap@googlegroups.com) for
-questions and the GitHub issue tracker at https://github.com/colmap/colmap for
-bug reports, feature requests/additions, etc.
+Please, use GitHub Discussions at https://github.com/colmap/colmap/discussions
+for questions and the GitHub issue tracker at https://github.com/colmap/colmap
+for bug reports, feature requests/additions, etc.
 
 
 Acknowledgments
 ---------------
 
-The library was written by Johannes L. Schönberger (https://demuc.de/). Funding
-was provided by his PhD advisors Jan-Michael Frahm (http://frahm.web.unc.edu/)
-and Marc Pollefeys (https://people.inf.ethz.ch/pomarc/).
+The library was originally written by Johannes L. Schönberger
+(https://demuc.de/) with funding provided by his PhD advisors Jan-Michael Frahm
+and Marc Pollefeys. Since then the project has benefitted from countless
+community contributions, including bug fixes, improvements, new features,
+third-party tooling, and community support.
 
 
 Contribution
@@ -112,11 +92,11 @@ License
 -------
 
 The COLMAP library is licensed under the new BSD license. Note that this text
-refers only to the license for COLMAP itself, independent of its dependencies,
-which are separately licensed. Building COLMAP with these dependencies may
-affect the resulting COLMAP license.
+refers only to the license for COLMAP itself, independent of its thirdparty
+dependencies, which are separately licensed. Building COLMAP with these
+dependencies may affect the resulting COLMAP license.
 
-    Copyright (c) 2018, ETH Zurich and UNC Chapel Hill.
+    Copyright (c) 2023, ETH Zurich and UNC Chapel Hill.
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -127,7 +107,7 @@ affect the resulting COLMAP license.
 
         * Redistributions in binary form must reproduce the above copyright
           notice, this list of conditions and the following disclaimer in the
-          documentation and/or other materials provided with the distribution.
+          documentation and/or other materials provided with the distribution.Personal
 
         * Neither the name of ETH Zurich and UNC Chapel Hill nor the names of
           its contributors may be used to endorse or promote products derived
@@ -145,4 +125,3 @@ affect the resulting COLMAP license.
     ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
     POSSIBILITY OF SUCH DAMAGE.
 
-    Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)

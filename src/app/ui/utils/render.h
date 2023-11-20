@@ -1,7 +1,7 @@
 #pragma once
 
 #include "calibmar/core/pixmap.h"
-#include "colmap/src/base/camera.h"
+#include "colmap/scene/camera.h"
 #include <Eigen/Core>
 #include <QtGui>
 

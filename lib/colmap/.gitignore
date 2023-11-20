@@ -1,19 +1,17 @@
 # Custom files
 LocalConfig.cmake
-src/util/version.h
-CMakeLists.txt.user
+src/colmap/util/version.cc
 
 # Custom directories
 .idea/
 .vscode
+.vs
 .DS_Store
 build*/
-install
 install-debug/
 install-release/
 data/
 doc/_build
-install/
 
 # Compiled Object files
 *.slo

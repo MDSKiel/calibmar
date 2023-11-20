@@ -6,6 +6,7 @@
 using namespace calibmar;
 
 namespace {
+  double epsilon = 0.00001;
   std::pair<int, int> image_size{270, 180};
   void PrepareCalibration(Calibration& calibration);
   std::vector<double> GetExpectedParams(CameraModelType model);
@@ -24,7 +25,7 @@ BOOST_AUTO_TEST_CASE(BasicCalibration) {
   std::vector<double> expected_params = GetExpectedParams(CameraModelType::OpenCVCameraModel);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
-  BOOST_TEST(actual.isApprox(expected));
+  BOOST_TEST((actual-expected).isMuchSmallerThan(epsilon));
 }
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(CameraModelType)
@@ -47,7 +48,7 @@ BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), mo
   std::vector<double> expected_params = GetExpectedParams(model);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
-  BOOST_TEST(actual.isApprox(expected));
+  BOOST_TEST((actual-expected).isMuchSmallerThan(epsilon));
 }
 
 std::vector<CameraModelType> std_dev_models = {CameraModelType::SimplePinholeCameraModel, CameraModelType::PinholeCameraModel,
@@ -84,7 +85,7 @@ BOOST_AUTO_TEST_CASE(IntrinsicGuess) {
   std::vector<double> expected_params = GetExpectedParams(CameraModelType::PinholeCameraModel);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
-  BOOST_TEST(actual.isApprox(expected));
+  BOOST_TEST((actual-expected).isMuchSmallerThan(epsilon));
 }
 
 namespace {

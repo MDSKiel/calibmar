@@ -1,6 +1,6 @@
 #include "ui/widgets/model_selector_widget.h"
 
-#include <colmap/src/base/camera_models.h>
+#include <colmap/sensor/models.h>
 
 namespace {
   void InitializeCameraModels(std::vector<std::tuple<calibmar::CameraModelType, std::string, std::string>>& camera_models) {

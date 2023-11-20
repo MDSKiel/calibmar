@@ -3,7 +3,7 @@
 #include "calibmar/core/camera_models.h"
 
 #include <Eigen/Core>
-#include <colmap/src/base/camera.h>
+#include <colmap/scene/camera.h>
 
 namespace calibmar {
   namespace opencv_calibration {
@@ -15,7 +15,7 @@ namespace calibmar {
     // @param camera Camera that will be calibrated, optionally containing an initial parameter guess.
     // @param use_intrinsic_guess If camera intrinsics should be used as an initial guess.
     // @param fast Use LU instead of SVD decomposition for solving. Faster but potentially less precise (from opencv).
-    // @param rotation_vecs Output sets of rotational part of the pose (as quaternion w, x, y, z).
+    // @param rotation_vecs Output sets of rotational part of the pose.
     // @param translation_vecs Output sets of corresponding translational part of the pose.
     // @param std_deviations_intrinsics Estimated standard deviation of the camera intrinsics.
     // @param std_deviations_extrinsics Estimated standard deviation of the pose extrinsics.
@@ -23,14 +23,14 @@ namespace calibmar {
     // @return Overall RMS
     double CalibrateCamera(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Vector4d*>& rotation_vecs,
+                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs, std::vector<double>& std_deviations_intrinsics,
                            std::vector<double>& std_deviations_extrinsics, std::vector<double>& per_view_rms);
 
     // Overload not calculating std deviations and per view RMS.
     double CalibrateCamera(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Vector4d*>& rotation_vecs,
+                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs);
   }
 }

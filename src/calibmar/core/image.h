@@ -1,6 +1,6 @@
 #pragma once
 
-#include <colmap/src/base/image.h>
+#include <colmap/scene/image.h>
 #include <unordered_map>
 
 namespace calibmar {
@@ -18,13 +18,13 @@ namespace calibmar {
 
     inline const std::unordered_map<size_t, uint32_t>& Correspondences() const;
 
-    // Access quaternion vector as (qw, qx, qy, qz) specifying the rotation of the
+    // Access quaternion specifying the rotation of the
     // pose which is defined as the transformation from world to image space.
-    inline const Eigen::Vector4d& Rotation() const;
-    inline Eigen::Vector4d& Rotation();
-    // Set quaternion vector as (qw, qx, qy, qz) specifying the rotation of the
+    inline const Eigen::Quaterniond& Rotation() const;
+    inline Eigen::Quaterniond& Rotation();
+    // Set quaternion specifying the rotation of the
     // pose which is defined as the transformation from world to image space.
-    inline void SetRotation(const Eigen::Vector4d& qvec);
+    inline void SetRotation(const Eigen::Quaterniond& quat);
 
     // Access vector as (tx, ty, tz) specifying the translation of the
     // pose which is defined as the transformation from world to image space.
@@ -36,7 +36,7 @@ namespace calibmar {
     std::string name_;
     std::vector<Eigen::Vector2d> points2D_;
     std::unordered_map<size_t, uint32_t> correspondences_;
-    Eigen::Vector4d rotation_;
+    Eigen::Quaterniond rotation_;
     Eigen::Vector3d translation_;
   };
 
@@ -72,15 +72,15 @@ namespace calibmar {
     name_ = name;
   }
 
-  inline const Eigen::Vector4d& Image::Rotation() const {
+  inline const Eigen::Quaterniond& Image::Rotation() const {
     return rotation_;
   }
 
-  inline Eigen::Vector4d& Image::Rotation() {
+  inline Eigen::Quaterniond& Image::Rotation() {
     return rotation_;
   }
 
-  inline void Image::SetRotation(const Eigen::Vector4d& rotation) {
+  inline void Image::SetRotation(const Eigen::Quaterniond& rotation) {
     rotation_ = rotation;
   }
 

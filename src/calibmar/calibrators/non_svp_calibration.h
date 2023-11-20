@@ -2,7 +2,7 @@
 
 #include "calibmar/core/calibration.h"
 
-#include <colmap/src/base/camera.h>
+#include <colmap/scene/camera.h>
 #include <optional>
 
 namespace calibmar {
@@ -23,29 +23,29 @@ namespace calibmar {
                                    const std::pair<int, int> pattern_cols_rows, colmap::Camera& camera,
                                    double max_expected_offset_percent = 0.2);
 
-    // Estimate absolute pose from 2D-3D correspondences for none svp cameras.
+    // Estimate absolute pose from 2D-3D correspondences for refractive cameras.
     //
     // @param points_2D               Corresponding 2D points.
     // @param points_3D               Corresponding 3D points.
-    // @param rotation_quaternion     Estimated rotation component as unit Quaternion coefficients (w, x, y, z).
+    // @param rotation_quaternion     Estimated rotation component.
     // @param translation             Estimated translation component.
     // @param camera                  Camera for which to estimate pose.
     // @param use_initial_pose_guess  If rotation_quaternion and translation already contain a valid first estimation.
     //
     // @return                        Whether pose is estimated successfully.
-    bool EstimateAbsolutePoseNonSvpCamera(const std::vector<Eigen::Vector3d>& points_3D,
-                                          const std::vector<Eigen::Vector2d>& points_2D, Eigen::Vector4d* rotation_quaternion,
+    bool EstimateAbsolutePoseRefractiveCamera(const std::vector<Eigen::Vector3d>& points_3D,
+                                          const std::vector<Eigen::Vector2d>& points_2D, Eigen::Quaterniond* rotation_quaternion,
                                           Eigen::Vector3d* translation, colmap::Camera* camera,
                                           bool use_initial_pose_guess = false);
 
-    // Optimize the non svp (that is: the housing related) parameters of the camera.
+    // Optimize the refractive (that is: the housing related) parameters of the camera.
     // Expects the calibration to have a camera with a valid first estimation of parameters (housing and intrinsics),
     // as well as a set of images with estimated poses.
     //
     // @param calibration         Calibration that is already parametrized with a initialized camera and pose estimated images.
     //                            Is edited in place.
     // @param housing_params_std  Estimated standard deviations of the housing parameters.
-    void OptimizeNonSvpCamera(calibmar::Calibration& calibration, std::vector<double>& housing_params_std);
+    void OptimizeRefractiveCamera(calibmar::Calibration& calibration, std::vector<double>& housing_params_std);
 
     // Calculate the mean squared reprojection error for each image in the calibration using the
     // calibration camera.

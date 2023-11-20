@@ -1,7 +1,7 @@
 #include "file_calibration_dialog.h"
 
 #include <calibmar/core/report.h>
-#include <colmap/src/util/misc.h>
+#include <colmap/util/misc.h>
 #include <filesystem>
 
 namespace calibmar {

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <colmap/src/base/camera.h>
-#include <colmap/src/base/camera_models.h>
-#include <colmap/src/base/camera_non_svp_models.h>
+#include <colmap/scene/camera.h>
+#include <colmap/sensor/models.h>
+#include <colmap/sensor/models_refrac.h>
 #include <string>
 #include <vector>
 
@@ -105,13 +105,13 @@ namespace calibmar {
 
     static inline std::map<HousingInterfaceType, HousingInterface> HousingInterfaces() {
       return {{HousingInterfaceType::DoubleLayerSphericalRefractive,
-               {"Thick Dome Port", colmap::DoubleLayerSphericalRefractiveInterface::non_svp_model_name,
-                colmap::DoubleLayerSphericalRefractiveInterface::params_info,
-                colmap::DoubleLayerSphericalRefractiveInterface::num_params}},
+               {"Thick Dome Port", colmap::DomePort::refrac_model_name,
+                colmap::DomePort::params_info,
+                colmap::DomePort::num_params}},
               {HousingInterfaceType::DoubleLayerPlanarRefractive,
-               {"Thick Flat Port", colmap::DoubleLayerPlanarRefractiveInterface::non_svp_model_name,
-                colmap::DoubleLayerPlanarRefractiveInterface::params_info,
-                colmap::DoubleLayerPlanarRefractiveInterface::num_params}}};
+               {"Thick Flat Port", colmap::FlatPort::refrac_model_name,
+                colmap::FlatPort::params_info,
+                colmap::FlatPort::num_params}}};
     }
   };
 }

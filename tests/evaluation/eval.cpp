@@ -6,8 +6,8 @@
 #include <Eigen/SparseCore>
 #include <calibmar/calibrators/calibrator.h>
 #include <calibmar/readers/filesystem_reader.h>
-#include <colmap/src/base/pose.h>
-#include <colmap/src/base/projection.h>
+#include <colmap/geometry/pose.h>
+#include <colmap/scene/projection.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -158,7 +158,7 @@ void CreateDistortMaps(cv::Mat* map_x, cv::Mat* map_y, const colmap::Camera& cam
     float* ptr1 = map_x->ptr<float>(y);
     float* ptr2 = map_y->ptr<float>(y);
     for (int x = 0; x < image_size.width; ++x) {
-      Eigen::Vector2d undist_world = camera.ImageToWorld({x, y});
+      Eigen::Vector2d undist_world = camera.CamFromImg({x, y});
       Eigen::Vector2d dist_img = undistorted_camera.WorldToImage(undist_world);
       ptr1[x] = dist_img.x();
       ptr2[x] = dist_img.y();

@@ -6,7 +6,7 @@
 #include "ui/utils/render.h"
 #include "ui/widgets/calibration_result_widget.h"
 
-#include <colmap/src/base/projection.h>
+#include <colmap/mvs/image.h>
 #include <filesystem>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/imgproc.hpp>
@@ -14,16 +14,11 @@
 namespace {
   void ProjectPoints(const colmap::Camera& camera, const std::vector<Eigen::Vector3d>& points3D, const Eigen::Vector4d& rotation,
                      const Eigen::Vector3d& translation, std::vector<Eigen::Vector2d>& points2D) {
-    Eigen::Matrix3x4d proj_mat = colmap::ComposeProjectionMatrix(rotation, translation);
-
     Eigen::Quaterniond q = Eigen::Quaterniond(rotation(0), rotation(1), rotation(2), rotation(3));
     Eigen::Affine3d trans = Eigen::Translation3d(translation) * q;
 
     for (const Eigen::Vector3d& point : points3D) {
-      Eigen::Vector3d p = trans * point;
-      Eigen::Vector2d test = camera.WorldToImage((trans * point).hnormalized());
-
-      points2D.push_back(colmap::ProjectPointToImage(point, proj_mat, camera));
+      points2D.push_back(camera.ImgFromCam((trans * point).hnormalized()));
     }
   }
 
@@ -349,9 +344,9 @@ namespace calibmar {
         // during init phase calibrate on one image only to get valid focal length for pinhole camera
         // copy camera and only replace if the calibration rms is better than current camera
         colmap::Camera camera = calibration.Camera();
-        Eigen::Vector4d rot = image.Rotation();
+        Eigen::Quaterniond rot = image.Rotation();
         Eigen::Vector3d trans = image.Translation();
-        std::vector<Eigen::Vector4d*> rotations{&rot};
+        std::vector<Eigen::Quaterniond*> rotations{&rot};
         std::vector<Eigen::Vector3d*> translations{&trans};
         double rms =
             opencv_calibration::CalibrateCamera(points3D, {image.Points2D()}, camera, true, true, rotations, translations);

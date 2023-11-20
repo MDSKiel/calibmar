@@ -1,4 +1,4 @@
-# Copyright (c) 2018, ETH Zurich and UNC Chapel Hill.
+# Copyright (c) 2023, ETH Zurich and UNC Chapel Hill.
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -26,16 +26,21 @@
 # CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
-#
-# Author: Johannes L. Schoenberger (jsch-at-demuc-dot-de)
 
-cmake_minimum_required(VERSION 3.0)
 
-project(COLMAP)
+cmake_minimum_required(VERSION 3.10)
 
-set(COLMAP_VERSION "3.7")
-set(COLMAP_VERSION_NUMBER "3700")
+project(COLMAP LANGUAGES C CXX)
 
+set(COLMAP_VERSION "3.9")
+set(COLMAP_VERSION_NUMBER "3900")
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CUDA_STANDARD 14)
+set(CMAKE_CUDA_STANDARD_REQUIRED ON)
+
+set_property(GLOBAL PROPERTY GLOBAL_DEPENDS_NO_CYCLES ON)
 
 ################################################################################
 # Include CMake dependencies
@@ -49,6 +54,9 @@ include(CheckCXXCompilerFlag)
 # the CMake policies in this file
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CMakeHelper.cmake NO_POLICY_SCOPE)
 
+# Build position-independent code, so that shared libraries can link against
+# COLMAP's static libraries.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 ################################################################################
 # Options
@@ -61,102 +69,21 @@ option(CUDA_ENABLED "Whether to enable CUDA, if available" ON)
 option(GUI_ENABLED "Whether to enable the graphical UI" ON)
 option(OPENGL_ENABLED "Whether to enable OpenGL, if available" ON)
 option(TESTS_ENABLED "Whether to build test binaries" OFF)
+option(ASAN_ENABLED "Whether to enable AddressSanitizer flags" OFF)
 option(PROFILING_ENABLED "Whether to enable google-perftools linker flags" OFF)
+option(CCACHE_ENABLED "Whether to enable compiler caching, if available" ON)
 option(CGAL_ENABLED "Whether to enable the CGAL library" ON)
-option(GDAL_ENABLED "Whether to enable the GDAL library" OFF)
-option(BOOST_STATIC "Whether to enable static boost library linker flags" ON)
-option(LEGACY_ENABLED "Whether to enable legacy output format" ON)
-set(CUDA_ARCHS "Auto" CACHE STRING "List of CUDA architectures for which to \
-generate code, e.g., Auto, All, Maxwell, Pascal, ...")
 
 if(TESTS_ENABLED)
     enable_testing()
 endif()
 
-if(BOOST_STATIC)
-    set(Boost_USE_STATIC_LIBS ON)
-else()
-    add_definitions("-DBOOST_TEST_DYN_LINK")
-endif()
-
 ################################################################################
-# Find packages
+# Dependency configuration
 ################################################################################
 
-if(OPENMP_ENABLED)
-    find_package(OpenMP QUIET)
-endif()
-
-find_package(Ceres REQUIRED)
-
-find_package(Boost REQUIRED COMPONENTS
-             program_options
-             filesystem
-             graph
-             system
-             unit_test_framework)
-
-find_package(Eigen3 REQUIRED)
-
-find_package(FreeImage REQUIRED)
-
-find_package(Glog REQUIRED)
-
-set(OpenGL_GL_PREFERENCE GLVND)
-find_package(OpenGL REQUIRED)
-find_package(Glew REQUIRED)
-find_package(Git)
-
-if(CGAL_ENABLED)
-    set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
-    find_package(CGAL QUIET)
-endif()
-
-set(CUDA_MIN_VERSION "7.0")
-if(CUDA_ENABLED)
-    find_package(CUDA ${CUDA_MIN_VERSION} QUIET)
-endif()
-
-if(GUI_ENABLED)
-    find_package(Qt5 5.4 COMPONENTS Core OpenGL Widgets)
-    if(Qt5_FOUND)
-        message(STATUS "Found Qt")
-        message(STATUS "  Module : ${Qt5Core_DIR}")
-        message(STATUS "  Module : ${Qt5OpenGL_DIR}")
-        message(STATUS "  Module : ${Qt5Widgets_DIR}")
-    else()
-        set(GUI_ENABLED OFF)
-    endif()
-endif()
-
-if(OPENGL_ENABLED AND NOT GUI_ENABLED)
-    message(STATUS "Disabling GUI will also disable OpenGL")
-    set(OPENGL_ENABLED OFF)
-endif()
-
-if(CGAL_FOUND)
-    list(APPEND CGAL_LIBRARY ${CGAL_LIBRARIES})
-    message(STATUS "Found CGAL")
-    message(STATUS "  Includes : ${CGAL_INCLUDE_DIRS}")
-    message(STATUS "  Libraries : ${CGAL_LIBRARY}")
-endif()
-
-if(GDAL_ENABLED)
-    find_package(GDAL 3 QUIET)
-    if(GDAL_FOUND)
-        message(STATUS "Found GDAL")
-        message(STATUS "  Version: ${GDAL_VERSION}")
-        message(STATUS "  Includes: ${GDAL_INCLUDE_DIR}")
-        message(STATUS "  Libraries: ${GDAL_LIBRARIES}")
-    else()
-        set(GDAL_ENABLED OFF)
-    endif()
-endif()
-
-if(LEGACY_ENABLED)
-    message(STATUS "Enable Legacy")
-    add_definitions("-DLEGACY_ENABLED")
-endif()
+set(COLMAP_FIND_QUIETLY FALSE)
+include(cmake/FindDependencies.cmake)
 
 ################################################################################
 # Compiler specific configuration
@@ -170,14 +97,28 @@ else()
     set(IS_DEBUG OFF)
 endif()
 
+if("${CMAKE_BUILD_TYPE}" STREQUAL "ClangTidy")
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+    if(NOT CLANG_TIDY_EXE)
+        message(FATAL_ERROR "Could not find the clang-tidy executable, please set CLANG_TIDY_EXE")
+    endif()
+else()
+    unset(CLANG_TIDY_EXE)
+endif()
+
 if(IS_MSVC)
     # Some fixes for the Glog library.
     add_definitions("-DGLOG_NO_ABBREVIATED_SEVERITIES")
     add_definitions("-DGL_GLEXT_PROTOTYPES")
+    add_definitions("-DNOMINMAX")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
     # Enable object level parallel builds in Visual Studio.
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug" OR "${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /bigobj")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+    endif()
 endif()
 
 if(IS_GNU)
@@ -200,15 +141,6 @@ else()
     message(STATUS "Disabling SIMD support")
 endif()
 
-if(OPENMP_ENABLED AND OPENMP_FOUND)
-    message(STATUS "Enabling OpenMP support")
-    add_definitions("-DOPENMP_ENABLED")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-else()
-    message(STATUS "Disabling OpenMP support")
-endif()
-
 if(IPO_ENABLED AND NOT IS_DEBUG AND NOT IS_GNU)
     message(STATUS "Enabling interprocedural optimization")
     set_property(DIRECTORY PROPERTY INTERPROCEDURAL_OPTIMIZATION 1)
@@ -216,49 +148,27 @@ else()
     message(STATUS "Disabling interprocedural optimization")
 endif()
 
-if(CUDA_FOUND)
-    if(CUDA_ENABLED)
-        add_definitions("-DCUDA_ENABLED")
-
-        include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SelectCudaComputeArch.cmake)
-
-        CUDA_SELECT_NVCC_ARCH_FLAGS(CUDA_ARCH_FLAGS ${CUDA_ARCHS})
-
-        set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} ${CUDA_ARCH_FLAGS}")
-
-        # Fix for some combinations of CUDA and GCC (e.g. under Ubuntu 16.04).
-        set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -D_FORCE_INLINES")
-        # Do not show warnings if the architectures are deprecated.
-        set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -Wno-deprecated-gpu-targets")
-
-        message(STATUS "Enabling CUDA support (version: ${CUDA_VERSION_STRING},"
-                       " archs: ${CUDA_ARCH_FLAGS_readable})")
+if(ASAN_ENABLED)
+    message(STATUS "Enabling ASan support")
+    if(IS_CLANG OR IS_GNU)
+        add_compile_options(-fsanitize=address -fno-omit-frame-pointer -fsanitize-address-use-after-scope)
+        add_link_options(-fsanitize=address)
     else()
-        set(CUDA_FOUND OFF)
-        message(STATUS "Disabling CUDA support")
-    endif()
-else()
-    set(CUDA_ENABLED OFF)
-    if(CUDA_VERSION_STRING)
-        message(STATUS "Disabling CUDA support (found version "
-                "${CUDA_VERSION_STRING} but >= ${CUDA_MIN_VERSION} required)")
-    else()
-        message(STATUS "Disabling CUDA support")
+        message(FATAL_ERROR "Unsupported compiler for ASan mode")
     endif()
 endif()
 
-if(GUI_ENABLED AND Qt5_FOUND)
-    add_definitions("-DGUI_ENABLED")
-    message(STATUS "Enabling GUI support")
+if(CCACHE_ENABLED)
+    find_program(CCACHE ccache)
+    if(CCACHE)
+        message(STATUS "Enabling ccache support")
+        set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE})
+        set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE})
+    else()
+        message(STATUS "Disabling ccache support")
+    endif()
 else()
-    message(STATUS "Disabling GUI support")
-endif()
-
-if(OPENGL_ENABLED)
-    add_definitions("-DOPENGL_ENABLED")
-    message(STATUS "Enabling OpenGL support")
-else()
-    message(STATUS "Disabling OpenGL support")
+    message(STATUS "Disabling ccache support")
 endif()
 
 if(PROFILING_ENABLED)
@@ -269,34 +179,6 @@ else()
     message(STATUS "Disabling profiling support")
 endif()
 
-if(CGAL_FOUND AND CGAL_ENABLED)
-    message(STATUS "Enabling CGAL support")
-    add_definitions("-DCGAL_ENABLED")
-else()
-    message(STATUS "Disabling CGAL support")
-    set(CGAL_ENABLED OFF)
-endif()
-
-if(Qt5_FOUND)
-    # Qt5 was built with -reduce-relocations.
-    if(Qt5_POSITION_INDEPENDENT_CODE)
-        set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-        if(CUDA_ENABLED AND NOT IS_MSVC)
-            set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --compiler-options -fPIC")
-        endif()
-    endif()
-
-    # Enable automatic compilation of Qt resource files.
-    set(CMAKE_AUTORCC ON)
-endif()
-
-if(GDAL_ENABLED AND GDAL_FOUND)
-    message(STATUS "Enabling GDAL support")
-    add_definitions("-DGDAL_ENABLED")
-else()
-    message(STATUS "Disabling GDAL support")
-endif()
-
 ################################################################################
 # Add sources
 ################################################################################
@@ -304,128 +186,63 @@ endif()
 # Generate source file with version definitions.
 include(GenerateVersionDefinitions)
 
-set(COLMAP_INCLUDE_DIRS
-    ${Boost_INCLUDE_DIRS}
-    ${EIGEN3_INCLUDE_DIRS}
-    ${GLOG_INCLUDE_DIRS}
-    ${FREEIMAGE_INCLUDE_DIRS}
-    ${CERES_INCLUDE_DIRS}
-    ${GLEW_INCLUDE_DIRS}
-)
-
-set(COLMAP_LINK_DIRS
-    ${Boost_LIBRARY_DIRS}
-)
-
-set(COLMAP_EXTERNAL_LIBRARIES
-    ${CMAKE_DL_LIBS}
-    ${Boost_FILESYSTEM_LIBRARY}
-    ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${GLOG_LIBRARIES}
-    ${FREEIMAGE_LIBRARIES}
-    ${CERES_LIBRARIES}
-    ${OPENGL_LIBRARIES}
-)
-
-if(OPENMP_FOUND)
-    list(APPEND COLMAP_EXTERNAL_LIBRARIES ${OpenMP_libomp_LIBRARY})
-endif()
-
-if(Qt5_FOUND)
-    list(APPEND COLMAP_INCLUDE_DIRS ${Qt5Core_INCLUDE_DIRS} ${Qt5OpenGL_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS})
-    list(APPEND COLMAP_EXTERNAL_LIBRARIES ${Qt5Core_LIBRARIES} ${Qt5OpenGL_LIBRARIES} ${Qt5Widgets_LIBRARIES})
-endif()
-
-if(CGAL_FOUND)
-    list(APPEND COLMAP_INCLUDE_DIRS ${CGAL_INCLUDE_DIRS} ${GMP_INCLUDE_DIR})
-    list(APPEND COLMAP_EXTERNAL_LIBRARIES ${CGAL_LIBRARY} ${GMP_LIBRARIES})
-    list(APPEND COLMAP_LINK_DIRS ${CGAL_LIBRARIES_DIR})
-endif()
-
-if(GDAL_ENABLED AND GDAL_FOUND)
-    list(APPEND COLMAP_INCLUDE_DIRS ${GDAL_INCLUDE_DIR})
-    list(APPEND COLMAP_EXTERNAL_LIBRARIES ${GDAL_LIBRARIES})
-endif()
-
-if(UNIX)
-    list(APPEND COLMAP_EXTERNAL_LIBRARIES pthread)
-endif()
-
-set(COLMAP_INTERNAL_LIBRARIES
-    flann
-    graclus
-    lsd
-    pba
-    poisson_recon
-    sqlite3
-    sift_gpu
-    vlfeat
-)
-
-include_directories(
-    lib
-    src
-    ${COLMAP_INCLUDE_DIRS}
-)
-
+include_directories(src)
 link_directories(${COLMAP_LINK_DIRS})
 
-add_subdirectory(lib)
-add_subdirectory(src)
-
+add_subdirectory(src/colmap)
+add_subdirectory(src/thirdparty)
 
 ################################################################################
 # Generate source groups for Visual Studio, XCode, etc.
 ################################################################################
 
-COLMAP_ADD_SOURCE_DIR(lib/FLANN LIB_FLANN_SRCS *.h *.cpp *.hpp *.cu)
-COLMAP_ADD_SOURCE_DIR(lib/Graclus LIB_GRACLUS_SRCS *.h *.c)
-COLMAP_ADD_SOURCE_DIR(lib/LSD LIB_LSD_SRCS *.h *.c)
-COLMAP_ADD_SOURCE_DIR(lib/PBA LIB_PBA_SRCS *.h *.cpp *.cu)
-COLMAP_ADD_SOURCE_DIR(lib/PoissonRecon LIB_POISSON_RECON_SRCS *.h *.cpp *.inl)
-COLMAP_ADD_SOURCE_DIR(lib/SiftGPU LIB_SIFT_GPU_SRCS *.h *.cpp *.cu)
-COLMAP_ADD_SOURCE_DIR(lib/SQLite LIB_SQLITE_SRCS *.h *.c)
-COLMAP_ADD_SOURCE_DIR(lib/VLFeat LIB_VLFEAT_SRCS *.h *.c *.tc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/controllers CONTROLLERS_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/estimators ESTIMATORS_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/exe EXE_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/feature FEATURE_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/geometry GEOMETRY_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/image IMAGE_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/math MATH_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/mvs MVS_SRCS *.h *.cc *.cu)
+COLMAP_ADD_SOURCE_DIR(src/colmap/optim OPTIM_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/retrieval RETRIEVAL_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/scene SCENE_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/sensor SENSOR_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/sfm SFM_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/tools TOOLS_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/ui UI_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/colmap/util UTIL_SRCS *.h *.cc)
 
-COLMAP_ADD_SOURCE_DIR(src/base BASE_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/controllers CONTROLLERS_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/estimators ESTIMATORS_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/exe EXE_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/feature FEATURE_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/mvs MVS_SRCS *.h *.cc *.cu)
-COLMAP_ADD_SOURCE_DIR(src/optim OPTIM_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/retrieval RETRIEVAL_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/sfm SFM_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/tools TOOLS_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/ui UI_SRCS *.h *.cc)
-COLMAP_ADD_SOURCE_DIR(src/util UTIL_SRCS *.h *.cc)
+COLMAP_ADD_SOURCE_DIR(src/thirdparty/LSD THIRDPARTY_LSD_SRCS *.h *.c)
+COLMAP_ADD_SOURCE_DIR(src/thirdparty/PoissonRecon THIRDPARTY_POISSON_RECON_SRCS *.h *.cpp *.inl)
+COLMAP_ADD_SOURCE_DIR(src/thirdparty/SiftGPU THIRDPARTY_SIFT_GPU_SRCS *.h *.cpp *.cu)
+COLMAP_ADD_SOURCE_DIR(src/thirdparty/VLFeat THIRDPARTY_VLFEAT_SRCS *.h *.c *.tc)
 
 # Add all of the source files to a regular library target, as using a custom
 # target does not allow us to set its C++ include directories (and thus
 # intellisense can't find any of the included files).
 add_library(
     ${COLMAP_SRC_ROOT_FOLDER}
-    ${LIB_FLANN_SRCS}
-    ${LIB_GRACLUS_SRCS}
-    ${LIB_LSD_SRCS}
-    ${LIB_PBA_SRCS}
-    ${LIB_POISSON_RECON_SRCS}
-    ${LIB_SIFT_GPU_SRCS}
-    ${LIB_SQLITE_SRCS}
-    ${LIB_VLFEAT_SRCS}
-    ${BASE_SRCS}
     ${CONTROLLERS_SRCS}
     ${ESTIMATORS_SRCS}
     ${EXE_SRCS}
     ${FEATURE_SRCS}
+    ${GEOMETRY_SRCS}
+    ${IMAGE_SRCS}
+    ${MATH_SRCS}
     ${MVS_SRCS}
     ${OPTIM_SRCS}
     ${RETRIEVAL_SRCS}
+    ${SCENE_SRCS}
+    ${SENSOR_SRCS}
     ${SFM_SRCS}
     ${TOOLS_SRCS}
     ${UI_SRCS}
     ${UTIL_SRCS}
+    ${THIRDPARTY_LSD_SRCS}
+    ${THIRDPARTY_POISSON_RECON_SRCS}
+    ${THIRDPARTY_SIFT_GPU_SRCS}
+    ${THIRDPARTY_VLFEAT_SRCS}
 )
 
 # Prevent the library from being compiled automatically.
@@ -438,29 +255,6 @@ set_target_properties(
 ################################################################################
 # Install and uninstall scripts
 ################################################################################
-
-# Install header files.
-install(DIRECTORY src/
-        DESTINATION include/colmap
-        FILES_MATCHING PATTERN "*.h")
-install(DIRECTORY lib/
-        DESTINATION include/colmap/lib
-        FILES_MATCHING REGEX ".*[.]h|.*[.]hpp|.*[.]inl")
-
-# Generate and install CMake configuration.
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CMakeConfig.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/COLMAPConfig.cmake" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/COLMAPConfig.cmake"
-        DESTINATION "share/colmap")
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CMakeConfigVersion.cmake.in"
-               "${CMAKE_CURRENT_BINARY_DIR}/COLMAPConfigVersion.cmake" @ONLY)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/COLMAPConfigVersion.cmake"
-        DESTINATION "share/colmap")
-
-# Install find_package scripts for dependencies.
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake
-        DESTINATION share/colmap
-        FILES_MATCHING PATTERN "Find*.cmake")
 
 # Install batch scripts under Windows.
 if(IS_MSVC)
@@ -481,3 +275,92 @@ configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CMakeUninstall.cmake.in"
                IMMEDIATE @ONLY)
 add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/CMakeUninstall.cmake)
 set_target_properties(uninstall PROPERTIES FOLDER ${CMAKE_TARGETS_ROOT_FOLDER})
+
+set(COLMAP_EXPORT_LIBS
+    # Internal.
+    colmap_controllers
+    colmap_estimators
+    colmap_exe
+    colmap_feature
+    colmap_geometry
+    colmap_image
+    colmap_math
+    colmap_mvs
+    colmap_optim
+    colmap_retrieval
+    colmap_scene
+    colmap_sensor
+    colmap_sfm
+    colmap_util
+    # Third-party.
+    colmap_lsd
+    colmap_poisson_recon
+    colmap_vlfeat
+)
+if(GUI_ENABLED)
+    list(APPEND COLMAP_EXPORT_LIBS
+         colmap_ui
+    )
+endif()
+if(CUDA_ENABLED)
+    list(APPEND COLMAP_EXPORT_LIBS
+         colmap_util_cuda
+         colmap_mvs_cuda
+    )
+endif()
+if(GPU_ENABLED)
+    list(APPEND COLMAP_EXPORT_LIBS
+         colmap_sift_gpu
+    )
+endif()
+
+# Add unified interface library target to export.
+add_library(colmap INTERFACE)
+target_link_libraries(colmap INTERFACE ${COLMAP_EXPORT_LIBS})
+set(INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+target_include_directories(
+    colmap INTERFACE 
+    $<INSTALL_INTERFACE:${INSTALL_INCLUDE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
+
+install(
+    TARGETS colmap ${COLMAP_EXPORT_LIBS}
+    EXPORT colmap-targets
+    LIBRARY DESTINATION thirdparty/)
+
+# Generate config and version.
+include(CMakePackageConfigHelpers)
+set(PACKAGE_CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/colmap-config.cmake")
+set(INSTALL_CONFIG_DIR "share/colmap")
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/colmap-config.cmake.in ${PACKAGE_CONFIG_FILE}
+    INSTALL_DESTINATION ${INSTALL_CONFIG_DIR})
+install(FILES ${PACKAGE_CONFIG_FILE} DESTINATION ${INSTALL_CONFIG_DIR})
+
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/colmap-config-version.cmake.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/colmap-config-version.cmake" @ONLY)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/colmap-config-version.cmake"
+        DESTINATION "share/colmap")
+
+# Install targets.
+install(
+    EXPORT colmap-targets
+    FILE colmap-targets.cmake
+    NAMESPACE colmap::
+    DESTINATION ${INSTALL_CONFIG_DIR})
+
+# Install header files.
+install(
+    DIRECTORY src/colmap
+    DESTINATION include
+    FILES_MATCHING PATTERN "*.h")
+install(
+    DIRECTORY src/thirdparty
+    DESTINATION include/colmap
+    FILES_MATCHING REGEX ".*[.]h|.*[.]hpp|.*[.]inl")
+
+# Install find_package scripts for dependencies.
+install(
+    DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/cmake
+    DESTINATION share/colmap
+    FILES_MATCHING PATTERN "Find*.cmake")

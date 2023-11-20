@@ -27,7 +27,7 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibration) {
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().NonSvpParams();
+  std::vector<double> params = calibration.Camera().RefracParams();
   std::vector<double> expected_params = {7.3261e-10, 7.49404e-09, -0.03, 0.0501, 0.007, 1.003, 1.473, 1.333};
   double tolerance = 0.001;
   BOOST_TEST(abs(params[0] - params[0]) < tolerance);
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationCalculatesRmsAndStdDeviations) {
   Eigen::Map<Eigen::VectorXd> actual(std_deviations.data(), std_deviations.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_deviations.data(), expected_deviations.size());
   BOOST_TEST(abs(rms - 0.24358256799712524) < 0.00001);
-  BOOST_TEST(actual.isApprox(expected));
+  BOOST_TEST((actual-expected).isMuchSmallerThan(0.00001));
 }
 
 namespace {

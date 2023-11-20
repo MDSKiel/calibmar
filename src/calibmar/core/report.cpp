@@ -48,16 +48,16 @@ namespace calibmar {
         stream << *(intrinsics_std_dev.end() - 1) << std::endl;
       }
       // non_svp
-      std::string non_svp_model_name = camera.IsCameraNonSingleViewPoint() ? camera.NonSvpModelName() : "NONE";
+      std::string non_svp_model_name = camera.IsCameraRefractive() ? camera.RefracModelName() : "NONE";
       stream << "non_svp_model: " << non_svp_model_name << std::endl;
-      if (camera.IsCameraNonSingleViewPoint()) {
+      if (camera.IsCameraRefractive()) {
         // one of the info strings contains a new line...
-        std::string params_info = std::regex_replace(camera.NonSvpParamsInfo(), std::regex("\\n"), " ");
+        std::string params_info = std::regex_replace(camera.RefracParamsInfo(), std::regex("\\n"), " ");
         stream << "# " << params_info << std::endl;
       }
       stream << "non_svp_parameters: [";
-      if (camera.IsCameraNonSingleViewPoint()) {
-        const std::vector<double>& non_svp_params = camera.NonSvpParams();
+      if (camera.IsCameraRefractive()) {
+        const std::vector<double>& non_svp_params = camera.RefracParams();
         std::copy(non_svp_params.begin(), non_svp_params.end() - 1, std::ostream_iterator<double>(stream, ", "));
         stream << *(non_svp_params.end() - 1);
       }
@@ -89,10 +89,10 @@ namespace calibmar {
       int field_width = 13;
       const colmap::Camera& camera = calibration.Camera();
       // camera model
-      std::string header = camera.IsCameraNonSingleViewPoint() ? "Camera & Housing Model:" : "Camera Model:";
+      std::string header = camera.IsCameraRefractive() ? "Camera & Housing Model:" : "Camera Model:";
       stream << header << std::endl << camera.ModelName();
-      if (camera.IsCameraNonSingleViewPoint()) {
-        stream << " " << camera.NonSvpModelName();
+      if (camera.IsCameraRefractive()) {
+        stream << " " << camera.RefracModelName();
       }
       stream << std::endl << std::endl;
       // width & height
@@ -124,17 +124,17 @@ namespace calibmar {
         }
         stream << std::endl;
       }
-      if (camera.IsCameraNonSingleViewPoint()) {
+      if (camera.IsCameraRefractive()) {
         stream << std::endl;
         // housing labels
-        std::vector<std::string> housing_param_names = Split(camera.NonSvpParamsInfo(), ", ");
+        std::vector<std::string> housing_param_names = Split(camera.RefracParamsInfo(), ", ");
         stream << std::left << std::setw(first_column_width) << std::setfill(' ') << "Housing Parameters:";
         for (auto& value : housing_param_names) {
           stream << std::left << std::setw(field_width) << std::setfill(' ') << value;
         }
         stream << std::endl;
         // housing values
-        const std::vector<double>& housing_params = camera.NonSvpParams();
+        const std::vector<double>& housing_params = camera.RefracParams();
         stream << std::left << std::setw(first_column_width) << std::setfill(' ') << "Values:";
         for (auto& value : housing_params) {
           stream << std::left << std::setw(field_width) << std::setfill(' ') << value;

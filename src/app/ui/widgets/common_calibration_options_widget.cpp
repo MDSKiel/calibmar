@@ -1,5 +1,5 @@
 #include "common_calibration_options_widget.h"
-#include <colmap/src/util/misc.h>
+#include <colmap/util/misc.h>
 
 namespace {
   bool TryParseParams(std::vector<double>& params, const std::string& params_string) {

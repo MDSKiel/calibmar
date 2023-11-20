@@ -2,7 +2,7 @@
 #include "calibmar/calibrators/opencv_calibration.h"
 
 #include <algorithm>
-#include <colmap/src/base/camera_models.h>
+#include <colmap/sensor/models.h>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core/eigen.hpp>
 
@@ -41,7 +41,7 @@ namespace calibmar {
     std::vector<std::vector<Eigen::Vector3d>> pointSets3D;
     calibration.GetCorrespondences(pointSets2D, pointSets3D);
 
-    std::vector<Eigen::Vector4d*> rotation_vecs;
+    std::vector<Eigen::Quaterniond*> rotation_vecs;
     std::vector<Eigen::Vector3d*> translation_vecs;
     for (auto& image : calibration.Images()) {
       rotation_vecs.push_back(&image.Rotation());

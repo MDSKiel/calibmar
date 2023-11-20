@@ -16,9 +16,10 @@ namespace calibmar {
     QVBoxLayout* layout = new QVBoxLayout(this);
     AddResultText(report::GenerateResultString(calibration), layout);
 
-    if (calibration.Camera().NonSvpModelId() == colmap::DoubleLayerSphericalRefractiveInterface::kNonSvpModelId &&
+    // only show offset diagramm with dome port
+    if (calibration.Camera().RefracModelId() == colmap::DomePort::kRefracModelId &&
         offset_visu_pixmap_) {
-      std::vector<double>& params = calibration.Camera().NonSvpParams();
+      std::vector<double>& params = calibration.Camera().RefracParams();
       OffsetDiagramWidget* offset_widget = new OffsetDiagramWidget(
           Eigen::Vector3d(params[0], params[1], params[2]), calibration.Camera().CalibrationMatrix(), *offset_visu_pixmap_, this);
 

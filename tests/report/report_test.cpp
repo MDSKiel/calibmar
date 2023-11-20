@@ -14,11 +14,11 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Structure) {
   std::string housing_name =
       HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerSphericalRefractive).model_name;
   camera.SetModelIdFromName(model_name);
-  camera.SetNonSvpModelIdFromName(housing_name);
+  camera.SetRefracModelIdFromName(housing_name);
   camera.SetWidth(1000);
   camera.SetHeight(2000);
   camera.SetParams({1.1, -2, 3, 4, 5, 6, 7, 8});
-  camera.SetNonSvpParams({1, 2, 3, 4, 5, 6, 7, 8});
+  camera.SetRefracParams({1, 2, 3, 4, 5, 6, 7, 8});
   calibration.SetCamera(camera);
   std::stringstream string;
   report::GenerateCalibrationYaml(string, calibration);
@@ -44,11 +44,11 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   std::string housing_name =
       HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerSphericalRefractive).model_name;
   camera.SetModelIdFromName(model_name);
-  camera.SetNonSvpModelIdFromName(housing_name);
+  camera.SetRefracModelIdFromName(housing_name);
   camera.SetWidth(1000);
   camera.SetHeight(2000);
   camera.SetParams({1.1, -2, 3, 4, 5, 6, 7, 8});
-  camera.SetNonSvpParams({1, 2, 3, 4, 5, 6, 7, 8});
+  camera.SetRefracParams({1, 2, 3, 4, 5, 6, 7, 8});
   calibration.SetCamera(camera);
   calibration.SetCalibrationTargetInfo("chessboard, 10, 7, 0.04");
 
@@ -66,9 +66,9 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   BOOST_TEST(parameters.chessboard_columns == 10);
   BOOST_TEST(parameters.chessboard_rows == 7);
   BOOST_TEST(parameters.housing_model.value() == HousingInterfaceType::DoubleLayerSphericalRefractive);
-  BOOST_TEST(parameters.housing_parameters.size() == camera.NonSvpParams().size());
+  BOOST_TEST(parameters.housing_parameters.size() == camera.RefracParams().size());
   for (size_t i = 0; i < parameters.housing_parameters.size(); i++) {
-    BOOST_TEST(parameters.housing_parameters[i] == camera.NonSvpParams()[i]);
+    BOOST_TEST(parameters.housing_parameters[i] == camera.RefracParams()[i]);
   }
   BOOST_TEST(parameters.square_size == 0.04);
 }

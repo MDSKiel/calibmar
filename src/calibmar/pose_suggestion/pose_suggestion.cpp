@@ -4,8 +4,8 @@
 
 #include <Eigen/Geometry>
 #include <Eigen/SparseCore>
-#include <colmap/src/base/pose.h>
-#include <colmap/src/base/projection.h>
+#include <colmap/geometry/pose.h>
+#include <colmap/scene/projection.h>
 #include <iostream>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/core/eigen.hpp>
@@ -66,11 +66,11 @@ namespace {
     // center
     Eigen::Translation3d center(-board_size.first / 2, -board_size.second / 2, 0);
     // rotations
-    // 90° z
+    // 90ï¿½ z
     Eigen::AngleAxisd rotate_z(M_PI / 2, Eigen::Vector3d::UnitZ());
-    // 45° x
+    // 45ï¿½ x
     Eigen::AngleAxisd rotate_x(M_PI / 4, Eigen::Vector3d::UnitX());
-    // 22.5° y
+    // 22.5ï¿½ y
     Eigen::AngleAxisd rotate_y((invert_y ? -1 : 1) * M_PI / 8, Eigen::Vector3d::UnitY());
     // move in front of camera
     Eigen::Translation3d move_z(0, 0, 1.8 * board_size.first);
@@ -95,7 +95,7 @@ namespace {
 
     double x = image_size.first * 0.9;
     double y = image_size.second * 0.9;
-    // flip width & height, because the pattern will be rotated 90°
+    // flip width & height, because the pattern will be rotated 90ï¿½
     double zx = (pattern_height * camera.MeanFocalLength()) / x;
     double zy = (pattern_width * camera.MeanFocalLength()) / y;
     // higher z, so that the longer side is inside the image
@@ -103,7 +103,7 @@ namespace {
 
     // center
     Eigen::Translation3d center(-board_size.first / 2, -board_size.second / 2, 0);
-    // 90° z
+    // 90ï¿½ z
     Eigen::AngleAxisd rotate_z(M_PI / 2, Eigen::Vector3d::UnitZ());
     // move in front of camera
     Eigen::Translation3d move_z(0, 0, z);
@@ -141,9 +141,9 @@ namespace calibmar {
 
       Eigen::MatrixXd A, B;
       for (size_t i = 0; i < images.size(); i++) {
-        const Eigen::Vector4d& rot = images[i].Rotation();
+        const Eigen::Quaterniond& rot = images[i].Rotation();
         const Eigen::Vector3d& trans = images[i].Translation();
-        Eigen::Matrix3d rot_mat = Eigen::Quaterniond(rot(0), rot(1), rot(2), rot(3)).toRotationMatrix();
+        Eigen::Matrix3d rot_mat = rot.toRotationMatrix();
         ComputeJacobian(rot_mat, trans, points3D, camera, A, B);
 
         jacobian_intrinsics.block(i * num_points * 2, 0, A.rows(), A.cols()) = A;
@@ -264,7 +264,7 @@ namespace calibmar {
       Eigen::Matrix3d rot = Eigen::Quaterniond(quat(0), quat(1), quat(2), quat(3)).toRotationMatrix();
       Eigen::Affine3d trans = Eigen::Translation3d(translation) * Eigen::Affine3d(rot);
       for (const auto& [id, point] : calibration.Points3D()) {
-        Eigen::Vector2d point_image = camera.WorldToImage((trans * point).hnormalized());
+        Eigen::Vector2d point_image = camera.ImgFromCam((trans * point).hnormalized());
         // all points must lay inside image with border_tolerance
         if ((point_image.x() < border_tolerance || point_image.x() > camera.Width() - border_tolerance) ||
             ((point_image.y() < border_tolerance || point_image.y() > camera.Height() - border_tolerance))) {
@@ -363,13 +363,11 @@ namespace calibmar {
       const colmap::Camera& camera = calibration.Camera();
       std::vector<Eigen::Vector2d> points2D;
       for (const calibmar::Image& image : calibration.Images()) {
-        const Eigen::Vector4d& rot = image.Rotation();
-        Eigen::Affine3d trans =
-            Eigen::Quaterniond(rot(0), rot(1), rot(2), rot(3)).normalized() * Eigen::Translation3d(image.Translation());
+        Eigen::Affine3d trans = image.Rotation().normalized() * Eigen::Translation3d(image.Translation());
         for (const auto& [idx, id] : image.Correspondences()) {
           const Eigen::Vector3d& point = calibration.Point3D(id);
           // TODO: Points are projected inside compute jacobian already, projecting here could be avoided.
-          points2D.push_back(camera.WorldToImage((trans * point).hnormalized()));
+          points2D.push_back(camera.ImgFromCam((trans * point).hnormalized()));
         }
       }
 
@@ -381,7 +379,7 @@ namespace calibmar {
       ComputeCornerUncertaintyAutoCorrMat(points2D, views, pattern_cols_rows, AC_matrix_extendable);
 
       double translation_bound = std::max(board_size.first, board_size.second) * 4;
-      double rotation_bound = M_PI / 2;  // 90°
+      double rotation_bound = M_PI / 2;  // 90ï¿½
       std::vector<double> lb{-rotation_bound, -rotation_bound, -rotation_bound, -translation_bound, -translation_bound, 0};
       std::vector<double> ub{rotation_bound,    rotation_bound,    rotation_bound,
                              translation_bound, translation_bound, translation_bound};

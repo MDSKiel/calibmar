@@ -8,8 +8,8 @@
 #include <boost/test/unit_test.hpp>
 #include <calibmar/calibrators/calibrator.h>
 #include <calibmar/readers/filesystem_reader.h>
-#include <colmap/src/base/pose.h>
-#include <colmap/src/base/projection.h>
+#include <colmap/geometry/pose.h>
+#include <colmap/scene/projection.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

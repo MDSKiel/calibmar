@@ -56,7 +56,7 @@ namespace {
 
   double CalibrateCameraCV(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Vector4d*>& rotation_vecs,
+                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs, std::vector<double>& std_deviations_intrinsics,
                            std::vector<double>& std_deviations_extrinsics, std::vector<double>& per_view_rms) {
     int flags = TranslateToOpenCVFlags(camera.ModelId());
@@ -100,7 +100,7 @@ namespace {
       Eigen::Vector3d rotation;
       cv::cv2eigen(rotation_cv[i], rotation);
       Eigen::Quaterniond quat(Eigen::AngleAxisd(rotation.norm(), rotation.normalized()));
-      *rotation_vecs[i] = {quat.w(), quat.x(), quat.y(), quat.z()};
+      *rotation_vecs[i] = quat;
 
       Eigen::Vector3d translation;
       cv::cv2eigen(translation_cv[i], translation);
@@ -119,7 +119,7 @@ namespace calibmar {
 
     double CalibrateCamera(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Vector4d*>& rotation_vecs,
+                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs, std::vector<double>& std_deviations_intrinsics,
                            std::vector<double>& std_deviations_extrinsics, std::vector<double>& per_view_rms) {
       return CalibrateCameraCV(object_points, image_points, camera, use_intrinsic_guess, fast, rotation_vecs, translation_vecs,
@@ -128,7 +128,7 @@ namespace calibmar {
 
     double CalibrateCamera(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Vector4d*>& rotation_vecs,
+                           bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs) {
       std::vector<double> std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms;
       return CalibrateCameraCV(object_points, image_points, camera, use_intrinsic_guess, fast, rotation_vecs, translation_vecs,
