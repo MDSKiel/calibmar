@@ -3,7 +3,7 @@
 #include "calibmar/core/image.h"
 
 #include <colmap/scene/camera.h>
-#include <unordered_map>
+#include <map>
 
 namespace calibmar {
   // Calibration holds all information about a single calibration.
@@ -21,9 +21,9 @@ namespace calibmar {
     const Eigen::Vector3d& Point3D(uint32_t point_id) const;
     uint32_t AddPoint3D(const Eigen::Vector3d& xyz);
 
-    std::unordered_map<uint32_t, Eigen::Vector3d>& Points3D();
-    const std::unordered_map<uint32_t, Eigen::Vector3d>& Points3D() const;
-    void SetPoints3D(const std::unordered_map<uint32_t, Eigen::Vector3d>& points3D);
+    std::map<uint32_t, Eigen::Vector3d>& Points3D();
+    const std::map<uint32_t, Eigen::Vector3d>& Points3D() const;
+    void SetPoints3D(const std::map<uint32_t, Eigen::Vector3d>& points3D);
 
     std::vector<class Image>& Images();
     const std::vector<class Image>& Images() const;
@@ -54,7 +54,7 @@ namespace calibmar {
     std::vector<double> intrinsics_std_deviations_;
     std::vector<double> housing_params_std_deviations_;
     std::vector<class Image> images_;
-    std::unordered_map<uint32_t, Eigen::Vector3d> points3D_;
+    std::map<uint32_t, Eigen::Vector3d> points3D_;
     // used to generate point id
     uint32_t number_of_points3D = 0;
   };
@@ -100,14 +100,14 @@ namespace calibmar {
     return id;
   }
 
-  inline std::unordered_map<uint32_t, Eigen::Vector3d>& Calibration::Points3D() {
+  inline std::map<uint32_t, Eigen::Vector3d>& Calibration::Points3D() {
     return points3D_;
   }
-  inline const std::unordered_map<uint32_t, Eigen::Vector3d>& Calibration::Points3D() const {
+  inline const std::map<uint32_t, Eigen::Vector3d>& Calibration::Points3D() const {
     return points3D_;
   }
 
-  inline void Calibration::SetPoints3D(const std::unordered_map<uint32_t, Eigen::Vector3d>& points3D) {
+  inline void Calibration::SetPoints3D(const std::map<uint32_t, Eigen::Vector3d>& points3D) {
     points3D_ = points3D;
   }
 

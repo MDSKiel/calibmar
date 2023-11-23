@@ -37,15 +37,15 @@ namespace calibmar {
     // Get the chessboard target 3D points. Useful to set in the calibration.
     //
     // @return 3D points mapped to their index.
-    const std::unordered_map<uint32_t, Eigen::Vector3d>& Points3D() override;
+    const std::map<uint32_t, Eigen::Vector3d>& Points3D() override;
 
    private:
     Options options_;
 
-    std::unordered_map<uint32_t, Eigen::Vector3d> points3D_;
+    std::map<uint32_t, Eigen::Vector3d> points3D_;
   };
 
-  inline const std::unordered_map<uint32_t, Eigen::Vector3d>& ChessboardFeatureExtractor::Points3D() {
+  inline const std::map<uint32_t, Eigen::Vector3d>& ChessboardFeatureExtractor::Points3D() {
     return points3D_;
   }
 }

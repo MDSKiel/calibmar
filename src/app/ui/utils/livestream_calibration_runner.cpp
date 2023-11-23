@@ -114,8 +114,8 @@ namespace calibmar {
       // INFO: all interaction between the extraction thread and this one
       // is guarded by the new_extraction_/extract_ signal, so no locking is needed
       if (new_extraction_) {
-        // move image to extraction instead for next extraction
-        current_pixmap_ = std::move(pixmap);
+        // clone image to extraction so it can extract in parallel
+        current_pixmap_ = std::make_unique<Pixmap>(pixmap.get()->Clone());
 
         current_draw_points_.clear();
         for (Eigen::Vector2d& point : current_extracted_points_) {
@@ -128,7 +128,6 @@ namespace calibmar {
 
         new_extraction_ = false;
         extract_.Set();
-        continue;
       }
 
       // draw currently extracted points and target
@@ -153,24 +152,6 @@ namespace calibmar {
     // To allow the extraction thread to close
     extract_.Set();
 
-    // Move extraction images to calibration UI
-    QMetaObject::invokeMethod(calibration_widget_,
-                              [calibration_widget = this->calibration_widget_, extraction_widget = this->extraction_widget_]() {
-      extraction_widget->setVisible(false);
-
-      std::vector<ExtractionImageWidget*> imgs = extraction_widget->RemoveExtractionImagesWidgets();
-      for (auto widget : imgs) {
-        calibration_widget->AddExtractionItem(widget);
-      }
-
-      delete extraction_widget;
-
-      calibration_widget->setVisible(true);
-      calibration_widget->StartCalibration();
-
-      calibration_widget->update();
-    });
-
     Calibrator::Options calibrator_options;
     if (dialog_options_.initial_camera_parameters.has_value()) {
       calibration.SetCamera(
@@ -183,6 +164,27 @@ namespace calibmar {
 
     try {
       extraction_thread->join();
+
+      // Move extraction images to calibration UI
+      // Also clean up extraction_widget (this has to be done after the extraction_thread has joined, since it accesses the
+      // widget)
+      QMetaObject::invokeMethod(calibration_widget_,
+                                [calibration_widget = this->calibration_widget_, extraction_widget = this->extraction_widget_]() {
+        extraction_widget->setVisible(false);
+
+        std::vector<ExtractionImageWidget*> imgs = extraction_widget->RemoveExtractionImagesWidgets();
+        for (auto widget : imgs) {
+          calibration_widget->AddExtractionItem(widget);
+        }
+
+        delete extraction_widget;
+
+        calibration_widget->setVisible(true);
+        calibration_widget->StartCalibration();
+
+        calibration_widget->update();
+      });
+
       calibrator.Calibrate(calibration);
       QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = this->calibration_widget_,
                                                       last_pixmap = std::move(last_pixmap_), &calibration]() mutable {

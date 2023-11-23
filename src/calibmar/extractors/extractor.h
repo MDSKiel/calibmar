@@ -3,7 +3,7 @@
 #include "calibmar/core/image.h"
 #include "calibmar/core/pixmap.h"
 #include <Eigen/Core>
-#include <unordered_map>
+#include <map>
 
 namespace calibmar {
 
@@ -16,6 +16,6 @@ namespace calibmar {
 
     virtual Status Extract(Image& image, const Pixmap& pixmap) = 0;
 
-    virtual const std::unordered_map<uint32_t, Eigen::Vector3d>& Points3D() = 0;
+    virtual const std::map<uint32_t, Eigen::Vector3d>& Points3D() = 0;
   };
 }
