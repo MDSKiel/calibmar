@@ -5,7 +5,9 @@
 #include <QToolButton>
 
 namespace calibmar {
-  CollapsibleWidget::CollapsibleWidget(const QString& title, QWidget* parent) {
+  CollapsibleWidget::CollapsibleWidget(const QString& title, const std::function<void(bool)> collapse_toggeled_callback,
+                                       QWidget* parent)
+      : collapse_toggeled_callback_(collapse_toggeled_callback) {
     QToolButton* toggle_button = new QToolButton(this);
     toggle_button->setStyleSheet("QToolButton { border: none; }");
     toggle_button->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -30,6 +32,10 @@ namespace calibmar {
       if (this->widget_) {
         widget_->setFixedHeight(checked ? target_height_ : 0);
         main_layout_->setVerticalSpacing(checked ? vertical_spacing_ : 0);
+      }
+
+      if(collapse_toggeled_callback_){
+        collapse_toggeled_callback_(checked);
       }
     });
   }

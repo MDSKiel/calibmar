@@ -54,6 +54,18 @@
             }
         },
         {
+            "name": "linux-default-release-with-debug-info",
+            "displayName": "Linux x64 Release with Debug Info",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "cacheVariables": {
+                "CUDA_ENABLED": "OFF",
+                "TESTS_ENABLED": "ON",
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+            }
+        },
+        {
             "name": "linux-default-release",
             "displayName": "Linux x64 Release",
             "generator": "Unix Makefiles",

@@ -1,4 +1,6 @@
 target_sources(calibmar PRIVATE
+	aruco_3D_target_tracker.cpp
+	chessboard_target_tracker.cpp
 	pose_suggestion.cpp
 	pose_suggestion.h
 	simmulated_annealing.cpp

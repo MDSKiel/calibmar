@@ -18,10 +18,6 @@ namespace calibmar {
       double square_size = 1.0;
 
       void Check();
-      bool Checked();
-
-     private:
-      bool checked_ = false;
     };
 
     ChessboardFeatureExtractor(const Options& options);
@@ -37,7 +33,7 @@ namespace calibmar {
     // Get the chessboard target 3D points. Useful to set in the calibration.
     //
     // @return 3D points mapped to their index.
-    const std::map<uint32_t, Eigen::Vector3d>& Points3D() override;
+    const std::map<uint32_t, Eigen::Vector3d>& Points3D();
 
    private:
     Options options_;

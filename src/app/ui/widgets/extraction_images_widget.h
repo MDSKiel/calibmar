@@ -5,6 +5,7 @@
 
 #include "calibmar/extractors/chessboard_extractor.h"
 #include "ui/utils/flow_layout.h"
+#include "ui/utils/calibration_target_visualization.h"
 #include "ui/widgets/extraction_image_widget.h"
 
 namespace calibmar {
@@ -12,7 +13,7 @@ namespace calibmar {
   class ExtractionImagesWidget : public QWidget {
    public:
     ExtractionImagesWidget(QWidget* parent = nullptr,
-                           const std::function<void(const std::string&, std::pair<int, int>&)> double_click_callback = nullptr);
+                           const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback = nullptr);
 
     void AddImage(ExtractionImageWidget* widget);
 
@@ -21,6 +22,6 @@ namespace calibmar {
 
    private:
     FlowLayout* main_layout_;
-    const std::function<void(const std::string&, std::pair<int, int>&)> double_click_callback_;
+    const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback_;
   };
 }

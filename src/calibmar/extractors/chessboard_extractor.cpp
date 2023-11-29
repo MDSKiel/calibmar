@@ -1,5 +1,6 @@
 #include "calibmar/extractors/chessboard_extractor.h"
 
+#include "chessboard_extractor.h"
 #include <opencv2/calib3d.hpp>
 
 namespace calibmar {
@@ -11,11 +12,6 @@ namespace calibmar {
     if (square_size <= 0.0) {
       throw std::runtime_error("Square size must be greater zero.");
     }
-    checked_ = true;
-  }
-
-  bool ChessboardFeatureExtractor::Options::Checked() {
-    return checked_;
   }
 
   ChessboardFeatureExtractor::ChessboardFeatureExtractor(const Options& options) : options_(options) {
@@ -34,10 +30,9 @@ namespace calibmar {
     }
   }
 
-  FeatureExtractor::Status ChessboardFeatureExtractor::Extract(Image& image, const Pixmap& pixmap) {
-    if (!options_.Checked()) {
-      options_.Check();
-    }
+  FeatureExtractor::Status ChessboardFeatureExtractor::Extract(Image& image, const Pixmap& pixmap) {    
+    options_.Check();
+
     if (pixmap.Width() <= 0 || pixmap.Height() <= 0) {
       return Status::DETECTION_ERROR;
     }

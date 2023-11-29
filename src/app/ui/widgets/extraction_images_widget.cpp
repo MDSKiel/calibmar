@@ -1,11 +1,10 @@
 #include "extraction_images_widget.h"
 
-#include "extraction_image_widget.h"
 
 namespace calibmar {
 
   ExtractionImagesWidget::ExtractionImagesWidget(
-      QWidget* parent, const std::function<void(const std::string&, std::pair<int, int>&)> double_click_callback)
+      QWidget* parent, const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback)
       : QWidget(parent), double_click_callback_(double_click_callback) {
     main_layout_ = new FlowLayout(this);
     setContentsMargins(0, 0, 0, 0);
@@ -27,9 +26,9 @@ namespace calibmar {
     }
 
     if (widget && double_click_callback_) {
-      std::pair<int, int> cols_rows = widget->ColumnsRows();
+      const TargetVisualizer& visualizer = widget->TargetVisualizer();
       const std::string& image_name = widget->ImageName();
-      double_click_callback_(image_name, cols_rows);
+      double_click_callback_(image_name, visualizer);
     }
   }
 }

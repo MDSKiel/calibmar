@@ -410,6 +410,7 @@ int RunModelAligner(int argc, char** argv) {
 
   if (alignment_success) {
     std::cout << "=> Alignment succeeded" << std::endl;
+    reconstruction.Transform(tform);
     reconstruction.Write(output_path);
     if (!transform_path.empty()) {
       tform.ToFile(transform_path);

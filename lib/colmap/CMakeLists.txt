@@ -322,7 +322,7 @@ target_include_directories(
     colmap INTERFACE 
     $<INSTALL_INTERFACE:${INSTALL_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
-
+    
 install(
     TARGETS colmap ${COLMAP_EXPORT_LIBS}
     EXPORT colmap-targets

@@ -698,12 +698,14 @@ size_t IncrementalTriangulator::Merge(const Options& options,
               reconstruction_->Camera(test_image.CameraId());
           const Point2D& test_point2D =
               test_image.Point2D(test_track_el.point2D_idx);
-          if (CalculateSquaredReprojectionError(test_point2D.xy,
+          const double squared_reproj_error =
+              CalculateSquaredReprojectionError(test_point2D.xy,
                                                 merged_xyz,
                                                 test_image.CamFromWorld(),
                                                 test_camera,
-                                                options.enable_refraction) >
-              max_squared_reproj_error) {
+                                                options.enable_refraction);
+          if (std::isnan(squared_reproj_error) ||
+              squared_reproj_error > max_squared_reproj_error) {
             merge_success = false;
             break;
           }
@@ -783,12 +785,15 @@ size_t IncrementalTriangulator::Complete(const Options& options,
           continue;
         }
 
-        if (CalculateSquaredReprojectionError(point2D.xy,
+        const double squared_reproj_error =
+            CalculateSquaredReprojectionError(point2D.xy,
                                               point3D.XYZ(),
                                               image.CamFromWorld(),
                                               camera,
-                                              options.enable_refraction) >
-            max_squared_reproj_error) {
+                                              options.enable_refraction);
+
+        if (std::isnan(squared_reproj_error) ||
+            squared_reproj_error > max_squared_reproj_error) {
           continue;
         }
 

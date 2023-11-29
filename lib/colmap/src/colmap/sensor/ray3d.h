@@ -22,8 +22,8 @@ struct Ray3D {
 };
 
 // Compute ray refraction accroding to Snell's law
-// (note that the total reflection case is not handled here, if there is total
-// reflection happens, the refracted ray will become (-nan -nan -nan))
+// (note that the total reflection case is not handled here, if there is a total
+// reflection event happening, the refracted ray will become (-nan -nan -nan))
 //
 // @param: normal is the normal vector of the interface which points from the
 // interface towards the side of the outgoing ray.

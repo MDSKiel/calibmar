@@ -23,13 +23,13 @@ namespace calibmar {
     housing_type_selector_ = new HousingSelectorWidget(this);
 
     // calibration target groupbox
-    chessboard_target_options_ = new ChessboardTargetOptionsWidget(this);
+    calibration_target_options_ = new CalibrationTargetOptionsWidget(this);
 
     // main layout
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(camera_model_selector_);
     layout->addWidget(housing_type_selector_);
-    layout->addWidget(chessboard_target_options_);
+    layout->addWidget(calibration_target_options_);
     layout->setSizeConstraint(QLayout::SetMinimumSize);
 
     layout->setContentsMargins(0, 0, 0, 0);
@@ -97,8 +97,30 @@ namespace calibmar {
                                                                      colmap::VectorToCSV<double>(parameters.housing_parameters));
     }
     housing_type_selector_->SetHousingOptions(housing_options);
-    chessboard_target_options_->SetChessBoardTargetOptions(parameters.chessboard_columns, parameters.chessboard_rows,
-                                                           parameters.square_size);
+
+    switch (parameters.calibration_target) {
+      case CalibrationTargetType::Chessboard: {
+        ChessboardFeatureExtractor::Options chessboard_options;
+        chessboard_options.chessboard_columns = parameters.chessboard_columns;
+        chessboard_options.chessboard_rows = parameters.chessboard_rows;
+        chessboard_options.square_size = parameters.square_size;
+        calibration_target_options_->SetCalibrationTargetOptions(chessboard_options);
+        break;
+      }
+      case CalibrationTargetType::Target3DAruco: {
+        ArucoSiftFeatureExtractor::Options aruco_options;
+        aruco_options.aruco_type = parameters.aruco_type;
+        aruco_options.masking_scale_factor = parameters.aruco_scale_factor;
+        calibration_target_options_->SetCalibrationTargetOptions(aruco_options);
+        break;
+      }
+      case CalibrationTargetType::Target3D: {
+        calibration_target_options_->SetCalibrationTargetOptions(SiftFeatureExtractor::Options());
+        break;
+      }
+      default:
+        break;
+    }
   }
 
   CameraModelType CommonCalibrationOptionsWidget::CameraModel() {
@@ -113,15 +135,11 @@ namespace calibmar {
     return housing_calibration_;
   }
 
-  int CommonCalibrationOptionsWidget::ChessboardColumns() {
-    return chessboard_target_options_->ChessboardColumns();
+  CalibrationTargetOptionsWidget::Options CommonCalibrationOptionsWidget::CalibrationTargetOptions() {
+    return calibration_target_options_->CalibrationTargetOptions();
   }
 
-  int CommonCalibrationOptionsWidget::ChessboardRows() {
-    return chessboard_target_options_->ChessboardRows();
-  }
-
-  double CommonCalibrationOptionsWidget::SquareSize() {
-    return chessboard_target_options_->SquareSize();
+  void CommonCalibrationOptionsWidget::ForceArucoFor3DTarget(bool force) {
+    calibration_target_options_->ForceArucoFor3DTarget(force);
   }
 }

@@ -2,6 +2,7 @@
 #include "main_window.h"
 
 #include "calibmar/calibrators/calibrator.h"
+#include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/calibrators/housing_calibrator.h"
 #include "calibmar/core/report.h"
 #include "calibmar/readers/filesystem_reader.h"
@@ -12,6 +13,7 @@
 #include "ui/dialogs/test_widget_dialog.h"
 #include "ui/utils/files_calibration_runner.h"
 #include "ui/utils/livestream_calibration_runner.h"
+#include "ui/utils/calibration_target_visualization.h"
 #include "ui/widgets/calibration_result_widget.h"
 #include "ui/widgets/zoomable_scroll_area.h"
 
@@ -215,7 +217,7 @@ namespace calibmar {
   }
 
   // Callback. Used to display an extracted image in a separate dialog
-  void MainWindow::DisplayExtractionImage(const std::string& image_name, std::pair<int, int>& cols_rows) {
+  void MainWindow::DisplayExtractionImage(const std::string& image_name, const TargetVisualizer& target_visualizer) {
     if (!calibration_) {
       return;
     }
@@ -230,11 +232,7 @@ namespace calibmar {
     // if known image add point visu
     for (auto& image : calibration_->Images()) {
       if (image.Name() == image_name) {
-        std::vector<cv::Point2f> cornerPoints;
-        for (const Eigen::Vector2d& point : image.Points2D()) {
-          cornerPoints.push_back(cv::Point2f(point.x(), point.y()));
-        }
-        cv::drawChessboardCorners(img.Data(), cv::Size(cols_rows.second - 1, cols_rows.first - 1), cornerPoints, true);
+        target_visualizer.DrawTargetOnImage(img, image);
         break;
       }
     }

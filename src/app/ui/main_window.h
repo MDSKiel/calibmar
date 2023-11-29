@@ -27,7 +27,7 @@ namespace calibmar {
     void CreateActions();
     void BeginNewCalibration();
     void EndNewCalibration();
-    void DisplayExtractionImage(const std::string& image_name, std::pair<int, int>& cols_rows);
+    void DisplayExtractionImage(const std::string& image_name, const TargetVisualizer& target_visualizer);
 
     QScrollArea* scroll_area_;
     QVBoxLayout* main_layout_;

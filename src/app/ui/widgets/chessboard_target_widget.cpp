@@ -1,10 +1,10 @@
 
 #include "ui/widgets/chessboard_target_widget.h"
+#include "chessboard_target_widget.h"
 
 namespace calibmar {
 
-  ChessboardTargetOptionsWidget::ChessboardTargetOptionsWidget(QWidget* parent) : QGroupBox(parent) {
-    setTitle("Chessboard Calibration Target");
+  ChessboardTargetOptionsWidget::ChessboardTargetOptionsWidget(QWidget* parent) : QWidget(parent) {
     QLabel* chessboard_columns_label = new QLabel(this);
     chessboard_columns_label->setText("Number of Chessboard Columns");
     chess_board_columns_edit_ = new QSpinBox(this);
@@ -32,21 +32,18 @@ namespace calibmar {
     formLayout_chessboard->setFieldGrowthPolicy(QFormLayout::FieldsStayAtSizeHint);
   }
 
-  void ChessboardTargetOptionsWidget::SetChessBoardTargetOptions(int columns, int rows, double square_size) {
-    chess_board_columns_edit_->setValue(columns);
-    chess_board_rows_edit_->setValue(rows);
-    square_size_edit_->setValue(square_size);
+  void ChessboardTargetOptionsWidget::SetChessBoardTargetOptions(const ChessboardFeatureExtractor::Options& options) {
+    chess_board_columns_edit_->setValue(options.chessboard_columns);
+    chess_board_rows_edit_->setValue(options.chessboard_rows);
+    square_size_edit_->setValue(options.square_size);
   }
 
-  int ChessboardTargetOptionsWidget::ChessboardColumns() {
-    return chess_board_columns_edit_->value();
-  }
+  ChessboardFeatureExtractor::Options ChessboardTargetOptionsWidget::ChessboardTargetOptions() {
+    ChessboardFeatureExtractor::Options options;
+    options.chessboard_columns = chess_board_columns_edit_->value();
+    options.chessboard_rows = chess_board_rows_edit_->value();
+    options.square_size = square_size_edit_->value();
 
-  int ChessboardTargetOptionsWidget::ChessboardRows() {
-    return chess_board_rows_edit_->value();
-  }
-
-  double ChessboardTargetOptionsWidget::SquareSize() {
-    return square_size_edit_->value();
+    return options;
   }
 }

@@ -3,28 +3,49 @@
 #include "calibmar/extractors/chessboard_extractor.h"
 
 namespace calibmar {
-  // TargetTracker compares sets of chessboard target points
-  // and determines if they are stable or identical within a certain tolerance.
   class TargetTracker {
    public:
-    TargetTracker(const std::pair<int, int>& columns_rows, const std::pair<int, int>& image_size, double limit_percentage = 0.03);
+    TargetTracker(const std::pair<int, int>& image_size, double limit_percentage);
 
-    // Update the current points. Points shape must adhere to columns_rows
-    void Update(const std::vector<Eigen::Vector2d>& current_points);
-    // True, if the edge corners of last and current points are within image_size * limit_percentage
-    bool IsStable();
-    // True, if stable and current points and target points are within image_size * limit_percentage
-    bool TargetPointsReached();
-    // Set target points. Points shape must adhere to columns_rows
-    void SetTargetPoints(const std::vector<Eigen::Vector2d>& target_points);
+    virtual ~TargetTracker() = default;
 
-   private:
-    bool CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a, const std::vector<Eigen::Vector2d>& points_b);
+    // Update the current points.
+    virtual void Update(const std::vector<Eigen::Vector2d>& current_points);
+    // True, if the edge corners of last and current points are within tolerance
+    virtual bool IsStable();
+    // True, if stable and current points and target points are within tolerance
+    virtual bool TargetPointsReached();
+    // Set target points.
+    virtual void SetTargetPoints(const std::vector<Eigen::Vector2d>& target_points);
+
+   protected:
+    virtual bool CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a, const std::vector<Eigen::Vector2d>& points_b);
 
     std::vector<Eigen::Vector2d> target_points_;
     std::vector<Eigen::Vector2d> last_points_;
     bool stable_;
     std::vector<size_t> outer_corner_idx_;
     std::pair<double, double> limits_xy_;
+  };
+
+  // ChessboardTargetTracker compares sets of chessboard target points
+  // and determines if they are stable or identical within a certain tolerance.
+  class ChessboardTargetTracker : public TargetTracker {
+   public:
+    ChessboardTargetTracker(const std::pair<int, int>& columns_rows, const std::pair<int, int>& image_size,
+                            double limit_percentage = 0.03);
+
+    ~ChessboardTargetTracker() = default;
+  };
+
+  class Aruco3DTargetTracker : public TargetTracker {
+   public:
+    Aruco3DTargetTracker(const std::pair<int, int>& image_size, double limit_percentage = 0.03);
+
+    ~Aruco3DTargetTracker() = default;
+
+   protected:
+    virtual bool CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,
+                                  const std::vector<Eigen::Vector2d>& points_b) override;
   };
 }

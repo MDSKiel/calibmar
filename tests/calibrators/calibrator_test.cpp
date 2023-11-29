@@ -1,4 +1,4 @@
-#include "calibmar/calibrators/calibrator.h"
+#include "calibmar/calibrators/basic_calibrator.h"
 
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
@@ -17,9 +17,9 @@ namespace {
 BOOST_AUTO_TEST_CASE(BasicCalibration) {
   Calibration calibration;
   PrepareCalibration(calibration);
-  Calibrator::Options options;
+  BasicCalibrator::Options options;
   options.image_size = image_size;
-  Calibrator calibrator(options);
+  BasicCalibrator calibrator(options);
 
   calibrator.Calibrate(calibration);
 
@@ -38,11 +38,11 @@ std::vector<CameraModelType> models = {CameraModelType::SimplePinholeCameraModel
 // This is more of a regression test. The expected values are not necessarily correct, but used to detect changes.
 BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), model) {
   Calibration calibration;
-  Calibrator::Options options;
+  BasicCalibrator::Options options;
   options.camera_model = model;
   options.image_size = image_size;
   PrepareCalibration(calibration);
-  Calibrator calibrator(options);
+  BasicCalibrator calibrator(options);
 
   calibrator.Calibrate(calibration);
 
@@ -59,11 +59,11 @@ std::vector<CameraModelType> std_dev_models = {CameraModelType::SimplePinholeCam
 // OpenCV fisheye calibration does not support returning std deviations
 BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength, boost::unit_test::data::make(std_dev_models), model) {
   Calibration calibration;
-  Calibrator::Options options;
+  BasicCalibrator::Options options;
   options.camera_model = model;
   options.image_size = image_size;
   PrepareCalibration(calibration);
-  Calibrator calibrator(options);
+  BasicCalibrator calibrator(options);
 
   calibrator.Calibrate(calibration);
 
@@ -77,9 +77,9 @@ BOOST_AUTO_TEST_CASE(IntrinsicGuess) {
   Calibration calibration;
   PrepareCalibration(calibration);
   calibration.SetCamera(CameraModel::InitCamera(CameraModelType::PinholeCameraModel, image_size, {300, 300, 135, 90}));
-  Calibrator::Options options;
+  BasicCalibrator::Options options;
   options.use_intrinsics_guess = true;
-  Calibrator calibrator(options);
+  BasicCalibrator calibrator(options);
 
   calibrator.Calibrate(calibration);
 

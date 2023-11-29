@@ -108,7 +108,8 @@ void BundleAdjustmentWidget::Run() {
   thread->AddCallback(Thread::FINISHED_CALLBACK,
                       [this]() { render_action_->trigger(); });
 
-  if (!options_->mapper->use_pose_prior) {
+  if (!options_->mapper->use_pose_prior &&
+      !options_->mapper->enable_refraction) {
     // Normalize scene for numerical stability and
     // to avoid large scale changes in viewer.
     reconstruction_->Normalize();

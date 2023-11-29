@@ -61,12 +61,12 @@ void AdjustGlobalBundle(const IncrementalMapperOptions& options,
     custom_ba_options.solver_options.max_linear_solver_iterations = 200;
   }
 
-  if (options.ba_refine_intrin_after_num_images > 0 &&
-      num_reg_images >
-          static_cast<size_t>(options.ba_refine_intrin_after_num_images)) {
-    custom_ba_options.refine_focal_length = true;
-    custom_ba_options.refine_principal_point = true;
-    custom_ba_options.refine_extra_params = true;
+  if (options.ba_fix_intrin_until_num_images > 0 &&
+      num_reg_images <
+          static_cast<size_t>(options.ba_fix_intrin_until_num_images)) {
+    custom_ba_options.refine_focal_length = false;
+    custom_ba_options.refine_principal_point = false;
+    custom_ba_options.refine_extra_params = false;
   }
 
   if (num_reg_images <
@@ -85,12 +85,12 @@ void IterativeLocalRefinement(const IncrementalMapperOptions& options,
 
   const size_t num_reg_images = mapper->GetReconstruction().NumRegImages();
 
-  if (options.ba_refine_intrin_after_num_images > 0 &&
+  if (options.ba_fix_intrin_until_num_images > 0 &&
       num_reg_images >
-          static_cast<size_t>(options.ba_refine_intrin_after_num_images)) {
-    ba_options.refine_focal_length = true;
-    ba_options.refine_principal_point = true;
-    ba_options.refine_extra_params = true;
+          static_cast<size_t>(options.ba_fix_intrin_until_num_images)) {
+    ba_options.refine_focal_length = false;
+    ba_options.refine_principal_point = false;
+    ba_options.refine_extra_params = false;
   }
 
   if (num_reg_images <

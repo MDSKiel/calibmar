@@ -81,6 +81,7 @@ namespace calibmar {
 
     // common options
     calibration_options_widget_ = new CommonCalibrationOptionsWidget(this);
+    calibration_options_widget_->ForceArucoFor3DTarget(true);
 
     // import button
     QHBoxLayout* horizontalLayout_run = new QHBoxLayout();
@@ -114,11 +115,9 @@ namespace calibmar {
   StreamCalibrationDialog::Options StreamCalibrationDialog::GetOptions() {
     Options options;
     options.camera_model = calibration_options_widget_->CameraModel();
-    options.chessboard_columns = calibration_options_widget_->ChessboardColumns();
-    options.chessboard_rows = calibration_options_widget_->ChessboardRows();
+    options.calibration_target_options = calibration_options_widget_->CalibrationTargetOptions();
     options.housing_calibration = calibration_options_widget_->HousingOptions();
     options.initial_camera_parameters = calibration_options_widget_->InitialCameraParameters();
-    options.square_size = calibration_options_widget_->SquareSize();
     options.device_index = device_index_->value();
     options.acquisition_mode = acquisition_modes_.at(mode_combobox_->currentIndex()).first;
     options.save_images_directory = save_images_directory_;
@@ -225,5 +224,6 @@ namespace calibmar {
     ImportedParameters p = ImportedParameters::ImportFromYaml(path);
     directory_edit_->setText(QString::fromStdString(p.directory));
     calibration_options_widget_->SetImportedParameters(p);
+    calibration_options_widget_->ForceArucoFor3DTarget(true);
   }
 }

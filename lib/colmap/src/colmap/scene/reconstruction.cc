@@ -453,8 +453,8 @@ Reconstruction Reconstruction::Crop(
   for (const auto& image : images_) {
     auto new_image = image.second;
     new_image.SetRegistered(false);
-    for (auto& point2D : new_image.Points2D()) {
-      point2D.point3D_id = kInvalidPoint3DId;
+    for (point2D_t pid = 0; pid < new_image.NumPoints2D(); ++pid) {
+      new_image.ResetPoint3DForPoint2D(pid);
     }
     cropped_reconstruction.AddImage(std::move(new_image));
   }
@@ -1471,7 +1471,8 @@ size_t Reconstruction::FilterPoints3DWithLargeReprojectionError(
                                             image.CamFromWorld(),
                                             camera,
                                             is_refractive);
-      if (squared_reproj_error > max_squared_reproj_error) {
+      if (std::isnan(squared_reproj_error) ||
+          squared_reproj_error > max_squared_reproj_error) {
         track_els_to_delete.push_back(track_el);
       } else {
         reproj_error_sum += std::sqrt(squared_reproj_error);

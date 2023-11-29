@@ -1,8 +1,9 @@
 #include "ui/widgets/calibration_widget.h"
+#include "calibration_widget.h"
 
 namespace calibmar {
-  CalibrationWidget::CalibrationWidget(QWidget* parent,
-                                       const std::function<void(const std::string&, std::pair<int, int>&)> double_click_callback)
+  CalibrationWidget::CalibrationWidget(
+      QWidget* parent, const std::function<void(const std::string&, const class TargetVisualizer&)> double_click_callback)
       : QWidget(parent) {
     main_layout_ = new QVBoxLayout(this);
     extraction_images_ = new ExtractionImagesWidget(this, double_click_callback);
@@ -11,7 +12,6 @@ namespace calibmar {
     QVBoxLayout* features_groupbox_layout = new QVBoxLayout(features_groupbox);
     features_groupbox_layout->addWidget(extraction_images_);
     main_layout_->addWidget(features_groupbox);
-
 
     calibration_widget_ = new QGroupBox("Calibration");
     QVBoxLayout* calibration_layout = new QVBoxLayout(calibration_widget_);
@@ -45,4 +45,11 @@ namespace calibmar {
     main_layout_->addWidget(calibration_widget_);
   }
 
+  void CalibrationWidget::SetTargetVisualizer(std::unique_ptr<class TargetVisualizer> target_visualizer) {
+    target_visualizer_ = std::move(target_visualizer);
+  }
+
+  const class TargetVisualizer& CalibrationWidget::TargetVisualizer() {
+    return *target_visualizer_;
+  }
 }

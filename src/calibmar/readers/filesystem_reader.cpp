@@ -1,4 +1,7 @@
-#include "calibmar/readers/filesystem_reader.h"
+
+#include "calibmar/core/natural_sort.h"
+
+#include "filesystem_reader.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -8,12 +11,25 @@ namespace calibmar {
   FilesystemImageReader::FilesystemImageReader(const Options& options)
       : options_(options), file_index_(0), image_width_(-1), image_height_(-1) {
     std::replace(options_.image_directory.begin(), options_.image_directory.end(), '\\', '/');
-
+    bool image_size_is_init = false;
+    Pixmap pixmap;
     for (auto const& dir_entry : std::filesystem::directory_iterator{options_.image_directory}) {
       if (dir_entry.is_regular_file()) {
+        if (options_.init_image_size && !image_size_is_init && pixmap.Read(dir_entry.path().string())) {
+          image_height_ = pixmap.Height();
+          image_width_ = pixmap.Width();
+          image_size_is_init = true;
+        }
+
         image_paths_.push_back(dir_entry.path().string());
       }
+    }    
+
+    if (options_.init_image_size && !image_size_is_init) {
+      throw std::runtime_error("Could not init image size!");
     }
+
+    std::sort(image_paths_.begin(), image_paths_.end(), natural_sort::compare<std::string>);
   }
 
   bool FilesystemImageReader::HasNext() {

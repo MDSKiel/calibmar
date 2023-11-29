@@ -3,12 +3,13 @@
 #include "calibmar/core/calibration.h"
 #include "calibmar/core/camera_models.h"
 #include "calibmar/extractors/extractor.h"
+#include "calibrator.h"
 
 #include <optional>
 
 namespace calibmar {
   // HousingCalibrator class calibrates the housing using contained 2D-3D correspondences.
-  class HousingCalibrator {
+  class HousingCalibrator : public Calibrator {
    public:
     struct Options {
       CameraModelType camera_model = CameraModelType::OpenCVCameraModel;
@@ -36,7 +37,7 @@ namespace calibmar {
     // and reprojection error will be set.
     //
     // @param calibration Calibration. Must contain 3D Points and images containing corresponding 2D points.
-    void Calibrate(Calibration& calibration);
+    void Calibrate(Calibration& calibration) override;
 
    private:
     Options options_;

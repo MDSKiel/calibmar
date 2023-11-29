@@ -215,7 +215,7 @@ int main(int argc, char* argv[]) {
   if (false) {
     std::cout << std::numeric_limits<double>::epsilon() << std::endl;
   }
-  if (false) {
+  if (true) {
     // Check projection at the image boundary.
     // Setup parameters
     const size_t width = 1000;
@@ -235,12 +235,13 @@ int main(int argc, char* argv[]) {
     int_normal[1] = colmap::RandomUniformReal(-0.3, 0.3);
     int_normal[2] = colmap::RandomUniformReal(0.7, 1.3);
 
+    int_normal = Eigen::Vector3d::UnitZ();
     int_normal.normalize();
 
     std::vector<double> flatport_params = {int_normal[0],
                                            int_normal[1],
                                            int_normal[2],
-                                           0.5,
+                                           -0.05,
                                            0.007,
                                            1.0,
                                            1.52,
@@ -255,14 +256,14 @@ int main(int argc, char* argv[]) {
     camera.SetRefracModelIdFromName("FLATPORT");
     camera.SetRefracParams(flatport_params);
 
-    Eigen::Vector2d point1(0.001, 789.235);
+    Eigen::Vector2d point1(556.0, 798.0);
     double d1 = 1.75;
 
     Eigen::Vector3d point3D_cam1 = camera.CamFromImgRefracPoint(point1, d1);
 
     std::cout << "Point3D cam1: " << point3D_cam1.transpose() << std::endl;
 
-    Eigen::Vector2d proj1 = camera.ImgFromCamRefrac(point3D_cam1);
+    Eigen::Vector2d proj1 = camera.ImgFromCamRefrac(Eigen::Vector3d(-0.3, -0.3, 0.5));
 
     Eigen::Vector2d point2(0.0, 789.235);
     double d2 = 1.75;
@@ -279,7 +280,7 @@ int main(int argc, char* argv[]) {
               << " , projection2: " << proj2.transpose() << std::endl;
   }
 
-  if (true) {
+  if (false) {
     SetPRNGSeed(time(NULL));
     Camera camera;
     camera.SetWidth(2048);
@@ -304,7 +305,7 @@ int main(int argc, char* argv[]) {
       std::vector<double> flatport_params_gt = {int_normal[0],
                                                 int_normal[1],
                                                 int_normal[2],
-                                                RandomUniformReal(0.002, 0.05),
+                                                -0.04,
                                                 0.007,
                                                 1.0,
                                                 1.52,
@@ -339,7 +340,7 @@ int main(int argc, char* argv[]) {
     std::vector<Eigen::Vector2d> points2D_refrac;
     std::vector<Eigen::Vector3d> points3D;
 
-    size_t num_points = 200;
+    size_t num_points = 25;
 
     const double qx = RandomUniformReal(0.0, 1.0);
     const double tx = RandomUniformReal(0.0, 1.0);
@@ -364,6 +365,9 @@ int main(int argc, char* argv[]) {
 
       // Now project the point in-air.
       Eigen::Vector2d point2D = camera.ImgFromCam(point3D_local.hnormalized());
+
+      // point2D_refrac(0) += RandomGaussian(0.0, 3.0);
+      // point2D_refrac(1) += RandomGaussian(0.0, 3.0);
 
       points2D.push_back(point2D);
       points2D_refrac.push_back(point2D_refrac);
@@ -457,6 +461,36 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Optimized refrac params: " << std::endl;
     std::cout << camera.RefracParamsToString() << std::endl;
+  }
+
+  if(false){
+    // Given a camera setup, check for total reflection.
+    Camera camera;
+    camera.SetWidth(1113);
+    camera.SetHeight(835);
+    camera.SetModelIdFromName("PINHOLE");
+    std::vector<double> params = {
+        100.476237, 100.476237, 556.500000, 417.500000};
+    camera.SetParams(params);
+
+    camera.SetRefracModelIdFromName("FLATPORT");
+    std::vector<double> refrac_params = {0.000000, 0.000000, 1.000000, 0.050000, 0.007000, 1.000000, 1.520000, 1.330000};
+    camera.SetRefracParams(refrac_params);
+
+    Eigen::Vector2d p1(0.0, 0.0);
+    Eigen::Vector2d p2(static_cast<double>(camera.Width()) + 2000.0, camera.Height());
+
+    //Ray3D ray1 = camera.CamFromImgRefrac(p1);
+    Ray3D ray2 = camera.CamFromImgRefrac(p2);
+
+    //std::cout << "ray1: " << ray1.dir.transpose() << std::endl;
+    std::cout << "ray2: " << ray2.dir.transpose() << std::endl;
+  }
+
+  if(false){
+    Eigen::Quaterniond rot(1.2, 0.1, 0.2, 0.3);
+
+    std::cout << rot.coeffs() << std::endl;
   }
 
   return true;

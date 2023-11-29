@@ -13,7 +13,7 @@ namespace calibmar {
     // Sets the next live stream frame
     void SetLiveStreamImage(std::unique_ptr<Pixmap> image);
     // Adds an extracted image to the calibration
-    void AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data);
+    void AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data, const TargetVisualizer& target_visualizer);
     // Adds a widget next to the live stream view (e.g. timer bar or button)
     void AddLiveModeWidget(QWidget* widget);
     // Set a callback called when calibration is to be completed

@@ -159,9 +159,9 @@ struct IncrementalMapperOptions {
   // Refine prior_from_cam after registering a certain number of images.
   int ba_refine_prior_from_cam_after_num_images = 800;
 
-  // Whether to refine all intrinsic parameters after registering a certain
+  // Whether to fix all intrinsic parameters until registering a certain
   // number of images.
-  int ba_refine_intrin_after_num_images = -1;
+  int ba_fix_intrin_until_num_images = -1;
 
   // Whether to use refractive camera model in reconstruction.
   bool enable_refraction = false;

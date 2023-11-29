@@ -1,17 +1,7 @@
 #include "target_tracker.h"
 
 namespace calibmar {
-  TargetTracker::TargetTracker(const std::pair<int, int>& columns_rows, const std::pair<int, int>& image_size,
-                               double limit_percentage)
-      : stable_(false) {
-    // opencv convention
-    size_t columns_inner = columns_rows.first - 1;
-    size_t rows_inner = columns_rows.second - 1;
-    // top left, top right, bottom left, bottom right
-    outer_corner_idx_ = {0, columns_inner - 1, (rows_inner - 1) * columns_inner,
-                         (rows_inner - 1) * columns_inner + columns_inner - 1};
-
-    limits_xy_ = {image_size.first * limit_percentage, image_size.second * limit_percentage};
+  TargetTracker::TargetTracker(const std::pair<int, int>& image_size, double limit_percentage) : stable_(false), limits_xy_(image_size.first * limit_percentage, image_size.second * limit_percentage) {
   }
 
   void TargetTracker::Update(const std::vector<Eigen::Vector2d>& current_points) {
@@ -42,7 +32,7 @@ namespace calibmar {
   }
 
   bool TargetTracker::CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,
-                                       const std::vector<Eigen::Vector2d>& points_b) {
+                                                 const std::vector<Eigen::Vector2d>& points_b) {
     if (points_a.empty() || points_b.empty()) {
       return false;
     }
@@ -55,5 +45,5 @@ namespace calibmar {
     }
 
     return true;
-  }
+  }  
 }

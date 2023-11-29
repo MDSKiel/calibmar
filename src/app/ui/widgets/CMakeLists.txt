@@ -1,8 +1,12 @@
 target_sources(calibmar_app PRIVATE
 	calibration_result_widget.cpp
 	calibration_result_widget.h
+	calibration_target_widget.cpp
+	calibration_target_widget.h
 	calibration_widget.cpp
 	calibration_widget.h
+	capture_button.cpp
+	capture_button.h
 	chessboard_target_widget.cpp
 	chessboard_target_widget.h
 	collapsible_widget.cpp
@@ -25,6 +29,8 @@ target_sources(calibmar_app PRIVATE
 	model_selector_widget.h
 	offset_diagram_widget.cpp
 	offset_diagram_widget.h
+	target3D_target_widget.cpp
+	target3D_target_widget.h
 	timer_bar_widget.cpp
 	timer_bar_widget.h
 	zoomable_scroll_area.cpp

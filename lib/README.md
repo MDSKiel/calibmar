@@ -1,5 +1,5 @@
 # COLMAP geomar fork
-_(internal fork repo commit id from underwater branch: bdd0ac97fb8e5c7163d69c783fe27b6ccd092c53)_
+_(internal fork repo commit id from underwater branch: c63a7255eb8fc676378c25aa9b99118eed6ad388)_
 ## Updating
 To upate the included colmap copy the desired version into the colmap/ subfolder.
 Currently also the `colmap` target inside `colmap/CMakeLists.txt` needs to be edited as follows

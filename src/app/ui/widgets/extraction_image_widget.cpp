@@ -47,20 +47,16 @@ namespace {
     return image_label;
   }
 
-  QWidget* CreateImageWidget(calibmar::ExtractionImageWidget::Data& data) {
+  QWidget* CreateImageWidget(calibmar::ExtractionImageWidget::Data& data, const calibmar::TargetVisualizer& target_visualizer) {
     cv::Mat& cornerMat = data.image->Data();
 
     if (cornerMat.channels() == 1) {
       // reallocate in place, this is supported by opencv, the old one gets destroyed if refrence count == 0
       cv::cvtColor(cornerMat, cornerMat, cv::COLOR_GRAY2RGB);
     }
-
-    std::vector<cv::Point2f> cornerPoints;
-    for (const Eigen::Vector2d& point : data.points) {
-      cornerPoints.push_back(cv::Point2f(point.x(), point.y()));
-    }
-
-    cv::drawChessboardCorners(cornerMat, cv::Size(data.chessboard_rows - 1, data.chessboard_columns - 1), cornerPoints, true);
+    calibmar::Pixmap pixmap;
+    pixmap.Assign(cornerMat);
+    target_visualizer.DrawTargetOnImage(pixmap, *data.image_data);
     QImage image = QImage(cornerMat.data, cornerMat.cols, cornerMat.rows, cornerMat.step, QImage::Format_BGR888);
 
     QImage scaled = image.scaled(widget_width, widget_height, Qt::AspectRatioMode::KeepAspectRatio);
@@ -75,12 +71,16 @@ namespace {
 
 namespace calibmar {
 
-  ExtractionImageWidget::ExtractionImageWidget(std::unique_ptr<Data> data, QWidget* parent)
-      : QWidget(parent), cols_rows_(data->chessboard_columns, data->chessboard_rows), image_name_(data->image_name) {
+  ExtractionImageWidget::ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer,
+                                               QWidget* parent)
+      : QWidget(parent), target_visualizer_(target_visualizer), image_name_(data->image_name) {
+    widget_width = QGuiApplication::screens().first()->availableGeometry().width() * (1.0 / 8);
+    widget_height = QGuiApplication::screens().first()->availableGeometry().height() * (1.0 / 8);
+
     QWidget* content;
     switch (data->status) {
       case Status::SUCCESS:
-        content = CreateImageWidget(*(data.get()));
+        content = CreateImageWidget(*(data.get()), target_visualizer);
         break;
       case Status::DETECTION_ERROR:
         content = CreateUndetectedWidget(*(data.get()));
@@ -106,8 +106,8 @@ namespace calibmar {
     }
   }
 
-  std::pair<int, int> ExtractionImageWidget::ColumnsRows() {
-    return cols_rows_;
+  const TargetVisualizer& ExtractionImageWidget::TargetVisualizer() {
+    return target_visualizer_;
   }
 
   const std::string& ExtractionImageWidget::ImageName() {

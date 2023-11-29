@@ -39,6 +39,10 @@ namespace calibmar {
     const std::vector<double>& HousingParamsStdDeviations() const;
     void SetHousingParamsStdDeviations(const std::vector<double>& housing_std);
 
+    std::vector<double>& PerViewRms();
+    const std::vector<double>& PerViewRms() const;
+    void SetPerViewRms(const std::vector<double>& housing_std);
+
     // Set infos about the used calibration target. Used in report generation.
     void SetCalibrationTargetInfo(const std::string& info);
     // Get infos about the used calibration target. Used in report generation.
@@ -54,6 +58,7 @@ namespace calibmar {
     std::vector<double> intrinsics_std_deviations_;
     std::vector<double> housing_params_std_deviations_;
     std::vector<class Image> images_;
+    std::vector<double> per_view_rms_;
     std::map<uint32_t, Eigen::Vector3d> points3D_;
     // used to generate point id
     uint32_t number_of_points3D = 0;
@@ -66,6 +71,7 @@ namespace calibmar {
   inline colmap::Camera& Calibration::Camera() {
     return camera_;
   }
+  
   inline const colmap::Camera& Calibration::Camera() const {
     return camera_;
   }
@@ -140,12 +146,25 @@ namespace calibmar {
   inline std::vector<double>& Calibration::HousingParamsStdDeviations() {
     return housing_params_std_deviations_;
   }
+
   inline const std::vector<double>& Calibration::HousingParamsStdDeviations() const {
     return housing_params_std_deviations_;
   }
 
   inline void Calibration::SetHousingParamsStdDeviations(const std::vector<double>& housing_std) {
     housing_params_std_deviations_ = housing_std;
+  }
+
+    inline std::vector<double>& Calibration::PerViewRms() {
+    return per_view_rms_;
+  }
+  
+  inline const std::vector<double>& Calibration::PerViewRms() const {
+    return per_view_rms_;
+  }
+
+  inline void Calibration::SetPerViewRms(const std::vector<double>& per_view_rms) {
+    per_view_rms_ = per_view_rms;
   }
 
   inline void Calibration::SetCalibrationTargetInfo(const std::string& info) {

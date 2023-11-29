@@ -2,19 +2,16 @@
 
 #include <QtCore>
 #include <QtWidgets>
+#include "calibmar/extractors/chessboard_extractor.h"
 
 namespace calibmar {
 
-  class ChessboardTargetOptionsWidget : public QGroupBox {
+  class ChessboardTargetOptionsWidget : public QWidget {
    public:
     ChessboardTargetOptionsWidget(QWidget* parent = nullptr);
 
-    void SetChessBoardTargetOptions(int columns, int rows, double square_size);
-
-    int ChessboardColumns();
-    int ChessboardRows();
-    double SquareSize();
-
+    void SetChessBoardTargetOptions(const ChessboardFeatureExtractor::Options& options);
+    ChessboardFeatureExtractor::Options ChessboardTargetOptions();
    private:
     QSpinBox* chess_board_rows_edit_;
     QSpinBox* chess_board_columns_edit_;

@@ -198,10 +198,10 @@ void CalculateCalibrationSeries(const std::string& image_dir, std::ostream& out)
   ex_options.square_size = 0.04;
   ChessboardFeatureExtractor extractor(ex_options);
   calibration.SetPoints3D(extractor.Points3D());
-  Calibrator::Options cal_options;
+  BasicCalibrator::Options cal_options;
   cal_options.camera_model = CameraModelType::RadialCameraModel;
   cal_options.image_size = {1280, 1024};
-  Calibrator calibrator(cal_options);
+  BasicCalibrator calibrator(cal_options);
 
   std::vector<double> rms_errors;
   std::vector<std::vector<double>> std_devs;
@@ -274,11 +274,11 @@ void GeneratePoseSuggestionImages(const std::string& blender_img_output_dir, con
   ex_options.square_size = 0.04;
   ChessboardFeatureExtractor extractor(ex_options);
   calibration.SetPoints3D(extractor.Points3D());
-  Calibrator::Options cal_options;
+  BasicCalibrator::Options cal_options;
   cal_options.camera_model = CameraModel::IdToCameraModelType().at(camera.ModelId());
   cal_options.image_size = maps.has_value() ? std::pair<int, int>{std::get<0>(maps.value()).cols, std::get<0>(maps.value()).rows}
                                             : std::pair<int, int>{camera.Width(), camera.Height()};
-  Calibrator calibrator(cal_options);
+  BasicCalibrator calibrator(cal_options);
 
   std::filesystem::path target_directory(target_dir);
   for (int i = 0; i < 100 && calibration.Images().size() < 30; i++) {

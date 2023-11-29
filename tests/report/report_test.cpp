@@ -37,6 +37,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Structure) {
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(CameraModelType)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(HousingInterfaceType)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(CalibrationTargetType)
 BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   Calibration calibration;
   colmap::Camera camera;
@@ -71,4 +72,41 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
     BOOST_TEST(parameters.housing_parameters[i] == camera.RefracParams()[i]);
   }
   BOOST_TEST(parameters.square_size == 0.04);
+  BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Chessboard);
+}
+
+BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetAruco) {
+  Calibration calibration;
+  colmap::Camera camera;
+  std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
+  camera.SetModelIdFromName(model_name);
+  calibration.SetCamera(camera);
+  calibration.SetCalibrationTargetInfo("3D target, aruco: 4x4_50, 3.2");
+
+  std::stringstream string;
+  report::GenerateCalibrationYaml(string, calibration);
+  string.seekg(0);
+  ImportedParameters parameters = ImportedParameters::ImportFromYaml(string);
+
+  // the exported yaml should be importable
+  BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Target3DAruco);
+  BOOST_TEST(parameters.aruco_type == cv::aruco::DICT_4X4_50);
+  BOOST_TEST(parameters.aruco_scale_factor == 3.2);
+}
+
+BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTarget) {
+  Calibration calibration;
+  colmap::Camera camera;
+  std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
+  camera.SetModelIdFromName(model_name);
+  calibration.SetCamera(camera);
+  calibration.SetCalibrationTargetInfo("3D target");
+
+  std::stringstream string;
+  report::GenerateCalibrationYaml(string, calibration);
+  string.seekg(0);
+  ImportedParameters parameters = ImportedParameters::ImportFromYaml(string);
+
+  // the exported yaml should be importable
+  BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Target3D);
 }

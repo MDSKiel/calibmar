@@ -3,9 +3,11 @@
 #include "calibmar/calibrators/calibrator.h"
 #include "calibmar/extractors/chessboard_extractor.h"
 #include "calibmar/readers/livestream_reader.h"
-#include "ui/widgets/chessboard_target_widget.h"
+#include "ui/widgets/calibration_target_widget.h"
 #include "ui/widgets/housing_selector_widget.h"
 #include "ui/widgets/model_selector_widget.h"
+
+#include <colmap/controllers/option_manager.h>
 
 #include <QtCore>
 #include <QtWidgets>
@@ -19,5 +21,6 @@ namespace calibmar {
 
    private:
     Pixmap pixmap_;
+    std::unique_ptr<colmap::OptionManager> options_manager_ = std::make_unique<colmap::OptionManager>();
   };
 }

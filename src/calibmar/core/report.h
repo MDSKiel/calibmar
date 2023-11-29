@@ -2,9 +2,14 @@
 
 #include "calibmar/core/calibration.h"
 #include "calibmar/core/camera_models.h"
+#include "calibmar/extractors/aruco_sift_extractor.h"
+#include "calibmar/extractors/chessboard_extractor.h"
+#include "calibmar/extractors/sift_extractor.h"
 
+#include "calibration_targets.h"
 #include <optional>
 #include <ostream>
+#include <variant>
 
 namespace calibmar {
   namespace report {
@@ -16,6 +21,10 @@ namespace calibmar {
     void GenerateCalibrationYaml(std::ostream& stream, const Calibration& calibration);
     std::string GenerateResultString(const Calibration& calibration);
     void GenerateResultString(std::ostream& stream, const Calibration& calibration);
+
+    std::string GenerateCalibrationTargetInfo(const ChessboardFeatureExtractor::Options& options);
+    std::string GenerateCalibrationTargetInfo(
+        const std::variant<ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options>& options);
   }
 
   // Represents parameters imported from report files
@@ -24,6 +33,9 @@ namespace calibmar {
     int chessboard_rows = 0;
     int chessboard_columns = 0;
     double square_size = 1;
+    cv::aruco::PREDEFINED_DICTIONARY_NAME aruco_type = cv::aruco::DICT_4X4_50;
+    double aruco_scale_factor = 3.0;
+    CalibrationTargetType calibration_target = CalibrationTargetType::Chessboard;
     std::string directory;
     CameraModelType camera_model = CameraModelType::SimplePinholeCameraModel;
     std::optional<HousingInterfaceType> housing_model = {};

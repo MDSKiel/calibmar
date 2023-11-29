@@ -1,5 +1,7 @@
 #include "report.h"
 
+#include "calibmar/core/calibration_targets.h"
+
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -152,6 +154,69 @@ namespace calibmar {
       }
       // overall rms
       stream << std::endl << "Overall RMS: " << calibration.CalibrationRms();
+      // per view rms
+      if (calibration.PerViewRms().size() > 0) {
+        int width = std::max(std::to_string(calibration.PerViewRms()[0]).size() + 2,
+                             std::filesystem::path(calibration.Images()[0].Name()).filename().string().size() + 2);
+
+        std::vector<std::pair<std::string, double>> name_rms;
+        name_rms.reserve(calibration.Images().size());
+        for (size_t i = 0; i < calibration.Images().size(); i++) {
+          name_rms.push_back({std::filesystem::path(calibration.Image(i).Name()).filename(), calibration.PerViewRms()[i]});
+        }
+        std::sort(name_rms.begin(), name_rms.end(), [](auto& a, auto& b) { return a.second > b.second; });
+
+        stream << std::endl << std::endl << "Per View RMS (" << name_rms.size() << " images, ordered descending):" << std::endl;
+        size_t img_idx = 0, rms_idx = 0;
+        size_t img_per_line = 8;
+
+        while (img_idx < name_rms.size()) {
+          for (; img_idx < name_rms.size(); img_idx++) {
+            stream << std::setw(width) << std::setfill(' ') << name_rms[img_idx].first;
+
+            if (img_idx % img_per_line == img_per_line - 1) {
+              img_idx++;
+              break;
+            }
+          }
+
+          stream << std::endl;
+
+          for (; rms_idx < name_rms.size(); rms_idx++) {
+            stream << std::setw(width) << std::setfill(' ') << name_rms[rms_idx].second;
+
+            if (rms_idx % img_per_line == img_per_line - 1) {
+              rms_idx++;
+              break;
+            }
+          }
+          stream << std::endl << std::endl;
+        }
+      }
+    }
+
+    std::string GenerateCalibrationTargetInfo(const ChessboardFeatureExtractor::Options& options) {
+      return "chessboard, " + std::to_string(options.chessboard_columns) + ", " + std::to_string(options.chessboard_rows) + ", " +
+             std::to_string(options.square_size);
+    }
+
+    std::string GenerateCalibrationTargetInfo(
+        const std::variant<ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options>& options) {
+      const ArucoSiftFeatureExtractor::Options* aruco_options = std::get_if<ArucoSiftFeatureExtractor::Options>(&options);
+      if (aruco_options) {
+        std::string name;
+        for (const auto& name_type : calibration_targets::ArucoTypes()) {
+          if (name_type.second == aruco_options->aruco_type) {
+            name = name_type.first;
+            break;
+          }
+        }
+
+        return "3D target, aruco: " + name + ", " + std::to_string(aruco_options->masking_scale_factor);
+      }
+      else {
+        return "3D target";
+      }
     }
   }
 
@@ -182,6 +247,14 @@ namespace calibmar {
 
     inline void TrimEnd(std::string& s) {
       s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
+    }
+
+    inline void TrimStart(std::string& s) {
+      s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    }
+
+    inline void ToLower(std::string& s) {
+      std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
     }
   }
 
@@ -245,6 +318,7 @@ namespace calibmar {
         }
       }
       else if (StartsWith(line, "# target: chessboard,")) {
+        parameters.calibration_target = CalibrationTargetType::Chessboard;
         line.erase(0, sizeof("# target: chessboard,") - 1);
         int i;
         size_t chars_used;
@@ -260,6 +334,33 @@ namespace calibmar {
             }
           }
         }
+      }
+      else if (StartsWith(line, "# target: 3D target, aruco:")) {
+        parameters.calibration_target = CalibrationTargetType::Target3DAruco;
+        line.erase(0, sizeof("# target: 3D target, aruco:") - 1);
+        TrimStart(line);
+        ToLower(line);
+        std::string name = "";
+        for (const auto& name_type : calibration_targets::ArucoTypes()) {
+          std::string aruco_name = name_type.first;
+          ToLower(aruco_name);
+          if (StartsWith(line, aruco_name)) {
+            parameters.aruco_type = name_type.second;
+            name = name_type.first;
+            break;
+          }
+        }
+        if (!name.empty()) {
+          line.erase(0, name.size() + 1);
+          double d;
+          size_t chars_used;
+          if (TryParse(&d, line, &chars_used)) {
+            parameters.aruco_scale_factor = d;
+          }
+        }
+      }
+      else if (StartsWith(line, "# target: 3D target")) {
+        parameters.calibration_target = CalibrationTargetType::Target3D;
       }
     }
 

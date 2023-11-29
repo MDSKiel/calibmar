@@ -3,6 +3,7 @@
 #include "calibmar/core/pixmap.h"
 #include "calibmar/extractors/extractor.h"
 #include "calibmar/readers/image_reader.h"
+#include "ui/utils/calibration_target_visualization.h"
 #include <Eigen/Core>
 #include <QtCore>
 #include <QtWidgets>
@@ -15,22 +16,20 @@ namespace calibmar {
     struct Data {
       Status status;
       std::unique_ptr<Pixmap> image;
-      std::vector<Eigen::Vector2d> points;
-      std::string image_name;
-      int chessboard_columns;
-      int chessboard_rows;
+      Image* image_data;
+      std::string image_name; // image name is kept separately in case extraction fails
     };
 
-    ExtractionImageWidget(std::unique_ptr<Data> data, QWidget* parent = nullptr);
+    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr);
 
-    std::pair<int, int> ColumnsRows();
+    const class TargetVisualizer& TargetVisualizer();
     const std::string& ImageName();
 
     static Status ConvertStatus(FeatureExtractor::Status status);
     static Status ConvertStatus(ImageReader::Status status);
 
    private:
-    std::pair<int, int> cols_rows_;
     std::string image_name_;
+    const class TargetVisualizer& target_visualizer_;
   };
 }

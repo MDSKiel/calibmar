@@ -59,8 +59,8 @@ namespace calibmar {
     image_widget_->update();
   }
 
-  void LiveStreamExtractionWidget::AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data) {
-    ExtractionImageWidget* extraction_image = new ExtractionImageWidget(std::move(data), this);
+  void LiveStreamExtractionWidget::AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data, const TargetVisualizer& target_visualizer) {
+    ExtractionImageWidget* extraction_image = new ExtractionImageWidget(std::move(data), target_visualizer, this);
     side_layout_->addWidget(extraction_image);
   }
 

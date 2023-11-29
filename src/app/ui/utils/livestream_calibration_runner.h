@@ -2,6 +2,8 @@
 
 #include "calibmar/pose_suggestion/target_tracker.h"
 #include "calibmar/readers/livestream_reader.h"
+#include "calibmar/core/image.h"
+
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/utils/auto_reset_signal.h"
 #include "ui/widgets/calibration_widget.h"
@@ -24,9 +26,9 @@ namespace calibmar {
     LiveStreamExtractionWidget* extraction_widget_;
     QPushButton* capture_button_;
     StreamCalibrationDialog::Options dialog_options_;
-    std::vector<cv::Point2f> current_draw_points_;
-    std::vector<cv::Point2f> current_draw_target_points_;
-    std::vector<Eigen::Vector2d> current_extracted_points_;
+    Image current_draw_image_;
+    std::vector<Eigen::Vector2d>  current_draw_target_points_;
+    Image currently_extracted_image_;
     std::vector<Eigen::Vector2d> current_target_points_;
     // Current pixmap that is worked on, e.g. extracted and saved.
     std::unique_ptr<Pixmap> current_pixmap_;
@@ -41,6 +43,7 @@ namespace calibmar {
     // Signal the extracton to run
     AutoResetSignal extract_;
     std::unique_ptr<FeatureExtractor> extractor_;
+    std::unique_ptr<TargetVisualizer> target_visualizer_;
     std::chrono::steady_clock::time_point stable_detection_start_;
     // Used for image names
     time_t run_start_;
@@ -51,7 +54,7 @@ namespace calibmar {
     void RunTimedExtraction(Calibration& calibration, TargetTracker& tracker);
     void RunPoseSuggestionExtraction(Calibration& calibration, TargetTracker& tracker, CameraModelType camera_model,
                                      const std::pair<int, int>& image_size);
-    void Save(Calibration& calibration, Image& image, std::unique_ptr<Pixmap> pixmap);
+    void Save(Calibration& calibration, Image image, std::unique_ptr<Pixmap> pixmap);
     void ShowCapturePossible(bool active);
   };
 }

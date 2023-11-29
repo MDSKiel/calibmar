@@ -58,9 +58,7 @@ namespace calibmar {
     options.housing_calibration = calibration_options_widget_->HousingOptions();
     options.initial_camera_parameters = calibration_options_widget_->InitialCameraParameters();
     options.images_directory = directory_edit_->text().toStdString();
-    options.chessboard_columns = calibration_options_widget_->ChessboardColumns();
-    options.chessboard_rows = calibration_options_widget_->ChessboardRows();
-    options.square_size = calibration_options_widget_->SquareSize();
+    options.calibration_target_options = calibration_options_widget_->CalibrationTargetOptions();
     return options;
   }
 

@@ -9,6 +9,7 @@ namespace calibmar {
     struct Options {
       std::string image_directory = "";
       Pixmap::ReadMode image_read_mode = Pixmap::ReadMode::GRAYSCALE;
+      bool init_image_size = true;
     };
 
     FilesystemImageReader(const Options& options);

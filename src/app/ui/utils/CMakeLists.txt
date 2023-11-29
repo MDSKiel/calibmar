@@ -2,6 +2,8 @@ target_sources(calibmar_app PRIVATE
 	auto_reset_signal.cpp
 	auto_reset_signal.h
 	blocking_queue.h
+	calibration_target_visualization.cpp
+	calibration_target_visualization.h
 	cancellation_token.h
 	flow_layout.cpp
 	flow_layout.h

@@ -68,11 +68,16 @@ namespace {
       // Opencv will use the aspect ratio of the focal lengths. If they are 0 (e.g. not set), the calibration will return NAN.
       flags |= cv::CALIB_USE_INTRINSIC_GUESS;
       GetCvParams(camera, camera_mat, distortion_coefficients);
-    }
-    if (fast) {
-      flags |= cv::CALIB_USE_LU;
-    }
 
+      if (camera.ModelId() == colmap::PinholeCameraModel::kModelId ||
+          camera.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+        // For pinhole models without distortion, fix the principal point (if intrinsics were provided)
+        flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
+      }
+      if (fast) {
+        flags |= cv::CALIB_USE_LU;
+      }
+    }
     std::vector<std::vector<cv::Point3f>> pointSets3D(object_points.size());
     std::vector<std::vector<cv::Point2f>> pointSets2D(image_points.size());
     for (size_t i = 0; i < object_points.size(); i++) {

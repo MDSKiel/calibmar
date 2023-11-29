@@ -561,8 +561,8 @@ void OptionManager::AddMapperOptions() {
   AddAndRegisterDefaultOption(
       "Mapper.ba_refine_prior_from_cam_after_num_images",
       &mapper->ba_refine_prior_from_cam_after_num_images);
-  AddAndRegisterDefaultOption("Mapper.ba_refine_intrin_after_num_images",
-                              &mapper->ba_refine_intrin_after_num_images);
+  AddAndRegisterDefaultOption("Mapper.ba_fix_intrin_until_num_images",
+                              &mapper->ba_fix_intrin_until_num_images);
   AddAndRegisterDefaultOption("Mapper.enable_refraction",
                               &mapper->enable_refraction);
   AddAndRegisterDefaultOption("Mapper.ba_refine_refrac_params",

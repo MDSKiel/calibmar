@@ -1,4 +1,4 @@
-#include "calibmar/calibrators/calibrator.h"
+#include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/calibrators/opencv_calibration.h"
 
 #include <algorithm>
@@ -8,15 +8,15 @@
 
 namespace calibmar {
 
-  void Calibrator::Options::Check() {
+  void BasicCalibrator::Options::Check() {
     if (!use_intrinsics_guess && (image_size.first == 0 || image_size.second == 0)) {
       throw std::runtime_error("Image size must be set!.");
     }
   }
 
-  Calibrator::Calibrator(const Options& options) : options_(options) {}
+  BasicCalibrator::BasicCalibrator(const Options& options) : options_(options) {}
 
-  void Calibrator::Calibrate(Calibration& calibration) {
+  void BasicCalibrator::Calibrate(Calibration& calibration) {
     options_.Check();
 
     if (calibration.Images().size() == 0) {
@@ -54,6 +54,7 @@ namespace calibmar {
                                                      std_deviations_extrinsics, per_view_rms);
 
     calibration.SetCalibrationRms(rms);
+    calibration.SetPerViewRms(per_view_rms);
     std_deviations_intrinsics.erase(std::remove(std_deviations_intrinsics.begin(), std_deviations_intrinsics.end(), 0.0),
                                     std_deviations_intrinsics.end());
     calibration.SetIntrinsicsStdDeviations(std_deviations_intrinsics);

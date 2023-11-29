@@ -15,7 +15,5 @@ namespace calibmar {
     virtual ~FeatureExtractor() = default;
 
     virtual Status Extract(Image& image, const Pixmap& pixmap) = 0;
-
-    virtual const std::map<uint32_t, Eigen::Vector3d>& Points3D() = 0;
   };
 }

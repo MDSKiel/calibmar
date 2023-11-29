@@ -1,6 +1,6 @@
 #pragma once
 
-#include "calibmar/calibrators/calibrator.h"
+#include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/core/report.h"
 #include "ui/widgets/initial_parameters_widget.h"
 

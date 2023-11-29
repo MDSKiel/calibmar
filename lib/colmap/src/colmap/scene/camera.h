@@ -173,6 +173,10 @@ class Camera {
 
   // Project point in image plane to world as 3D ray using refractive camera
   // model.
+  //
+  // (note that the total reflection case is not handled here, if there is a
+  // total reflection event happening, the refracted ray will become (-nan -nan
+  // -nan))
   Ray3D CamFromImgRefrac(const Eigen::Vector2d& image_point) const;
 
   // Project point in image plane to world given a depth.
@@ -181,6 +185,9 @@ class Camera {
 
   // Project point from camera frame to image plane using refractive camera
   // model.
+  //
+  // (note that the total reflection case is not handled here, if there is a
+  // total reflection event happening, the projection become (-nan -nan))
   Eigen::Vector2d ImgFromCamRefrac(const Eigen::Vector3d& cam_point) const;
 
   // Rescale camera dimensions and accordingly the focal length and
