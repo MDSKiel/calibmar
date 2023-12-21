@@ -1,6 +1,5 @@
 #include "extraction_images_widget.h"
 
-
 namespace calibmar {
 
   ExtractionImagesWidget::ExtractionImagesWidget(
@@ -10,20 +9,13 @@ namespace calibmar {
     setContentsMargins(0, 0, 0, 0);
   }
 
-  void ExtractionImagesWidget::AddImage(ExtractionImageWidget* widget) {
+  void ExtractionImagesWidget::AddImage(QWidget* widget) {
     main_layout_->addWidget(widget);
     update();
   }
 
-  void ExtractionImagesWidget::mouseDoubleClickEvent(QMouseEvent* event) {
-    ExtractionImageWidget* widget = nullptr;
-    for (size_t i = 0; i < main_layout_->count(); i++) {
-      QLayoutItem* item = main_layout_->itemAt(i);
-      if (item->geometry().contains(event->pos())) {
-        widget = static_cast<ExtractionImageWidget*>(item->widget());
-        break;
-      }
-    }
+  void ExtractionImagesWidget::mouseDoubleClickEvent(QMouseEvent* event) {    
+    ExtractionImageWidget* widget = dynamic_cast<ExtractionImageWidget*>(childAt(event->pos())->parent());
 
     if (widget && double_click_callback_) {
       const TargetVisualizer& visualizer = widget->TargetVisualizer();

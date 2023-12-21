@@ -24,8 +24,6 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Structure) {
   report::GenerateCalibrationYaml(string, calibration);
   std::string yaml_string = string.str();
 
-  std::cout << yaml_string;
-
   // the exported yaml should adhere to this structure
   BOOST_TEST(yaml_string.find("model: " + model_name) != std::string::npos);
   BOOST_TEST(yaml_string.find("parameters: [1.1, -2, 3, 4, 5, 6, 7, 8]") != std::string::npos);

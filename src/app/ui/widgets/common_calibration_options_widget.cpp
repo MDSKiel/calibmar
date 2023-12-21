@@ -1,18 +1,6 @@
 #include "common_calibration_options_widget.h"
+#include "ui/utils/parse_params.h"
 #include <colmap/util/misc.h>
-
-namespace {
-  bool TryParseParams(std::vector<double>& params, const std::string& params_string) {
-    std::vector<double> parsed = colmap::CSVToVector<double>(params_string);
-    if (parsed.size() == 0) {
-      return false;
-    }
-    for (auto d : parsed) {
-      params.push_back(d);
-    }
-    return true;
-  }
-}
 
 namespace calibmar {
   CommonCalibrationOptionsWidget::CommonCalibrationOptionsWidget(QWidget* parent) : QWidget(parent) {
@@ -55,25 +43,15 @@ namespace calibmar {
     else {
       housing_calibration_ = {};
     }
-    std::optional<std::string> initial_parameters = camera_model_selector_->InitialCameraParameters();
-    CameraModelType camera_model = camera_model_selector_->CameraModel();
-    if (initial_parameters.has_value()) {
-      std::vector<double> params;
-      if (!TryParseParams(params, initial_parameters.value())) {
-        QMessageBox::information(this, "Validation Error", "Invalid camera parameter format.");
-        return false;
-      }
-      else if (params.size() != CameraModel::CameraModels().at(camera_model).num_params) {
-        QMessageBox::information(this, "Validation Error", "Camera parameters dont match camera model.");
-        return false;
-      }
-      else {
-        // validated, take parameters
-        initial_camera_parameters_ = params;
-      }
+
+    std::string message;
+    if (!camera_model_selector_->Validate(message)) {
+      QMessageBox::information(this, "Validation Error", QString::fromStdString(message));
+      return false;
     }
     else {
-      initial_camera_parameters_ = {};
+      // validated
+      initial_camera_parameters_ = camera_model_selector_->InitialCameraParameters();
     }
 
     if (housing_calibration_.has_value() && !initial_camera_parameters_.has_value()) {

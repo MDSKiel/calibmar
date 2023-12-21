@@ -33,7 +33,8 @@ namespace {
     }
   }
 
-  void SetParams(colmap::Camera& camera, const cv::Mat& camera_matrix, const std::vector<double>& distortion_coefficients) {
+  void CvToColmapCamera(colmap::Camera& camera, const cv::Mat& camera_matrix,
+                        const std::vector<double>& distortion_coefficients) {
     std::vector<double> params;
 
     if (camera.FocalLengthIdxs().size() == 1) {
@@ -62,22 +63,24 @@ namespace {
     int flags = TranslateToOpenCVFlags(camera.ModelId());
 
     cv::Mat camera_mat;
+    if (camera.ModelId() == colmap::PinholeCameraModel::kModelId ||
+        camera.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+      // For pinhole models without distortion, fix the principal point
+      flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
+    }
+
     std::vector<double> distortion_coefficients;
     if (use_intrinsic_guess) {
       // Careful: if CALIB_FIX_ASPECT_RATIO is used the camera_matrix should either be empty or set to valid values.
       // Opencv will use the aspect ratio of the focal lengths. If they are 0 (e.g. not set), the calibration will return NAN.
       flags |= cv::CALIB_USE_INTRINSIC_GUESS;
       GetCvParams(camera, camera_mat, distortion_coefficients);
-
-      if (camera.ModelId() == colmap::PinholeCameraModel::kModelId ||
-          camera.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
-        // For pinhole models without distortion, fix the principal point (if intrinsics were provided)
-        flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
-      }
-      if (fast) {
-        flags |= cv::CALIB_USE_LU;
-      }
     }
+
+    if (fast) {
+      flags |= cv::CALIB_USE_LU;
+    }
+
     std::vector<std::vector<cv::Point3f>> pointSets3D(object_points.size());
     std::vector<std::vector<cv::Point2f>> pointSets2D(image_points.size());
     for (size_t i = 0; i < object_points.size(); i++) {
@@ -90,14 +93,15 @@ namespace {
 
     std::vector<cv::Mat> rotation_cv, translation_cv;
     double rms;
+    // + 1 to cause principal point initialisation to the expected value
+    cv::Size image_size(camera.Width() + 1, camera.Height() + 1);
     if (!calibmar::CameraModel::IsFisheyeModel(camera.ModelId())) {
-      rms = cv::calibrateCamera(pointSets3D, pointSets2D, cv::Size(camera.Width(), camera.Height()), camera_mat,
-                                distortion_coefficients, rotation_cv, translation_cv, std_deviations_intrinsics,
-                                std_deviations_extrinsics, per_view_rms, flags);
+      rms = cv::calibrateCamera(pointSets3D, pointSets2D, image_size, camera_mat, distortion_coefficients, rotation_cv,
+                                translation_cv, std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms, flags);
     }
     else {
-      rms = cv::fisheye::calibrate(pointSets3D, pointSets2D, cv::Size(camera.Width(), camera.Height()), camera_mat,
-                                   distortion_coefficients, rotation_cv, translation_cv, flags);
+      rms = cv::fisheye::calibrate(pointSets3D, pointSets2D, image_size, camera_mat, distortion_coefficients, rotation_cv,
+                                   translation_cv, flags);
     }
 
     // convert the cv angle axis representation to quat vector.
@@ -113,7 +117,7 @@ namespace {
     }
 
     // Assign camera parameters
-    SetParams(camera, camera_mat, distortion_coefficients);
+    CvToColmapCamera(camera, camera_mat, distortion_coefficients);
 
     return rms;
   }
@@ -138,6 +142,95 @@ namespace calibmar {
       std::vector<double> std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms;
       return CalibrateCameraCV(object_points, image_points, camera, use_intrinsic_guess, fast, rotation_vecs, translation_vecs,
                                std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms);
+    }
+
+    double StereoCalibrateCamera(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
+                                 const std::vector<std::vector<Eigen::Vector2d>>& image_points1,
+                                 const std::vector<std::vector<Eigen::Vector2d>>& image_points2, colmap::Camera& camera1,
+                                 colmap::Camera& camera2, colmap::Rigid3d& pose, bool use_intrinsic_guess, bool fix_intrinsic,
+                                 bool same_focal_length, std::vector<std::vector<double>>& per_view_rms) {
+      if (object_points.size() != image_points1.size() || object_points.size() != image_points2.size()) {
+        throw std::runtime_error("Image and objects points must match for stereo calibration!");
+      }
+
+      if (camera1.ModelId() != camera2.ModelId()) {
+        throw std::runtime_error("Camera models must be of same type for stereo calibration!");
+      }
+
+      if (fix_intrinsic && !use_intrinsic_guess) {
+        throw std::runtime_error("Can not fix intrinsics if no intrinsics given!");
+      }
+
+      std::vector<std::vector<cv::Point3f>> pointSets3D(object_points.size());
+      std::vector<std::vector<cv::Point2f>> pointSets2D_1(image_points1.size());
+      std::vector<std::vector<cv::Point2f>> pointSets2D_2(image_points2.size());
+      for (size_t i = 0; i < object_points.size(); i++) {
+        int set_size = object_points[i].size();
+        for (size_t j = 0; j < set_size; j++) {
+          pointSets3D[i].push_back(cv::Point3f(object_points[i][j].x(), object_points[i][j].y(), object_points[i][j].z()));
+          pointSets2D_1[i].push_back(cv::Point2f(image_points1[i][j].x(), image_points1[i][j].y()));
+          pointSets2D_2[i].push_back(cv::Point2f(image_points2[i][j].x(), image_points2[i][j].y()));
+        }
+      }
+
+      int flags = TranslateToOpenCVFlags(camera1.ModelId());
+
+      if (same_focal_length) {
+        flags |= cv::CALIB_SAME_FOCAL_LENGTH;
+      }
+
+      cv::Mat camera_mat1;
+      cv::Mat camera_mat2;
+      std::vector<double> distortion_coefficients1;
+      std::vector<double> distortion_coefficients2;
+
+      if (camera1.ModelId() == colmap::PinholeCameraModel::kModelId ||
+          camera1.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+        // For pinhole models without distortion, fix the principal point
+        flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
+      }
+
+      if (use_intrinsic_guess) {
+        // Careful: if CALIB_FIX_ASPECT_RATIO is used the camera_matrix should either be empty or set to valid values.
+        // Opencv will use the aspect ratio of the focal lengths. If they are 0 (e.g. not set), the calibration will return NAN.
+        flags |= cv::CALIB_USE_INTRINSIC_GUESS;
+
+        if (fix_intrinsic) {
+          flags |= cv::CALIB_FIX_INTRINSIC;
+        }
+
+        GetCvParams(camera1, camera_mat1, distortion_coefficients1);
+        GetCvParams(camera2, camera_mat2, distortion_coefficients2);
+      }
+
+      cv::Mat R, T, perViewError;
+      double rms;
+      // + 1 to cause principal point initialisation to the expected value
+      cv::Size image_size(camera1.Width() + 1, camera1.Height() + 1);
+      if (!calibmar::CameraModel::IsFisheyeModel(camera1.ModelId())) {
+        rms = cv::stereoCalibrate(pointSets3D, pointSets2D_1, pointSets2D_2, camera_mat1, distortion_coefficients1, camera_mat2,
+                                  distortion_coefficients2, image_size, R, T, cv::noArray(), cv::noArray(), perViewError, flags);
+      }
+      else {
+        rms = cv::fisheye::stereoCalibrate(pointSets3D, pointSets2D_1, pointSets2D_2, camera_mat1, distortion_coefficients1,
+                                           camera_mat2, distortion_coefficients2, image_size, R, T, flags);
+      }
+
+      // Convert to colmap cameras
+      CvToColmapCamera(camera1, camera_mat1, distortion_coefficients1);
+      CvToColmapCamera(camera2, camera_mat2, distortion_coefficients2);
+
+      // Convert pose info
+      Eigen::Matrix3d rot;
+      cv::cv2eigen(R, rot);
+      pose.translation = Eigen::Vector3d(T.at<double>(0), T.at<double>(1), T.at<double>(2));
+      pose.rotation = Eigen::Quaterniond(rot);
+
+      // Convert per view RMS
+      per_view_rms.push_back(perViewError.col(0));
+      per_view_rms.push_back(perViewError.col(1));
+
+      return rms;
     }
   }
 }

@@ -1,5 +1,7 @@
 #include "ui/widgets/model_selector_widget.h"
+#include "ui/utils/parse_params.h"
 
+#include "model_selector_widget.h"
 #include <colmap/sensor/models.h>
 
 namespace {
@@ -49,12 +51,36 @@ namespace calibmar {
     camera_model_combobox_->setCurrentIndex(index);
   }
 
-  std::optional<std::string> CameraModelSelectorWidget::InitialCameraParameters() {
-    return initial_parameters_->InitialParameters();
+  std::optional<std::vector<double>> CameraModelSelectorWidget::InitialCameraParameters() {
+    std::optional<std::string> parameters_string = initial_parameters_->InitialParameters();
+    std::vector<double> params;
+    if (!parameters_string.has_value() || !TryParseParams(params, parameters_string.value())) {
+      return {};
+    }
+
+    return params;
   }
 
   void CameraModelSelectorWidget::SetInitialCameraParameters(const std::optional<std::string>& parameters) {
     initial_parameters_->SetInitialParameters(parameters);
+  }
+
+  bool CameraModelSelectorWidget::Validate(std::string& error_message) {
+    CameraModelType camera_model = CameraModel();
+    std::optional<std::string> parameters_string = initial_parameters_->InitialParameters();
+    if (parameters_string.has_value()) {
+      std::vector<double> params;
+      if (!TryParseParams(params, parameters_string.value())) {
+        error_message = "Invalid camera parameter format.";
+        return false;
+      }
+      else if (params.size() != CameraModel::CameraModels().at(camera_model).num_params) {
+        error_message = "Camera parameters dont match camera model.";
+        return false;
+      }
+    }
+
+    return true;
   }
 
   void CameraModelSelectorWidget::SetCameraParametersLabel(int index) {

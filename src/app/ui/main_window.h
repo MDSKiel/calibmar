@@ -22,6 +22,7 @@ namespace calibmar {
    private:
     void NewStreamCalibration();
     void NewFilesCalibration();
+    void NewStereoFilesCalibration();
     void SaveCalibration();
     void About();
     void CreateActions();
@@ -32,10 +33,13 @@ namespace calibmar {
     QScrollArea* scroll_area_;
     QVBoxLayout* main_layout_;
     QAction* calibration_files_action_;
+    QAction* calibration_stereo_files_action_;
     QAction* calibration_stream_action_;
     QAction* calibration_save_action_;
     std::string last_directory_;
     std::unique_ptr<std::thread> worker_thread_;
     std::unique_ptr<Calibration> calibration_;
+    // second calibration that only exists for a stereo calibration
+    std::unique_ptr<Calibration> calibration_stereo_;
   };
 }

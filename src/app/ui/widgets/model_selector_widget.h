@@ -17,8 +17,10 @@ namespace calibmar {
     CameraModelType CameraModel();
     void SetCameraModel(CameraModelType type);
 
-    std::optional<std::string> InitialCameraParameters();
+    std::optional<std::vector<double>> InitialCameraParameters();
     void SetInitialCameraParameters(const std::optional<std::string>& parameters);
+
+    bool Validate(std::string& error_message);
 
    private:
     void SetCameraParametersLabel(int index);

@@ -19,7 +19,7 @@ namespace calibmar {
     main_layout_->addWidget(calibration_widget_);
   }
 
-  void CalibrationWidget::AddExtractionItem(ExtractionImageWidget* widget) {
+  void CalibrationWidget::AddExtractionItem(QWidget* widget) {
     extraction_images_->AddImage(widget);
   }
 

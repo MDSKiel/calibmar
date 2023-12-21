@@ -11,4 +11,6 @@ target_sources(calibmar PRIVATE
 	non_svp_calibration.cpp
 	non_svp_calibration.h
 	opencv_calibration.cpp
-	opencv_calibration.h)
+	opencv_calibration.h
+	stereo_calibrator.cpp
+	stereo_calibrator.h)

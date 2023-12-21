@@ -108,7 +108,7 @@ namespace calibmar {
     layout->addWidget(save_image_groupbox);
     layout->addWidget(calibration_options_widget_);
     layout->addLayout(horizontalLayout_run);
-    setWindowTitle("Chessboard Calibration");
+    setWindowTitle("Calibrate from Stream");
     layout->setSizeConstraint(QLayout::SetMinimumSize);
   }
 

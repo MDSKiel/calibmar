@@ -1,19 +1,21 @@
 
 #include "main_window.h"
 
-#include "calibmar/calibrators/calibrator.h"
 #include "calibmar/calibrators/basic_calibrator.h"
+#include "calibmar/calibrators/calibrator.h"
 #include "calibmar/calibrators/housing_calibrator.h"
 #include "calibmar/core/report.h"
 #include "calibmar/readers/filesystem_reader.h"
 #include "calibmar/readers/livestream_reader.h"
 #include "calibmar/version.h"
 #include "ui/dialogs/license_dialog.h"
+#include "ui/dialogs/stereo_file_calibration_dialog.h"
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/dialogs/test_widget_dialog.h"
+#include "ui/utils/calibration_target_visualization.h"
 #include "ui/utils/files_calibration_runner.h"
 #include "ui/utils/livestream_calibration_runner.h"
-#include "ui/utils/calibration_target_visualization.h"
+#include "ui/utils/stereo_files_calibration_runner.h"
 #include "ui/widgets/calibration_result_widget.h"
 #include "ui/widgets/zoomable_scroll_area.h"
 
@@ -128,6 +130,41 @@ namespace calibmar {
     worker_thread_->detach();
   }
 
+  void MainWindow::NewStereoFilesCalibration() {
+    StereoFileCalibrationDialog dialog(this);
+    dialog.exec();
+
+    if (dialog.result() != QDialog::DialogCode::Accepted) {
+      return;
+    }
+
+    BeginNewCalibration();
+    calibration_stereo_.reset(new Calibration());
+
+    StereoFileCalibrationDialog::Options options = dialog.GetOptions();
+    last_directory_ = options.images_directory2;
+    last_directory_ = options.images_directory2;
+
+    CalibrationWidget* calibration_widget = new CalibrationWidget(
+        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
+    main_layout_->addWidget(calibration_widget);
+
+    std::unique_ptr<StereoFilesCalibrationRunner> runner =
+        std::make_unique<StereoFilesCalibrationRunner>(calibration_widget, options);
+    worker_thread_.reset(new std::thread(
+        [this, runner = std::move(runner), calibration1 = calibration_.get(), calibration2 = calibration_stereo_.get()]() {
+      bool success = runner->Run(*calibration1, *calibration2);
+
+      if (!success) {
+        calibration_.reset();
+      }
+
+      QMetaObject::invokeMethod(this, [this]() { EndNewCalibration(); });
+    }));
+
+    worker_thread_->detach();
+  }
+
   // Saves current calibration at desired location
   void MainWindow::SaveCalibration() {
     if (!calibration_) {
@@ -163,6 +200,31 @@ namespace calibmar {
       }
     }
 
+    // do the same for stereo
+    if (calibration_stereo_) {
+      std::filesystem::path report_file_stereo = report_file;
+      report_file_stereo.replace_extension();  // remove any potentially userdefined extensions
+      report_file_stereo += "_stereo.txt";
+      std::filesystem::path yaml_file_stereo = report_file_stereo;
+      yaml_file_stereo.replace_extension("yaml");
+
+      if (!std::filesystem::exists(report_file) &&
+          (std::filesystem::exists(yaml_file_stereo) || std::filesystem::exists(report_file_stereo))) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this, "Overwrite",
+            QString::fromStdString(report_file_stereo.filename().string() + "/" + yaml_file_stereo.filename().string() +
+                                   " already exists.\nDo you want to replace?"),
+            QMessageBox::Ok | QMessageBox::Cancel);
+
+        if (reply == QMessageBox::Cancel) {
+          return;
+        }
+      }
+
+      report::WriteCalibrationReport(report_file_stereo.string(), *calibration_stereo_);
+      report::WriteCalibrationYaml(yaml_file_stereo.string(), *calibration_stereo_);
+    }
+
     report::WriteCalibrationReport(report_file.string(), *calibration_);
     report::WriteCalibrationYaml(yaml_file.string(), *calibration_);
   }
@@ -175,6 +237,8 @@ namespace calibmar {
     QMenu* fileMenu = menuBar()->addMenu("&File");
     calibration_files_action_ = fileMenu->addAction("&Calibrate from Files...", this, &MainWindow::NewFilesCalibration);
     calibration_stream_action_ = fileMenu->addAction("Calibrate from &Livestream...", this, &MainWindow::NewStreamCalibration);
+    calibration_stereo_files_action_ =
+        fileMenu->addAction("&Stereo Calibrate from Files...", this, &MainWindow::NewStereoFilesCalibration);
     // fileMenu->addAction("Test Widget Dialog", this, []() {
     //   TestWidgetDialog dialog;
     //   dialog.exec();
@@ -203,15 +267,18 @@ namespace calibmar {
     }
 
     calibration_files_action_->setEnabled(false);
+    calibration_stereo_files_action_->setEnabled(false);
     calibration_stream_action_->setEnabled(false);
     calibration_save_action_->setEnabled(false);
 
     calibration_.reset(new Calibration());
+    calibration_stereo_.reset();
   }
 
   // Called after a new calibration. Enables/Disables context menus.
   void MainWindow::EndNewCalibration() {
     calibration_files_action_->setEnabled(true);
+    calibration_stereo_files_action_->setEnabled(true);
     calibration_stream_action_->setEnabled(true);
     calibration_save_action_->setEnabled(static_cast<bool>(calibration_));
   }
@@ -236,6 +303,15 @@ namespace calibmar {
         break;
       }
     }
+    if (calibration_stereo_) {
+      for (auto& image : calibration_stereo_->Images()) {
+        if (image.Name() == image_name) {
+          target_visualizer.DrawTargetOnImage(img, image);
+          break;
+        }
+      }
+    }
+
     // display as dialog
     QImage qImage = QImage(img.Data().data, img.Data().cols, img.Data().rows, img.Data().step, QImage::Format_BGR888);
     QPixmap pixmap = QPixmap::fromImage(qImage);

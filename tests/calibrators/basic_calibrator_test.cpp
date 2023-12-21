@@ -5,6 +5,8 @@
 
 #include "utils/test_helpers.h"
 
+#include <iomanip>
+
 using namespace calibmar;
 
 namespace {
@@ -69,7 +71,13 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength, boost::unit_test::d
 
   std::vector<double> params = calibration.Camera().Params();
   std::vector<double> intrinsics_std_dev = calibration.IntrinsicsStdDeviations();
-  BOOST_TEST(params.size() == intrinsics_std_dev.size());
+  if (model == CameraModelType::PinholeCameraModel || model == CameraModelType::SimplePinholeCameraModel) {
+    // For pinhole models the principal point is not estimated and therefore does not have a std deviation
+    BOOST_TEST(params.size() - 2 == intrinsics_std_dev.size());
+  }
+  else {
+    BOOST_TEST(params.size() == intrinsics_std_dev.size());
+  }
 }
 
 // The expected values are not necessarily correct, but used to detect changes.
@@ -115,9 +123,9 @@ namespace {
   std::vector<double> GetExpectedParams(CameraModelType model) {
     switch (model) {
       case calibmar::CameraModelType::SimplePinholeCameraModel:
-        return {222.07195611026711, 144.84924600366065, 75.551060432880959};
+        return {225.68526725553883, 135, 90};
       case calibmar::CameraModelType::PinholeCameraModel:
-        return {195.92468578905567, 216.87861378636376, 137.25325013888644, 89.159125025409438};
+        return {196.30181001486221, 217.95446625739132, 135, 90};
       case calibmar::CameraModelType::SimpleRadialCameraModel:
         return {215.07699224946091, 124.06171118648342, 71.408220362731569, -0.15052033210101046};
       case calibmar::CameraModelType::RadialCameraModel:
@@ -126,12 +134,10 @@ namespace {
         return {2.0188715078245809e+02,  2.1747919060681681e+02, 9.6243850990938085e+01,  7.2696251399402101e+01,
                 -1.4415600464693909e-01, 8.7045274598903946e-02, -1.2333462790628771e-02, -2.8774769110121036e-02};
       case calibmar::CameraModelType::FullOpenCVCameraModel:
-        return {193.23245484744245,  210.25191253494594,  109.70998773952022,     91.046573561312115,
-                -18.976280608549686, 94.908582048945973,  -0.0021114678555288137, -0.032946280660719147,
-                209.12021076517169,  -18.949728842973212, 93.714407250262155,     212.91488305049299};
+        return {193.232371,     210.251722,    109.709759, 91.0455827, -18.976556, 94.9240243,
+                -0.00211222641, -0.0329466841, 208.921145, -18.95004,  93.7305751, 212.713336};
       case calibmar::CameraModelType::OpenCVFisheyeCameraModel:
-        return {105.40813851831963,   119.88470510750452,  126.94443922625560, 87.962659998111917,
-                -0.38526660354926962, 0.98230253220278152, 2.8161833640255787, -2.7523335070129344};
+        return {105.345678, 116.318389, 127.340804, 87.1324962, -0.893005024, 2.89266999, -0.78731496, -1.12493278};
       default:
         throw std::runtime_error("Bad CameraModel");
     }

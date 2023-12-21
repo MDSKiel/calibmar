@@ -1,0 +1,151 @@
+#include "stereo_files_calibration_runner.h"
+#include "calibmar/calibrators/calibrator3D.h"
+#include "calibmar/calibrators/housing_calibrator.h"
+#include "calibmar/calibrators/stereo_calibrator.h"
+#include "calibmar/extractors/aruco_sift_extractor.h"
+#include "calibmar/extractors/sift_extractor.h"
+#include "calibmar/readers/filesystem_reader.h"
+
+#include "ui/widgets/calibration_result_widget.h"
+
+#include <colmap/scene/reconstruction.h>
+
+namespace {
+  std::unique_ptr<calibmar::ExtractionImageWidget::Data> ReadAndExtractImage(calibmar::ImageReader& reader,
+                                                                             calibmar::FeatureExtractor& extractor,
+                                                                             calibmar::Image& image) {
+    using namespace calibmar;
+
+    std::unique_ptr<Pixmap> pixmap = std::make_unique<Pixmap>();
+    ImageReader::Status reader_status = reader.Next(image, *pixmap);
+    FeatureExtractor::Status extractor_status;
+    std::unique_ptr<ExtractionImageWidget::Data> data = std::make_unique<ExtractionImageWidget::Data>();
+    if (reader_status == ImageReader::Status::SUCCESS) {
+      data->image_name = image.Name();
+
+      extractor_status = extractor.Extract(image, *pixmap);
+
+      data->image = std::move(pixmap);
+      data->status = ExtractionImageWidget::ConvertStatus(extractor_status);
+    }
+    else {
+      data->status = ExtractionImageWidget::ConvertStatus(reader_status);
+    }
+
+    return std::move(data);
+  }
+}
+
+namespace calibmar {
+
+  StereoFilesCalibrationRunner::StereoFilesCalibrationRunner(CalibrationWidget* calibration_widget,
+                                                             StereoFileCalibrationDialog::Options options)
+      : calibration_widget_(calibration_widget), options_(options) {}
+
+  bool StereoFilesCalibrationRunner::Run(Calibration& calibration1, Calibration& calibration2) {
+    FilesystemImageReader::Options reader_options1;
+    reader_options1.image_directory = options_.images_directory1;
+    FilesystemImageReader::Options reader_options2;
+    reader_options2.image_directory = options_.images_directory2;
+    FilesystemImageReader reader1(reader_options1);
+    FilesystemImageReader reader2(reader_options2);
+    std::pair<int, int> image_size{reader1.ImagesWidth(), reader1.ImagesHeight()};
+
+    ChessboardFeatureExtractor::Options extractor_options;
+    extractor_options.chessboard_columns = options_.calibration_target_options.chessboard_columns;
+    extractor_options.chessboard_rows = options_.calibration_target_options.chessboard_rows;
+    extractor_options.square_size = options_.calibration_target_options.square_size;
+    ChessboardFeatureExtractor extractor(extractor_options);
+    calibration1.SetPoints3D(extractor.Points3D());
+    calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
+    calibration2.SetPoints3D(extractor.Points3D());
+    calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
+
+    StereoCalibrator::Options calibrator_options;
+    colmap::Camera camera;
+    if (options_.initial_camera_parameters.has_value()) {
+      camera = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters.value());
+      calibrator_options.use_intrinsics_guess = true;
+    }
+    else {
+      calibrator_options.camera_model = options_.camera_model;
+      calibrator_options.image_size = image_size;
+    }
+
+    calibration1.SetCamera(camera);
+    calibration2.SetCamera(camera);
+
+    StereoCalibrator calibrator(calibrator_options);
+    std::unique_ptr<TargetVisualizer> target_visualizer = std::make_unique<ChessboardTargetVisualizer>(
+        options_.calibration_target_options.chessboard_columns, options_.calibration_target_options.chessboard_rows);
+
+    calibration_widget_->SetTargetVisualizer(std::move(target_visualizer));
+
+    try {
+      while (reader1.HasNext() && reader2.HasNext()) {
+        Image image1, image2;
+        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data1 = ReadAndExtractImage(reader1, extractor, image1);
+        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data2 = ReadAndExtractImage(reader2, extractor, image2);
+
+        if (data1->status == ExtractionImageWidget::Status::SUCCESS && data2->status == ExtractionImageWidget::Status::SUCCESS) {
+          size_t id = calibration1.AddImage(image1);
+          data1->image_data = &calibration1.Image(id);
+          id = calibration2.AddImage(image2);
+          data2->image_data = &calibration2.Image(id);
+        }
+
+        // currently ignore read errors for visu. Check visualization, when reenabling.
+        if (data1->status == ExtractionImageWidget::Status::READ_ERROR ||
+            data2->status == ExtractionImageWidget::Status::READ_ERROR) {
+          continue;
+        }
+
+        QMetaObject::invokeMethod(calibration_widget_, [this, data1 = std::move(data1), data2 = std::move(data2)]() mutable {
+          QFrame* frame = new QFrame();
+          frame->setFrameStyle(QFrame::StyledPanel);
+          QGridLayout* grid = new QGridLayout(frame);
+          ExtractionImageWidget* image_widget1 =
+              new ExtractionImageWidget(std::move(data1), calibration_widget_->TargetVisualizer());
+          ExtractionImageWidget* image_widget2 =
+              new ExtractionImageWidget(std::move(data2), calibration_widget_->TargetVisualizer());
+          grid->addWidget(image_widget1, 0, 0);
+          grid->addWidget(image_widget2, 0, 1);
+          frame->setLayout(grid);
+
+          calibration_widget_->AddExtractionItem(frame);
+        });
+      }
+
+      QMetaObject::invokeMethod(calibration_widget_,
+                                [calibration_widget = calibration_widget_]() { calibration_widget->StartCalibration(); });
+
+      calibrator.Calibrate(calibration1, calibration2);
+    }
+    catch (std::exception& ex) {
+      std::string message(ex.what());
+
+      QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, message]() {
+        calibration_widget->EndCalibration(new CalibrationResultWidget(message));
+      });
+      return false;
+    }
+
+    QMetaObject::invokeMethod(calibration_widget_,
+                              [calibration_widget = calibration_widget_, &calibration1, &calibration2]() mutable {
+      QWidget* frame = new QWidget();
+      QVBoxLayout* layout = new QVBoxLayout(frame);
+      QMargins margin = layout->contentsMargins();
+      margin.setLeft(0);
+      margin.setRight(0);
+      layout->setContentsMargins(margin);
+      layout->addWidget(new QLabel("Camera 1"));
+      layout->addWidget(new CalibrationResultWidget(calibration1));
+      layout->addWidget(new QLabel("Camera 2"));
+      layout->addWidget(new CalibrationResultWidget(calibration2));
+
+      calibration_widget->EndCalibration(frame);
+    });
+
+    return true;
+  }
+}

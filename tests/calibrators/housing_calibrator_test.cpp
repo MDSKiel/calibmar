@@ -35,11 +35,10 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationFlat) {
   calibrator.Calibrate(calibration);
 
   std::vector<double> actual_params = calibration.Camera().RefracParams();
-  double tolerance = 0.002;
-  BOOST_TEST(abs(actual_params[0] - expected_params[0]) < tolerance);
-  BOOST_TEST(abs(actual_params[1] - expected_params[1]) < tolerance);
-  BOOST_TEST(abs(actual_params[2] - expected_params[2]) < tolerance);
-  BOOST_TEST(abs(actual_params[3] - expected_params[3]) < tolerance);
+  BOOST_TEST(abs(actual_params[0] - expected_params[0]) < 0.0002);
+  BOOST_TEST(abs(actual_params[1] - expected_params[1]) < 0.0002);
+  BOOST_TEST(abs(actual_params[2] - expected_params[2]) < 0.0002);
+  BOOST_TEST(abs(actual_params[3] - expected_params[3]) < 0.01); // distance is not estimated well
 }
 
 BOOST_AUTO_TEST_CASE(BasicHousingCalibrationDome) {

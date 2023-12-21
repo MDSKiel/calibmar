@@ -47,7 +47,7 @@ namespace calibmar {
     layout->addWidget(directory_groupbox);
     layout->addWidget(calibration_options_widget_);
     layout->addLayout(horizontalLayout_run);
-    setWindowTitle("Chessboard Calibration");
+    setWindowTitle("Calibrate from Files");
 
     layout->setSizeConstraint(QLayout::SetMinimumSize);
   }

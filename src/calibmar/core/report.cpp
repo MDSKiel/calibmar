@@ -78,6 +78,16 @@ namespace calibmar {
       stream << "# overall_rms: " << calibration.CalibrationRms() << std::endl;
       // target
       stream << "# target: " << calibration.GetCalibrationTargetInfo();
+
+      // stereo
+      if (calibration.CameraToWorldStereo().has_value()) {
+        Eigen::IOFormat yaml_format(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "[", "]");
+        const colmap::Rigid3d& pose = calibration.CameraToWorldStereo().value();
+        stream << "\n\n# stereo pose (camera to world, camera 3D point X_C can be transformed to 3D world point X_W by X_W = cam_to_world_rotation * X_C + cam_to_world_translation)";
+        stream << "\ncam_to_world_rotation_rowmajor: " << pose.rotation.normalized().toRotationMatrix().format(yaml_format);
+        stream << "\ncam_to_world_translation: " << pose.translation.format(yaml_format);
+        stream << "\n# (distance to origin: " << pose.translation.norm() << ")";
+      }
     }
 
     std::string GenerateResultString(const Calibration& calibration) {
@@ -152,6 +162,13 @@ namespace calibmar {
           stream << std::endl;
         }
       }
+      // optional stereo pose
+      if (calibration.CameraToWorldStereo().has_value()) {
+        const colmap::Rigid3d& cam_to_world = calibration.CameraToWorldStereo().value();
+        stream << std::endl << "Stereo Pose (camera to world R|t):" << std::endl;
+        stream << cam_to_world.ToMatrix() << std::endl;
+        stream << "(Distance to origin: " << cam_to_world.translation.norm() << ")" << std::endl;
+      }
       // overall rms
       stream << std::endl << "Overall RMS: " << calibration.CalibrationRms();
       // per view rms
@@ -179,7 +196,6 @@ namespace calibmar {
               break;
             }
           }
-
           stream << std::endl;
 
           for (; rms_idx < name_rms.size(); rms_idx++) {

@@ -4,6 +4,7 @@
 
 #include <colmap/scene/camera.h>
 #include <map>
+#include <optional>
 
 namespace calibmar {
   // Calibration holds all information about a single calibration.
@@ -48,6 +49,11 @@ namespace calibmar {
     // Get infos about the used calibration target. Used in report generation.
     const std::string& GetCalibrationTargetInfo() const;
 
+    // Contains the stereo pose in case this is the calibration of a stereo camera.
+    // That is: a 3D point X_C in camera coordinates is transformed to a 3D point X_W in world coordinates by X_W = R * X_C + t
+    const std::optional<colmap::Rigid3d>& CameraToWorldStereo() const;
+    void SetCameraToWorldStereo(const std::optional<colmap::Rigid3d>& pose);
+
     void GetCorrespondences(std::vector<std::vector<Eigen::Vector2d>>& points2D,
                             std::vector<std::vector<Eigen::Vector3d>>& points3D);
 
@@ -62,6 +68,7 @@ namespace calibmar {
     std::map<uint32_t, Eigen::Vector3d> points3D_;
     // used to generate point id
     uint32_t number_of_points3D = 0;
+    std::optional<colmap::Rigid3d> stereo_pose_ = {};
   };
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +78,7 @@ namespace calibmar {
   inline colmap::Camera& Calibration::Camera() {
     return camera_;
   }
-  
+
   inline const colmap::Camera& Calibration::Camera() const {
     return camera_;
   }
@@ -155,10 +162,10 @@ namespace calibmar {
     housing_params_std_deviations_ = housing_std;
   }
 
-    inline std::vector<double>& Calibration::PerViewRms() {
+  inline std::vector<double>& Calibration::PerViewRms() {
     return per_view_rms_;
   }
-  
+
   inline const std::vector<double>& Calibration::PerViewRms() const {
     return per_view_rms_;
   }
@@ -173,5 +180,13 @@ namespace calibmar {
 
   inline const std::string& Calibration::GetCalibrationTargetInfo() const {
     return calibration_target_info_;
+  }
+
+  inline const std::optional<colmap::Rigid3d>& Calibration::CameraToWorldStereo() const {
+    return stereo_pose_;
+  }
+
+  inline void Calibration::SetCameraToWorldStereo(const std::optional<colmap::Rigid3d>& pose) {
+    stereo_pose_ = pose;
   }
 }

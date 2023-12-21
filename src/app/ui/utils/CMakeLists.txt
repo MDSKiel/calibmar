@@ -13,5 +13,8 @@ target_sources(calibmar_app PRIVATE
 	livestream_calibration_runner.h	
 	manual_reset_signal.cpp
 	manual_reset_signal.h
+	parse_params.h
 	render.cpp
-	render.h)
+	render.h
+	stereo_files_calibration_runner.cpp
+	stereo_files_calibration_runner.h)
