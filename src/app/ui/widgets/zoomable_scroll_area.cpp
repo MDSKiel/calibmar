@@ -15,7 +15,7 @@ namespace calibmar {
 
     // limit scaling
     QSize new_size = widget()->size() * scale;
-    int limited = std::clamp(std::max(new_size.width(), new_size.height()), 100, 5000);
+    int limited = std::clamp(std::max(new_size.width(), new_size.height()), 100, 50000);
     new_size = widget()->size().scaled(limited, limited, Qt::KeepAspectRatio);
 
     // due to limiting the actual scale might be smaller

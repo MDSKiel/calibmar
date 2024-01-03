@@ -11,6 +11,7 @@ namespace calibmar {
     QGroupBox* features_groupbox = new QGroupBox("Extracted Features");
     QVBoxLayout* features_groupbox_layout = new QVBoxLayout(features_groupbox);
     features_groupbox_layout->addWidget(extraction_images_);
+    features_groupbox_layout->setContentsMargins(0, 0, 0, 0);
     main_layout_->addWidget(features_groupbox);
 
     calibration_widget_ = new QGroupBox("Calibration");

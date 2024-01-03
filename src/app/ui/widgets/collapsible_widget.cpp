@@ -15,6 +15,7 @@ namespace calibmar {
     toggle_button->setText(title);
     toggle_button->setCheckable(true);
     toggle_button->setChecked(false);
+    toggle_button->setCursor(QCursor(Qt::PointingHandCursor));
 
     QFrame* header_line = new QFrame(this);
     header_line->setFrameShape(QFrame::HLine);

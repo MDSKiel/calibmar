@@ -23,8 +23,6 @@ namespace calibmar {
     virtual void showEvent(QShowEvent* e) override;
 
    private:
-    void AddResultText(const std::string& message, QLayout* layout);
-
     std::unique_ptr<Pixmap> offset_visu_pixmap_;
     std::unique_ptr<colmap::OptionManager> options_manager_;
     QTextEdit* result_text_;

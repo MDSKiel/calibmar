@@ -41,5 +41,6 @@ namespace calibmar {
     std::unique_ptr<Calibration> calibration_;
     // second calibration that only exists for a stereo calibration
     std::unique_ptr<Calibration> calibration_stereo_;
+    bool scrolled_to_bottom_;
   };
 }

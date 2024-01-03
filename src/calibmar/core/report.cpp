@@ -171,44 +171,6 @@ namespace calibmar {
       }
       // overall rms
       stream << std::endl << "Overall RMS: " << calibration.CalibrationRms();
-      // per view rms
-      if (calibration.PerViewRms().size() > 0) {
-        int width = std::max(std::to_string(calibration.PerViewRms()[0]).size() + 2,
-                             std::filesystem::path(calibration.Images()[0].Name()).filename().string().size() + 2);
-
-        std::vector<std::pair<std::string, double>> name_rms;
-        name_rms.reserve(calibration.Images().size());
-        for (size_t i = 0; i < calibration.Images().size(); i++) {
-          name_rms.push_back({std::filesystem::path(calibration.Image(i).Name()).filename(), calibration.PerViewRms()[i]});
-        }
-        std::sort(name_rms.begin(), name_rms.end(), [](auto& a, auto& b) { return a.second > b.second; });
-
-        stream << std::endl << std::endl << "Per View RMS (" << name_rms.size() << " images, ordered descending):" << std::endl;
-        size_t img_idx = 0, rms_idx = 0;
-        size_t img_per_line = 8;
-
-        while (img_idx < name_rms.size()) {
-          for (; img_idx < name_rms.size(); img_idx++) {
-            stream << std::setw(width) << std::setfill(' ') << name_rms[img_idx].first;
-
-            if (img_idx % img_per_line == img_per_line - 1) {
-              img_idx++;
-              break;
-            }
-          }
-          stream << std::endl;
-
-          for (; rms_idx < name_rms.size(); rms_idx++) {
-            stream << std::setw(width) << std::setfill(' ') << name_rms[rms_idx].second;
-
-            if (rms_idx % img_per_line == img_per_line - 1) {
-              rms_idx++;
-              break;
-            }
-          }
-          stream << std::endl << std::endl;
-        }
-      }
     }
 
     std::string GenerateCalibrationTargetInfo(const ChessboardFeatureExtractor::Options& options) {

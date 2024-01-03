@@ -138,9 +138,9 @@ namespace calibmar {
       margin.setLeft(0);
       margin.setRight(0);
       layout->setContentsMargins(margin);
-      layout->addWidget(new QLabel("Camera 1"));
+      layout->addWidget(new QLabel("<h2>Camera 1</h2>"));
       layout->addWidget(new CalibrationResultWidget(calibration1));
-      layout->addWidget(new QLabel("Camera 2"));
+      layout->addWidget(new QLabel("<h2>Camera 2</h2>"));
       layout->addWidget(new CalibrationResultWidget(calibration2));
 
       calibration_widget->EndCalibration(frame);

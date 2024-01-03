@@ -54,10 +54,16 @@ namespace calibmar {
     main_layout_->setAlignment(Qt::AlignTop);
     scroll_area_->setWidgetResizable(true);
     scroll_area_->setWidget(content);
-
+    scrolled_to_bottom_ = true;
     QScrollBar* scrollbar = scroll_area_->verticalScrollBar();
-    QObject::connect(scrollbar, &QScrollBar::rangeChanged, this,
-                     [this](int min, int max) { this->scroll_area_->verticalScrollBar()->setValue(max); });
+    QObject::connect(scrollbar, &QScrollBar::rangeChanged, this, [this](int min, int max) {
+      if (this->scrolled_to_bottom_) {
+        this->scroll_area_->verticalScrollBar()->setValue(max);
+      }
+    });
+    QObject::connect(scrollbar, &QScrollBar::valueChanged, this, [this](int value) {
+      this->scrolled_to_bottom_ = this->scroll_area_->verticalScrollBar()->maximum() == value;
+    });
   }
 
   // Starts a new live stream calibration
@@ -239,10 +245,12 @@ namespace calibmar {
     calibration_stream_action_ = fileMenu->addAction("Calibrate from &Livestream...", this, &MainWindow::NewStreamCalibration);
     calibration_stereo_files_action_ =
         fileMenu->addAction("&Stereo Calibrate from Files...", this, &MainWindow::NewStereoFilesCalibration);
+    ////
     // fileMenu->addAction("Test Widget Dialog", this, []() {
     //   TestWidgetDialog dialog;
     //   dialog.exec();
     // });
+    ////
     fileMenu->addSeparator();
     calibration_save_action_ = fileMenu->addAction("&Save Calibration...", this, &MainWindow::SaveCalibration);
     calibration_save_action_->setEnabled(false);
@@ -291,39 +299,35 @@ namespace calibmar {
     if (!std::filesystem::exists(image_name)) {
       return;
     }
-    Pixmap img;
-    if (!img.Read(image_name)) {
+    std::unique_ptr<Pixmap> img = std::make_unique<Pixmap>();
+    if (!img->Read(image_name)) {
       return;
     }
 
     // if known image add point visu
     for (auto& image : calibration_->Images()) {
       if (image.Name() == image_name) {
-        target_visualizer.DrawTargetOnImage(img, image);
+        target_visualizer.DrawTargetOnImage(*img, image);
         break;
       }
     }
     if (calibration_stereo_) {
       for (auto& image : calibration_stereo_->Images()) {
         if (image.Name() == image_name) {
-          target_visualizer.DrawTargetOnImage(img, image);
+          target_visualizer.DrawTargetOnImage(*img, image);
           break;
         }
       }
     }
 
     // display as dialog
-    QImage qImage = QImage(img.Data().data, img.Data().cols, img.Data().rows, img.Data().step, QImage::Format_BGR888);
-    QPixmap pixmap = QPixmap::fromImage(qImage);
     QDialog dialog(this);
     dialog.setGeometry(this->geometry());
     dialog.setWindowTitle(QString::fromStdString(image_name));
     QVBoxLayout* layout = new QVBoxLayout(&dialog);
     ZoomableScrollArea* area = new ZoomableScrollArea(&dialog);
-    QLabel* lbl = new QLabel(&dialog);
-    lbl->setPixmap(pixmap);
-    lbl->setScaledContents(true);
-    lbl->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    ImageWidget* lbl = new ImageWidget(&dialog);
+    lbl->SetImage(std::move(img));
     area->setWidget(lbl);
     layout->addWidget(area);
     dialog.exec();
