@@ -8,8 +8,7 @@
 
 namespace {
   std::unique_ptr<colmap::Database> PrepareColmapDB(calibmar::Calibration& calibration, const std::string& database_path,
-                                                    std::map<colmap::image_t, size_t>& colmap_img_to_calib_img,
-                                                    bool use_pose_priors) {
+                                                    std::map<colmap::image_t, size_t>& colmap_img_to_calib_img) {
     std::unique_ptr<colmap::Database> database = std::make_unique<colmap::Database>(database_path);
 
     colmap::DatabaseTransaction database_transaction(database.get());
@@ -21,11 +20,6 @@ namespace {
       colmap::Image colmap_img;
       colmap_img.SetCameraId(calibration.Camera().CameraId());
       colmap_img.SetName(image.Name());
-
-      if (use_pose_priors) {
-        colmap_img.CamFromWorldPrior().translation = image.Translation();
-        colmap_img.CamFromWorldPrior().rotation = image.Rotation();
-      }
 
       colmap::image_t img_id = database->WriteImage(colmap_img);
 
@@ -60,24 +54,31 @@ namespace {
 
 namespace colmap_calibration {
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
-                       bool use_pose_priors) {
+                       bool enable_refraction) {
     colmap::SiftMatchingOptions sift_options;
     colmap::TwoViewGeometryOptions geometry_options;
     colmap::IncrementalMapperOptions mapper_options;
-    CalibrateCamera(calibration, reconstruction, use_pose_priors, sift_options, geometry_options, mapper_options);
+    CalibrateCamera(calibration, reconstruction, enable_refraction, sift_options, geometry_options, mapper_options);
   }
 
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
-                       bool use_pose_priors, colmap::SiftMatchingOptions& matching_options,
+                       bool enable_refraction, colmap::SiftMatchingOptions& matching_options,
                        colmap::TwoViewGeometryOptions& geometry_options, colmap::IncrementalMapperOptions& mapper_options) {
     std::string database_path = "file::memory:?cache=shared";
     std::map<colmap::image_t, size_t> colmap_img_to_calib_img;
-    std::unique_ptr<colmap::Database> database =
-        PrepareColmapDB(calibration, database_path, colmap_img_to_calib_img, use_pose_priors);
+    std::unique_ptr<colmap::Database> database = PrepareColmapDB(calibration, database_path, colmap_img_to_calib_img);
 
-    // currently hard disable of GPU
+#if defined(COLMAP_CUDA_ENABLED)
+    matching_options.use_gpu = true;
+#else
     matching_options.use_gpu = false;
+#endif
     colmap::ExhaustiveMatchingOptions options;
+
+    if (enable_refraction) {
+      geometry_options.enable_refraction = true;
+    }
+
     std::unique_ptr<colmap::Thread> feature_matcher =
         colmap::CreateExhaustiveFeatureMatcher(options, matching_options, geometry_options, database_path);
     feature_matcher->Start();
@@ -95,11 +96,19 @@ namespace colmap_calibration {
       mapper_options_ptr->ba_refine_principal_point = false;
     }
     else {
-      mapper_options_ptr->ba_refine_principal_point = true; 
+      mapper_options_ptr->ba_refine_principal_point = true;
     }
-    
+
     mapper_options_ptr->extract_colors = false;
-    mapper_options_ptr->use_pose_prior = use_pose_priors;
+
+    if (enable_refraction) {
+      mapper_options_ptr->enable_refraction = enable_refraction;
+      mapper_options_ptr->ba_refine_refrac_params = true;
+      mapper_options_ptr->ba_refine_extra_params = false;
+      mapper_options_ptr->ba_refine_focal_length = false;
+      mapper_options_ptr->ba_refine_principal_point = false;
+    }
+
     std::unique_ptr<colmap::IncrementalMapperController> mapper =
         std::make_unique<colmap::IncrementalMapperController>(mapper_options_ptr,
                                                               /*image_path=*/"", database_path, reconstruction_manager);

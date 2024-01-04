@@ -11,10 +11,10 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CUDA_ENABLED": "OFF",
                 "CMAKE_BUILD_TYPE": "Debug",
                 "TESTS_ENABLED": "ON",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CUDA_ARCHITECTURES": "native",
                 "CMAKE_TOOLCHAIN_FILE": {
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                     "type": "FILEPATH"
@@ -31,10 +31,10 @@
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CUDA_ENABLED": "OFF",
                 "CMAKE_BUILD_TYPE": "Release",
                 "TESTS_ENABLED": "ON",
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CUDA_ARCHITECTURES": "native",
                 "CMAKE_TOOLCHAIN_FILE": {
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                     "type": "FILEPATH"
@@ -47,10 +47,10 @@
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
-                "CUDA_ENABLED": "OFF",
                 "TESTS_ENABLED": "ON",
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CUDA_ARCHITECTURES": "native"
             }
         },
         {
@@ -59,10 +59,10 @@
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
-                "CUDA_ENABLED": "OFF",
                 "TESTS_ENABLED": "ON",
                 "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CUDA_ARCHITECTURES": "native"
             }
         },
         {
@@ -71,10 +71,10 @@
             "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "cacheVariables": {
-                "CUDA_ENABLED": "OFF",
                 "TESTS_ENABLED": "ON",
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}"
+                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "CMAKE_CUDA_ARCHITECTURES": "native"
             }
         }
     ]

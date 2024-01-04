@@ -21,6 +21,8 @@ namespace calibmar {
 
       bool contains_arucos = false;
 
+      bool enable_refraction = false;
+
       std::pair<int, int> image_size = {0, 0};
     };
 

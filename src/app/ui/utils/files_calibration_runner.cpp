@@ -78,6 +78,13 @@ namespace {
       calibrator_options.image_size = image_size;
     }
 
+    if (options.housing_calibration.has_value()) {
+      calibration.Camera().SetRefracModelIdFromName(
+          calibmar::HousingInterface::HousingInterfaces().at(options.housing_calibration.value().first).model_name);
+      calibration.Camera().SetRefracParams(options.housing_calibration.value().second);
+      calibrator_options.enable_refraction = true;
+    }
+
     double aruco_mask_factor = 1;
     if (use_aruco) {
       ArucoSiftFeatureExtractor::Options options = std::get<ArucoSiftFeatureExtractor::Options>(target3d_options);

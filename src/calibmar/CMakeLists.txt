@@ -10,3 +10,7 @@ add_subdirectory(readers)
 target_link_libraries(calibmar PUBLIC colmap ${OpenCV_LIBS})
 target_include_directories(calibmar PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/.. ${OpenCV_INCLUDE_DIRS})
 target_compile_features(calibmar PUBLIC cxx_std_17)
+
+if(CUDA_ENABLED) # to also use the colmap cuda enabled option
+    target_compile_definitions(calibmar PUBLIC COLMAP_CUDA_ENABLED)
+endif()

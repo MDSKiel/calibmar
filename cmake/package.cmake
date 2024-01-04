@@ -1,7 +1,7 @@
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Calibmar is a camera and underwater housing calibration tool")
 set(CPACK_VERBATIM_VARIABLES TRUE)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
-set(CPACK_PACKAGE_CONTACT "fseegraeber@geomar.de")
+set(CPACK_PACKAGE_CONTACT "fse@informatik.uni-kiel.de")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libopencv-dev (>= 4.0), qtbase5-dev (>= 5.14), libsuitesparse-dev, libfreeimage-dev, libgoogle-glog-dev,  libatlas-base-dev")
 include(CPack)

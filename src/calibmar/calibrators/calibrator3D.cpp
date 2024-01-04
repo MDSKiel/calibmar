@@ -38,6 +38,15 @@ namespace calibmar {
       throw std::runtime_error("No images to calibrate from.");
     }
 
+    if(options_.enable_refraction){
+      if(!options_.use_intrinsics_guess){
+        throw std::runtime_error("Housing calibration requires an intrinsic guess!");
+      }
+      if(!calibration.Camera().IsCameraRefractive()){
+        throw std::runtime_error("Housing calibration requested but refractive parameters not initialized!");
+      }
+    }
+
     if (!options_.use_intrinsics_guess) {
       if ((options_.image_size.first == 0 || options_.image_size.second == 0)) {
         throw std::runtime_error("Image size must be set!.");
@@ -69,16 +78,16 @@ namespace calibmar {
 
         std::cout << "Initial camera estimate from arucos:" << std::endl << init_camera.CalibrationMatrix() << std::endl;
 
-        if(calibration.Camera().FocalLengthIdxs().size() == 1){
+        if (calibration.Camera().FocalLengthIdxs().size() == 1) {
           calibration.Camera().SetFocalLength(init_camera.FocalLength());
         }
-        else{
+        else {
           calibration.Camera().SetFocalLengthX(init_camera.FocalLength());
           calibration.Camera().SetFocalLengthY(init_camera.FocalLength());
         }
       }
     }
 
-    colmap_calibration::CalibrateCamera(calibration, reconstruction_, false);
+    colmap_calibration::CalibrateCamera(calibration, reconstruction_, options_.enable_refraction);
   }
 }

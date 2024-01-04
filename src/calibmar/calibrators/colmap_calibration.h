@@ -10,10 +10,10 @@
 namespace colmap_calibration {
 
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
-                       bool use_pose_priors);
+                       bool enable_refraction);
 
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
-                       bool use_pose_priors, colmap::SiftMatchingOptions& matching_options,
+                       bool enable_refraction, colmap::SiftMatchingOptions& matching_options,
                        colmap::TwoViewGeometryOptions& geometry_options, colmap::IncrementalMapperOptions& mapper_options);
 
 }
