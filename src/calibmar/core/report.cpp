@@ -27,6 +27,7 @@ namespace calibmar {
 
     void WriteCalibrationYaml(const std::string& path, const Calibration& calibration) {
       std::ofstream out_file(path);
+      out_file.precision(10);
       GenerateCalibrationYaml(out_file, calibration);
       out_file.close();
     }
