@@ -68,6 +68,15 @@ namespace calibmar {
     layout->setSizeConstraint(QLayout::SetMinimumSize);
   }
 
+  void StereoFileCalibrationDialog::SetOptions(Options options) {
+    directory_edit1_->setText(QString::fromStdString(options.images_directory1));
+    directory_edit2_->setText(QString::fromStdString(options.images_directory2));
+
+    camera_model_selector_->SetCameraModel(options.camera_model);
+    camera_model_selector_->SetInitialCameraParameters(options.initial_camera_parameters);
+    calibration_target_options_->SetChessBoardTargetOptions(options.calibration_target_options);
+  }
+
   StereoFileCalibrationDialog::Options StereoFileCalibrationDialog::GetOptions() {
     Options options;
     options.camera_model = camera_model_selector_->CameraModel();
@@ -102,26 +111,23 @@ namespace calibmar {
   void StereoFileCalibrationDialog::ImportParameters() {
     std::string path =
         QFileDialog::getOpenFileName(this, "Import Parameters", QString(), "Calibration YAML (*.yaml *.yml)").toStdString();
-    
-    ImportedParameters parameters = ImportedParameters::ImportFromYaml(path);
-
-    // directories
-    directory_edit1_->setText(QString::fromStdString(parameters.directory));
-    directory_edit2_->setText(QString::fromStdString(parameters.directory));
-
-    // camera model/params
-    camera_model_selector_->SetCameraModel(parameters.camera_model);
-    std::optional<std::string> params;
-    if (parameters.camera_parameters.size() > 0) {
-      params = colmap::VectorToCSV<double>(parameters.camera_parameters);
+    if (path.empty()) {
+      return;
     }
-    camera_model_selector_->SetInitialCameraParameters(params);
 
-    // chessboard target
-    ChessboardFeatureExtractor::Options target_options;
-    target_options.chessboard_columns = parameters.chessboard_columns;
-    target_options.chessboard_rows = parameters.chessboard_rows;
-    target_options.square_size = parameters.square_size;
-    calibration_target_options_->SetChessBoardTargetOptions(target_options);
+    ImportedParameters parameters = ImportedParameters::ImportFromYaml(path);
+    Options options;
+
+    options.calibration_target_options.chessboard_columns = parameters.chessboard_columns;
+    options.calibration_target_options.chessboard_rows = parameters.chessboard_rows;
+    options.calibration_target_options.square_size = parameters.square_size;
+
+    options.images_directory1 = parameters.directory;
+    options.images_directory2 = parameters.directory;
+
+    options.camera_model = parameters.camera_model;
+    options.initial_camera_parameters = parameters.camera_parameters;
+
+    SetOptions(options);
   }
 }

@@ -23,6 +23,7 @@ namespace calibmar {
 
     StreamCalibrationDialog(QWidget* parent = nullptr);
 
+    void SetOptions(Options options);
     Options GetOptions();
 
     virtual void done(int r) override;

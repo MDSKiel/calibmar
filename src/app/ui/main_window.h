@@ -3,6 +3,7 @@
 #include "calibmar/core/pixmap.h"
 #include "calibmar/extractors/chessboard_extractor.h"
 #include "ui/dialogs/file_calibration_dialog.h"
+#include "ui/dialogs/stereo_file_calibration_dialog.h"
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/widgets/calibration_widget.h"
 #include "ui/widgets/livestream_extraction_widget.h"
@@ -42,5 +43,9 @@ namespace calibmar {
     // second calibration that only exists for a stereo calibration
     std::unique_ptr<Calibration> calibration_stereo_;
     bool scrolled_to_bottom_;
+    // to persist dialog options between runs
+    FileCalibrationDialog::Options file_calibration_options_;
+    StreamCalibrationDialog::Options stream_calibration_options_;
+    StereoFileCalibrationDialog::Options stereo_calibration_options_;
   };
 }

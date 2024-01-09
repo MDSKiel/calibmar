@@ -112,12 +112,32 @@ namespace calibmar {
     layout->setSizeConstraint(QLayout::SetMinimumSize);
   }
 
+  void StreamCalibrationDialog::SetOptions(Options options) {
+    if (options.save_images_directory.has_value()) {
+      directory_edit_->setText(QString::fromStdString(options.save_images_directory.value()));
+      save_images_checkbox_->setChecked(true);
+    }
+
+    auto mode = std::find_if(acquisition_modes_.begin(), acquisition_modes_.end(),
+                             [&options](auto& pair) { return pair.first == options.acquisition_mode; });
+    mode_combobox_->setCurrentText(QString::fromStdString(mode->second));
+
+    CommonCalibrationOptionsWidget::Options calibration_options;
+    calibration_options.calibration_target_options = options.calibration_target_options;
+    calibration_options.camera_model = options.camera_model;
+    calibration_options.housing_options = options.housing_calibration;
+    calibration_options.initial_camera_parameters = options.initial_camera_parameters;
+    calibration_options_widget_->SetOptions(calibration_options);
+    calibration_options_widget_->ForceArucoFor3DTarget(true);
+  }
+
   StreamCalibrationDialog::Options StreamCalibrationDialog::GetOptions() {
+    CommonCalibrationOptionsWidget::Options calibration_options = calibration_options_widget_->GetOptions();
     Options options;
-    options.camera_model = calibration_options_widget_->CameraModel();
-    options.calibration_target_options = calibration_options_widget_->CalibrationTargetOptions();
-    options.housing_calibration = calibration_options_widget_->HousingOptions();
-    options.initial_camera_parameters = calibration_options_widget_->InitialCameraParameters();
+    options.camera_model = calibration_options.camera_model;
+    options.calibration_target_options = calibration_options.calibration_target_options;
+    options.housing_calibration = calibration_options.housing_options;
+    options.initial_camera_parameters = calibration_options.initial_camera_parameters;
     options.device_index = device_index_->value();
     options.acquisition_mode = acquisition_modes_.at(mode_combobox_->currentIndex()).first;
     options.save_images_directory = save_images_directory_;
@@ -207,7 +227,7 @@ namespace calibmar {
       return false;
     }
 
-    if (calibration_options_widget_->HousingOptions().has_value() &&
+    if (calibration_options_widget_->GetOptions().housing_options.has_value() &&
         acquisition_modes_.at(mode_combobox_->currentIndex()).first == AcquisitionMode::OnSuggestedPose) {
       QMessageBox::information(this, "Validation Error",
                                "Acquisition mode Pose Suggestion does not support housing calibration.");
@@ -220,10 +240,34 @@ namespace calibmar {
   void calibmar::StreamCalibrationDialog::ImportParameters() {
     std::string path =
         QFileDialog::getOpenFileName(this, "Import Parameters", QString(), "Calibration YAML (*.yaml *.yml)").toStdString();
+    if (path.empty()) {
+      return;
+    }
 
     ImportedParameters p = ImportedParameters::ImportFromYaml(path);
-    directory_edit_->setText(QString::fromStdString(p.directory));
-    calibration_options_widget_->SetImportedParameters(p);
-    calibration_options_widget_->ForceArucoFor3DTarget(true);
+
+    Options options;
+    switch (p.calibration_target) {
+      case CalibrationTargetType::Chessboard:
+        options.calibration_target_options =
+            ChessboardFeatureExtractor::Options{p.chessboard_rows, p.chessboard_columns, p.square_size};
+        break;
+      case CalibrationTargetType::Target3D:
+        options.calibration_target_options = SiftFeatureExtractor::Options{};
+        break;
+      case CalibrationTargetType::Target3DAruco:
+        options.calibration_target_options = ArucoSiftFeatureExtractor::Options{p.aruco_type, p.aruco_scale_factor, false};
+        break;
+    }
+
+    options.camera_model = p.camera_model;
+    if (p.housing_model.has_value()) {
+      options.housing_calibration = {p.housing_model.value(), p.housing_parameters};
+    }
+
+    options.save_images_directory = p.directory;
+    options.initial_camera_parameters = p.camera_parameters;
+
+    SetOptions(options);
   }
 }

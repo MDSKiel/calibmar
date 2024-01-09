@@ -62,59 +62,25 @@ namespace calibmar {
     return true;
   }
 
-  void CommonCalibrationOptionsWidget::SetImportedParameters(const ImportedParameters& parameters) {
-    camera_model_selector_->SetCameraModel(parameters.camera_model);
-    std::optional<std::string> params;
-    if (parameters.camera_parameters.size() > 0) {
-      params = colmap::VectorToCSV<double>(parameters.camera_parameters);
+  CommonCalibrationOptionsWidget::Options CommonCalibrationOptionsWidget::GetOptions() {
+    Options options;
+    options.calibration_target_options = calibration_target_options_->CalibrationTargetOptions();
+    options.camera_model = camera_model_selector_->CameraModel();
+    options.housing_options = housing_calibration_;
+    options.initial_camera_parameters = initial_camera_parameters_;
+    return options;
+  }
+
+  void CommonCalibrationOptionsWidget::SetOptions(Options options) {
+    camera_model_selector_->SetCameraModel(options.camera_model);
+    camera_model_selector_->SetInitialCameraParameters(options.initial_camera_parameters);
+    if(options.housing_options.has_value()){
+      housing_type_selector_->SetHousingOptions(std::make_pair(options.housing_options->first, colmap::VectorToCSV(options.housing_options->second)));
     }
-    camera_model_selector_->SetInitialCameraParameters(params);
-    std::optional<std::pair<HousingInterfaceType, std::string>> housing_options;
-    if (parameters.housing_model.has_value()) {
-      housing_options = std::pair<HousingInterfaceType, std::string>(parameters.housing_model.value(),
-                                                                     colmap::VectorToCSV<double>(parameters.housing_parameters));
+    else{
+      housing_type_selector_->SetHousingOptions({});
     }
-    housing_type_selector_->SetHousingOptions(housing_options);
-
-    switch (parameters.calibration_target) {
-      case CalibrationTargetType::Chessboard: {
-        ChessboardFeatureExtractor::Options chessboard_options;
-        chessboard_options.chessboard_columns = parameters.chessboard_columns;
-        chessboard_options.chessboard_rows = parameters.chessboard_rows;
-        chessboard_options.square_size = parameters.square_size;
-        calibration_target_options_->SetCalibrationTargetOptions(chessboard_options);
-        break;
-      }
-      case CalibrationTargetType::Target3DAruco: {
-        ArucoSiftFeatureExtractor::Options aruco_options;
-        aruco_options.aruco_type = parameters.aruco_type;
-        aruco_options.masking_scale_factor = parameters.aruco_scale_factor;
-        calibration_target_options_->SetCalibrationTargetOptions(aruco_options);
-        break;
-      }
-      case CalibrationTargetType::Target3D: {
-        calibration_target_options_->SetCalibrationTargetOptions(SiftFeatureExtractor::Options());
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
-  CameraModelType CommonCalibrationOptionsWidget::CameraModel() {
-    return camera_model_selector_->CameraModel();
-  }
-
-  std::optional<std::vector<double>> CommonCalibrationOptionsWidget::InitialCameraParameters() {
-    return initial_camera_parameters_;
-  }
-
-  std::optional<std::pair<HousingInterfaceType, std::vector<double>>> CommonCalibrationOptionsWidget::HousingOptions() {
-    return housing_calibration_;
-  }
-
-  CalibrationTargetOptionsWidget::Options CommonCalibrationOptionsWidget::CalibrationTargetOptions() {
-    return calibration_target_options_->CalibrationTargetOptions();
+    calibration_target_options_->SetCalibrationTargetOptions(options.calibration_target_options);    
   }
 
   void CommonCalibrationOptionsWidget::ForceArucoFor3DTarget(bool force) {

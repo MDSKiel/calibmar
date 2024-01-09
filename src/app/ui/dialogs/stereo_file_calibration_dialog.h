@@ -20,6 +20,7 @@ namespace calibmar {
 
     StereoFileCalibrationDialog(QWidget* parent = nullptr);
 
+    void SetOptions(Options options);
     Options GetOptions();
 
    private:

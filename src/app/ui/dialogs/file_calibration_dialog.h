@@ -20,6 +20,7 @@ namespace calibmar {
 
     FileCalibrationDialog(QWidget* parent = nullptr);
 
+    void SetOptions(Options options);
     Options GetOptions();
 
    private:

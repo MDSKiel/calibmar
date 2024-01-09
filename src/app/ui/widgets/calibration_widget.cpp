@@ -21,7 +21,10 @@ namespace calibmar {
   }
 
   void CalibrationWidget::AddExtractionItem(QWidget* widget) {
-    extraction_images_->AddImage(widget);
+    // if EndCalibration is called this might be null (can happen with unfortunate ordering in deferred qt calls)
+    if (extraction_images_) {
+      extraction_images_->AddImage(widget);
+    }
   }
 
   void CalibrationWidget::StartCalibration() {

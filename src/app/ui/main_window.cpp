@@ -69,6 +69,8 @@ namespace calibmar {
   // Starts a new live stream calibration
   void MainWindow::NewStreamCalibration() {
     StreamCalibrationDialog dialog(this);
+    dialog.SetOptions(stream_calibration_options_);
+
     dialog.exec();
 
     if (dialog.result() != QDialog::DialogCode::Accepted) {
@@ -77,9 +79,9 @@ namespace calibmar {
 
     BeginNewCalibration();
 
-    StreamCalibrationDialog::Options options = dialog.GetOptions();
-    if (options.save_images_directory.has_value()) {
-      last_directory_ = options.save_images_directory.value();
+    stream_calibration_options_ = dialog.GetOptions();
+    if (stream_calibration_options_.save_images_directory.has_value()) {
+      last_directory_ = stream_calibration_options_.save_images_directory.value();
     }
 
     LiveStreamExtractionWidget* extraction_widget = new LiveStreamExtractionWidget(this);
@@ -90,7 +92,7 @@ namespace calibmar {
     main_layout_->addWidget(extraction_widget);
 
     std::unique_ptr<LivestreamCalibrationRunner> runner =
-        std::make_unique<LivestreamCalibrationRunner>(calibration_widget, extraction_widget, options);
+        std::make_unique<LivestreamCalibrationRunner>(calibration_widget, extraction_widget, stream_calibration_options_);
     worker_thread_.reset(new std::thread([this, runner = std::move(runner), calibration = calibration_.get()]() {
       bool success = runner->Run(*calibration);
 
@@ -107,6 +109,7 @@ namespace calibmar {
   // Starts a new files calibration
   void MainWindow::NewFilesCalibration() {
     FileCalibrationDialog dialog(this);
+    dialog.SetOptions(file_calibration_options_);
     dialog.exec();
 
     if (dialog.result() != QDialog::DialogCode::Accepted) {
@@ -115,14 +118,15 @@ namespace calibmar {
 
     BeginNewCalibration();
 
-    FileCalibrationDialog::Options options = dialog.GetOptions();
-    last_directory_ = options.images_directory;
+    file_calibration_options_ = dialog.GetOptions();
+    last_directory_ = file_calibration_options_.images_directory;
 
     CalibrationWidget* calibration_widget = new CalibrationWidget(
         this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
     main_layout_->addWidget(calibration_widget);
 
-    std::unique_ptr<FilesCalibrationRunner> runner = std::make_unique<FilesCalibrationRunner>(calibration_widget, options);
+    std::unique_ptr<FilesCalibrationRunner> runner =
+        std::make_unique<FilesCalibrationRunner>(calibration_widget, file_calibration_options_);
     worker_thread_.reset(new std::thread([this, runner = std::move(runner), calibration = calibration_.get()]() {
       bool success = runner->Run(*calibration);
 
@@ -138,6 +142,7 @@ namespace calibmar {
 
   void MainWindow::NewStereoFilesCalibration() {
     StereoFileCalibrationDialog dialog(this);
+    dialog.SetOptions(stereo_calibration_options_);
     dialog.exec();
 
     if (dialog.result() != QDialog::DialogCode::Accepted) {
@@ -147,16 +152,16 @@ namespace calibmar {
     BeginNewCalibration();
     calibration_stereo_.reset(new Calibration());
 
-    StereoFileCalibrationDialog::Options options = dialog.GetOptions();
-    last_directory_ = options.images_directory2;
-    last_directory_ = options.images_directory2;
+    stereo_calibration_options_ = dialog.GetOptions();
+    last_directory_ = stereo_calibration_options_.images_directory2;
+    last_directory_ = stereo_calibration_options_.images_directory2;
 
     CalibrationWidget* calibration_widget = new CalibrationWidget(
         this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
     main_layout_->addWidget(calibration_widget);
 
     std::unique_ptr<StereoFilesCalibrationRunner> runner =
-        std::make_unique<StereoFilesCalibrationRunner>(calibration_widget, options);
+        std::make_unique<StereoFilesCalibrationRunner>(calibration_widget, stereo_calibration_options_);
     worker_thread_.reset(new std::thread(
         [this, runner = std::move(runner), calibration1 = calibration_.get(), calibration2 = calibration_stereo_.get()]() {
       bool success = runner->Run(*calibration1, *calibration2);

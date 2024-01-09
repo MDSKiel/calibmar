@@ -203,7 +203,7 @@ namespace calibmar {
       cv::cv2eigen(jac_intrinsics, jacobian_intrinsics);
       cv::cv2eigen(jac_extrinsics, jacobian_extrinsics);
     }
-
+  
     void ComputeCornerUncertaintyAutoCorrMat(const std::vector<Eigen::Vector2d>& points2D, int views,
                                              const std::pair<int, int>& pattern_cols_rows, Eigen::SparseMatrix<double>& mat) {
       int width = pattern_cols_rows.first;

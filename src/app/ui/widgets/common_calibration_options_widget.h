@@ -13,15 +13,19 @@ namespace calibmar {
 
   class CommonCalibrationOptionsWidget : public QWidget {
    public:
+    struct Options {
+      CameraModelType camera_model;
+      std::optional<std::vector<double>> initial_camera_parameters;
+      std::optional<std::pair<HousingInterfaceType, std::vector<double>>> housing_options;
+      CalibrationTargetOptionsWidget::Options calibration_target_options;
+    };
+
     CommonCalibrationOptionsWidget(QWidget* parent = nullptr);
 
     bool Validate();
-    void SetImportedParameters(const ImportedParameters& parameters);
 
-    CameraModelType CameraModel();
-    std::optional<std::vector<double>> InitialCameraParameters();
-    std::optional<std::pair<HousingInterfaceType, std::vector<double>>> HousingOptions();
-    CalibrationTargetOptionsWidget::Options CalibrationTargetOptions();
+    Options GetOptions();
+    void SetOptions(Options options);
 
     void ForceArucoFor3DTarget(bool force);
    private:

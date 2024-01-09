@@ -52,13 +52,25 @@ namespace calibmar {
     layout->setSizeConstraint(QLayout::SetMinimumSize);
   }
 
+  void FileCalibrationDialog::SetOptions(Options options) {
+    directory_edit_->setText(QString::fromStdString(options.images_directory));
+
+    CommonCalibrationOptionsWidget::Options calibration_options;
+    calibration_options.calibration_target_options = options.calibration_target_options;
+    calibration_options.camera_model = options.camera_model;
+    calibration_options.housing_options = options.housing_calibration;
+    calibration_options.initial_camera_parameters = options.initial_camera_parameters;
+    calibration_options_widget_->SetOptions(calibration_options);
+  }
+
   FileCalibrationDialog::Options FileCalibrationDialog::GetOptions() {
+    CommonCalibrationOptionsWidget::Options calibration_options = calibration_options_widget_->GetOptions();
     Options options;
-    options.camera_model = calibration_options_widget_->CameraModel();
-    options.housing_calibration = calibration_options_widget_->HousingOptions();
-    options.initial_camera_parameters = calibration_options_widget_->InitialCameraParameters();
+    options.camera_model = calibration_options.camera_model;
+    options.housing_calibration = calibration_options.housing_options;
+    options.initial_camera_parameters = calibration_options.initial_camera_parameters;
+    options.calibration_target_options = calibration_options.calibration_target_options;
     options.images_directory = directory_edit_->text().toStdString();
-    options.calibration_target_options = calibration_options_widget_->CalibrationTargetOptions();
     return options;
   }
 
@@ -74,9 +86,32 @@ namespace calibmar {
   void FileCalibrationDialog::ImportParameters() {
     std::string path =
         QFileDialog::getOpenFileName(this, "Import Parameters", QString(), "Calibration YAML (*.yaml *.yml)").toStdString();
+    if (path.empty()) {
+      return;
+    }
 
     ImportedParameters p = ImportedParameters::ImportFromYaml(path);
-    directory_edit_->setText(QString::fromStdString(p.directory));
-    calibration_options_widget_->SetImportedParameters(p);
+    Options options;
+    switch (p.calibration_target) {
+      case CalibrationTargetType::Chessboard:
+        options.calibration_target_options =
+            ChessboardFeatureExtractor::Options{p.chessboard_rows, p.chessboard_columns, p.square_size};
+        break;
+      case CalibrationTargetType::Target3D:
+        options.calibration_target_options = SiftFeatureExtractor::Options{};
+        break;
+      case CalibrationTargetType::Target3DAruco:
+        options.calibration_target_options = ArucoSiftFeatureExtractor::Options{p.aruco_type, p.aruco_scale_factor, false};
+        break;
+    }
+
+    options.camera_model = p.camera_model;
+    if (p.housing_model.has_value()) {
+      options.housing_calibration = {p.housing_model.value(), p.housing_parameters};
+    }
+    options.images_directory = p.directory;
+    options.initial_camera_parameters = p.camera_parameters;
+
+    SetOptions(options);
   }
 }

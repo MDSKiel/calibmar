@@ -61,8 +61,13 @@ namespace calibmar {
     return params;
   }
 
-  void CameraModelSelectorWidget::SetInitialCameraParameters(const std::optional<std::string>& parameters) {
-    initial_parameters_->SetInitialParameters(parameters);
+  void CameraModelSelectorWidget::SetInitialCameraParameters(const std::optional<std::vector<double>>& parameters) {
+    if (parameters.has_value()) {
+      initial_parameters_->SetInitialParameters(colmap::VectorToCSV(parameters.value()));
+    }
+    else {
+      initial_parameters_->SetInitialParameters({});
+    }
   }
 
   bool CameraModelSelectorWidget::Validate(std::string& error_message) {
