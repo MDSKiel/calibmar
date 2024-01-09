@@ -1340,15 +1340,15 @@ bool IncrementalMapper::EstimateInitialTwoViewGeometry(
   two_view_geometry_options.ransac_options.max_error = options.init_max_error;
   TwoViewGeometry two_view_geometry;
 
-  if (!options.enable_refraction) {
-    two_view_geometry = EstimateCalibratedTwoViewGeometry(
-        camera1, points1, camera2, points2, matches, two_view_geometry_options);
+  two_view_geometry = EstimateCalibratedTwoViewGeometry(
+      camera1, points1, camera2, points2, matches, two_view_geometry_options);
 
-    if (!EstimateTwoViewGeometryPose(
-            camera1, points1, camera2, points2, &two_view_geometry)) {
-      return false;
-    }
-  } else {
+  if (!EstimateTwoViewGeometryPose(
+          camera1, points1, camera2, points2, &two_view_geometry)) {
+    return false;
+  }
+
+  if (options.enable_refraction) {
     std::vector<Camera> virtual_cameras1;
     std::vector<Camera> virtual_cameras2;
     std::vector<Rigid3d> virtual_from_reals1;
@@ -1358,7 +1358,7 @@ bool IncrementalMapper::EstimateInitialTwoViewGeometry(
     camera2.ComputeVirtuals(points2, virtual_cameras2, virtual_from_reals2);
 
     two_view_geometry_options.compute_relative_pose = true;
-    two_view_geometry =
+    TwoViewGeometry two_view_geometry_refractive =
         EstimateRefractiveTwoViewGeometry(points1,
                                           virtual_cameras1,
                                           virtual_from_reals1,
@@ -1370,26 +1370,23 @@ bool IncrementalMapper::EstimateInitialTwoViewGeometry(
     // [Experimental]: Since the refractive two-view geometry can not estimate
     // scale well, it is not determined whether we should normalize the
     // estimated translation to unit length.
-    // two_view_geometry.cam2_from_cam1.translation.normalize();
+    two_view_geometry.cam2_from_cam1.translation.normalize();
+
+    // only use refractive two view geometry if it has more inliers
+    if (two_view_geometry.inlier_matches.size() <
+        two_view_geometry_refractive.inlier_matches.size()) {
+      two_view_geometry = two_view_geometry_refractive;
+    }
   }
 
-  if (options.enable_refraction) {
-    if (options.init_min_num_inliers &&
-        two_view_geometry.tri_angle > DegToRad(options.init_min_tri_angle)) {
-      prev_init_image_pair_id_ = image_pair_id;
-      prev_init_two_view_geometry_ = two_view_geometry;
-      return true;
-    }
-  } else {
-    if (static_cast<int>(two_view_geometry.inlier_matches.size()) >=
-            options.init_min_num_inliers &&
-        std::abs(two_view_geometry.cam2_from_cam1.translation.z()) <
-            options.init_max_forward_motion &&
-        two_view_geometry.tri_angle > DegToRad(options.init_min_tri_angle)) {
-      prev_init_image_pair_id_ = image_pair_id;
-      prev_init_two_view_geometry_ = two_view_geometry;
-      return true;
-    }
+  if (static_cast<int>(two_view_geometry.inlier_matches.size()) >=
+          options.init_min_num_inliers &&
+      std::abs(two_view_geometry.cam2_from_cam1.translation.z()) <
+          options.init_max_forward_motion &&
+      two_view_geometry.tri_angle > DegToRad(options.init_min_tri_angle)) {
+    prev_init_image_pair_id_ = image_pair_id;
+    prev_init_two_view_geometry_ = two_view_geometry;
+    return true;
   }
 
   return false;
