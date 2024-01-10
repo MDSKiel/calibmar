@@ -31,23 +31,27 @@ namespace {
   }
 
   void CalculatePerViewRms(colmap::Reconstruction& reconstruction, std::map<colmap::image_t, double>& per_img_rms) {
-    for (const auto& image : reconstruction.Images()) {
-      if (!image.second.IsRegistered()) {
+    // NOTE: The average of the per view RMS will likely not match the overall RMS reported by the reconstruction.
+    // This is because the overall RMS is calculated over the 3D point tracks, while the per view is calculated over all observed
+    // features. Since not all 3D points are visible in all views, the two means do not match (i.e. a outlier in view or 3D point
+    // RMS will influence the respective overall RMS).
+    for (const auto& id_image : reconstruction.Images()) {
+      if (!id_image.second.IsRegistered()) {
         continue;
       }
-      const auto& camera = reconstruction.Camera(image.second.CameraId());
+      const auto& camera = reconstruction.Camera(id_image.second.CameraId());
       int num_image_pts = 0;
       double error_sum = 0;
-      for (const auto& point2D : image.second.Points2D()) {
+      for (const auto& point2D : id_image.second.Points2D()) {
         if (point2D.HasPoint3D()) {
           const auto& point3D = reconstruction.Point3D(point2D.point3D_id);
-          error_sum += std::sqrt(
-              colmap::CalculateSquaredReprojectionError(point2D.xy, point3D.XYZ(), image.second.CamFromWorld(), camera));
+          error_sum += std::sqrt(colmap::CalculateSquaredReprojectionError(
+              point2D.xy, point3D.XYZ(), id_image.second.CamFromWorld(), camera, camera.IsCameraRefractive()));
           num_image_pts++;
         }
       }
 
-      per_img_rms.emplace(image.first, error_sum / num_image_pts);
+      per_img_rms.emplace(id_image.first, error_sum / num_image_pts);
     }
   }
 }
