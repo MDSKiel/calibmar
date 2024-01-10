@@ -44,6 +44,10 @@ namespace calibmar {
     const std::vector<double>& PerViewRms() const;
     void SetPerViewRms(const std::vector<double>& housing_std);
 
+    std::vector<int>& PerView3DPointCount();
+    const std::vector<int>& PerView3DPointCount() const;
+    void SetPerView3DPoints(const std::vector<int>& per_view_3d_point_count);
+
     // Set infos about the used calibration target. Used in report generation.
     void SetCalibrationTargetInfo(const std::string& info);
     // Get infos about the used calibration target. Used in report generation.
@@ -61,13 +65,18 @@ namespace calibmar {
     colmap::Camera camera_;
     double calibration_rms_ = 0;
     std::string calibration_target_info_;
+    // std deviations are only available if the calibrator supports it
     std::vector<double> intrinsics_std_deviations_;
     std::vector<double> housing_params_std_deviations_;
     std::vector<class Image> images_;
     std::vector<double> per_view_rms_;
+    // per view 3D count only relevant for 3D target calibration, where not all points are visible in every view
+    std::vector<int> per_view_3d_point_count_;
+    // these 3d points are currently not used for 3d target calibration (everything is handled inside the calibrator i.e. colmap)
     std::map<uint32_t, Eigen::Vector3d> points3D_;
     // used to generate point id
     uint32_t number_of_points3D = 0;
+    // only used with stereo calibration
     std::optional<colmap::Rigid3d> stereo_pose_ = {};
   };
 
@@ -172,6 +181,18 @@ namespace calibmar {
 
   inline void Calibration::SetPerViewRms(const std::vector<double>& per_view_rms) {
     per_view_rms_ = per_view_rms;
+  }
+
+  inline std::vector<int>& Calibration::PerView3DPointCount() {
+    return per_view_3d_point_count_;
+  }
+
+  inline const std::vector<int>& Calibration::PerView3DPointCount() const {
+    return per_view_3d_point_count_;
+  }
+
+  inline void Calibration::SetPerView3DPoints(const std::vector<int>& per_view_3d_point_count) {
+    per_view_3d_point_count_ = per_view_3d_point_count;
   }
 
   inline void Calibration::SetCalibrationTargetInfo(const std::string& info) {

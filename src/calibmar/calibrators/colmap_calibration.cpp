@@ -30,7 +30,12 @@ namespace {
     return std::move(database);
   }
 
-  void CalculatePerViewRms(colmap::Reconstruction& reconstruction, std::map<colmap::image_t, double>& per_img_rms) {
+  struct ImageStats {
+    double per_img_rms;
+    int per_img_3d_point_count;
+  };
+
+  void CalculatePerViewRms(colmap::Reconstruction& reconstruction, std::map<colmap::image_t, ImageStats>& img_stats) {
     // NOTE: The average of the per view RMS will likely not match the overall RMS reported by the reconstruction.
     // This is because the overall RMS is calculated over the 3D point tracks, while the per view is calculated over all observed
     // features. Since not all 3D points are visible in all views, the two means do not match (i.e. a outlier in view or 3D point
@@ -51,7 +56,7 @@ namespace {
         }
       }
 
-      per_img_rms.emplace(id_image.first, error_sum / num_image_pts);
+      img_stats[id_image.first] = {error_sum / num_image_pts, (int)id_image.second.NumPoints3D()};
     }
   }
 }
@@ -127,13 +132,16 @@ namespace colmap_calibration {
     calibration.SetCamera(reconstruction->Camera(calibration.Camera().CameraId()));
     calibration.SetCalibrationRms(reconstruction->ComputeMeanReprojectionError());
 
-    std::map<colmap::image_t, double> per_img_rms;
-    CalculatePerViewRms(*reconstruction, per_img_rms);
+    std::map<colmap::image_t, ImageStats> per_img_stats;
+    CalculatePerViewRms(*reconstruction, per_img_stats);
     std::vector<double> per_view_rms(calibration.Images().size(), -1.0);
-    for (const auto& img_id_rms : per_img_rms) {
-      per_view_rms[colmap_img_to_calib_img.at(img_id_rms.first)] = img_id_rms.second;
+    std::vector<int> per_view_3d_points(calibration.Images().size(), -1);
+    for (const auto& id_stats : per_img_stats) {
+      per_view_rms[colmap_img_to_calib_img.at(id_stats.first)] = id_stats.second.per_img_rms;
+      per_view_3d_points[colmap_img_to_calib_img.at(id_stats.first)] = id_stats.second.per_img_3d_point_count;
     }
     calibration.SetPerViewRms(per_view_rms);
+    calibration.SetPerView3DPoints(per_view_3d_points);
 
     for (auto id : reconstruction->RegImageIds()) {
       const colmap::Rigid3d& pose = reconstruction->Image(id).CamFromWorld();

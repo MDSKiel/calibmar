@@ -41,7 +41,7 @@ td {
     return {first, last};
   }
 
-  void FormatTable(std::ostream& stream, const std::vector<std::string>& first_col, const std::vector<std::string>& first_row,
+  void FormatTableRows(std::ostream& stream, const std::vector<std::string>& first_col, const std::vector<std::string>& first_row,
                    const std::vector<double>& second_row, const std::vector<double>& third_row) {
     stream << "<table>\n<tbody>\n<tr>"
            << "<td><b>" << first_col[0] << ":</b></td>\n";
@@ -86,15 +86,15 @@ td {
            << std::endl;
     // parameter lables
     std::vector<std::string> param_names = Split(camera.ParamsInfo(), ", ");
-    FormatTable(stream, {"Parameters", "Values", "Est. Std. Deviations:"}, param_names, camera.Params(),
-                calibration.IntrinsicsStdDeviations());
+    FormatTableRows(stream, {"Parameters", "Values", "Est. Std. Deviations:"}, param_names, camera.Params(),
+                    calibration.IntrinsicsStdDeviations());
 
     // optional refractive
     if (camera.IsCameraRefractive()) {
       std::vector<std::string> housing_param_names = Split(camera.RefracParamsInfo(), ", ");
-      FormatTable(stream, {"Housing Parameters", "Values", "Est. Std. Deviations:"},
-                  Split(Split(camera.RefracParamsInfo(), "\n")[0], ", "), camera.RefracParams(),
-                  calibration.HousingParamsStdDeviations());
+      FormatTableRows(stream, {"Housing Parameters", "Values", "Est. Std. Deviations:"},
+                      Split(Split(camera.RefracParamsInfo(), "\n")[0], ", "), camera.RefracParams(),
+                      calibration.HousingParamsStdDeviations());
     }
     // optional stereo pose
     if (calibration.CameraToWorldStereo().has_value()) {
@@ -105,22 +105,40 @@ td {
     }
     // overall rms
     stream << std::endl << "<h3>Overall RMS:</h3>\n<p>" << calibration.CalibrationRms() << "</p>\n";
-    // per view rms
+    // per view rms & per view observation
     if (calibration.PerViewRms().size() > 0) {
-      std::vector<std::pair<std::string, double>> name_rms;
-      name_rms.reserve(calibration.Images().size());
+      struct Stats {
+        std::string name;
+        double rms;
+        int point_3d_count;
+      };
+      std::vector<Stats> stats;
+      bool contains_3d_count = calibration.PerView3DPointCount().size() > 0;
+      stats.reserve(calibration.Images().size());
       for (size_t i = 0; i < calibration.Images().size(); i++) {
-        name_rms.push_back({std::filesystem::path(calibration.Image(i).Name()).filename(), calibration.PerViewRms()[i]});
+        stats.push_back({std::filesystem::path(calibration.Image(i).Name()).filename(), calibration.PerViewRms()[i],
+                         contains_3d_count ? calibration.PerView3DPointCount()[i] : -1});
       }
-      std::sort(name_rms.begin(), name_rms.end(), [](auto& a, auto& b) { return a.second > b.second; });
+      std::sort(stats.begin(), stats.end(), [](Stats& a, Stats& b) { return a.rms > b.rms; });
 
       stream << std::endl
              << std::endl
-             << "<h3>Per View RMS (" << name_rms.size() << " images, ordered descending):</h3>" << std::endl;
+             << "<h3>Per View RMS (" << stats.size() << " images, ordered descending):</h3>" << std::endl;
       stream << "<table>\n<tbody>\n";
 
-      for (const auto& name_value : name_rms) {
-        stream << "\n<tr>\n<td>" << name_value.first << "</td>\n<td>" << name_value.second << "</td>\n</tr>\n";
+      stream << "\n<tr>\n<td><b>Image</b></td>\n<td><b>RMS</b></td>\n";
+      if (contains_3d_count) {
+        stream << "<td><b>Observed 3D Points</b></td>\n";
+      }
+      stream << "</tr>\n";
+
+      for (const auto& stat : stats) {
+        stream << "\n<tr>\n<td>" << stat.name << "</td>\n<td>" << stat.rms << "</td>\n";
+        // optionally add 3d point count if it exists
+        if (contains_3d_count) {
+          stream << "<td>" << stat.point_3d_count << "</td>\n";
+        }
+        stream << "</tr>\n";
       }
 
       stream << "\n</tbody>\n</table>\n";
