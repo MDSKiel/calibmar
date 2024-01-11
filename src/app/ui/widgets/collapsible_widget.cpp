@@ -23,6 +23,7 @@ namespace calibmar {
     header_line->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
 
     main_layout_ = new QGridLayout(this);
+    main_layout_->setContentsMargins(0,0,0,0);
     vertical_spacing_ = main_layout_->verticalSpacing();
     main_layout_->setVerticalSpacing(0);
     main_layout_->addWidget(toggle_button, 0, 0, 1, 1, Qt::AlignLeft);

@@ -1,7 +1,9 @@
 #include "calibration_result_widget.h"
 
 #include "calibmar/core/report.h"
+#include "ui/utils/heatmap.h"
 #include "ui/widgets/collapsible_widget.h"
+#include "ui/widgets/image_widget.h"
 #include "ui/widgets/offset_diagram_widget.h"
 #include "ui/widgets/zoomable_scroll_area.h"
 
@@ -42,7 +44,7 @@ td {
   }
 
   void FormatTableRows(std::ostream& stream, const std::vector<std::string>& first_col, const std::vector<std::string>& first_row,
-                   const std::vector<double>& second_row, const std::vector<double>& third_row) {
+                       const std::vector<double>& second_row, const std::vector<double>& third_row) {
     stream << "<table>\n<tbody>\n<tr>"
            << "<td><b>" << first_col[0] << ":</b></td>\n";
     for (auto& value : first_row) {
@@ -180,6 +182,20 @@ namespace calibmar {
 
       layout->addWidget(collapse);
     }
+
+    ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
+    ImageWidget* image = new ImageWidget(this);
+    heatmap_area->setWidget(image);
+    int target_height = 500;
+    heatmap_area->widget()->resize(
+        QSize(calibration.Camera().Width(), calibration.Camera().Height())
+            .scaled(calibration.Camera().Width(), target_height, Qt::AspectRatioMode::KeepAspectRatio));
+    std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
+    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
+    image->SetImage(std::move(heatmap));
+    CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
+    heatmap_collapse->SetWidget(heatmap_area, target_height);
+    layout->addWidget(heatmap_collapse);
 
     if (reconstruction != nullptr) {
       options_manager_ = std::make_unique<colmap::OptionManager>();

@@ -15,6 +15,8 @@
 #include "ui/widgets/offset_diagram_widget.h"
 #include "ui/widgets/zoomable_scroll_area.h"
 
+#include "ui/utils/heatmap.h"
+
 #include "colmap/ui/model_viewer_widget.h"
 
 #include "ui/widgets/calibration_result_widget.h"
@@ -69,26 +71,53 @@ namespace calibmar {
 
     //----------------------------------------------------------------------------------------------
 
+    // Calibration calibration;
+    // calibration.Camera().InitializeWithName(CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name,
+    // 1000,
+    //                                         800, 600);
+    // calibration.Camera().SetRefracModelIdFromName(
+    //     HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerPlanarRefractive).model_name);
+    // calibration.Camera().SetRefracParams({0, 0, 1, 0.12, 1, 1.44, 1.32});
+
+    // calibration.SetCalibrationRms(1.32313);
+    // calibration.SetIntrinsicsStdDeviations({1.1, 1.2, 1.3});
+
+    // std::vector<double> rmss;
+    // for (int i = 0; i < 30; i++) {
+    //   Image img;
+    //   img.SetName("image_asd_" + std::to_string(i));
+    //   calibration.AddImage(img);
+    //   rmss.push_back(sqrt(i));
+    // }
+    // calibration.SetPerViewRms(rmss);
+
+    // CalibrationResultWidget* result = new CalibrationResultWidget(calibration);
+    // layout->addWidget(result);
+
+    //----------------------------------------------------------------------------------------------
+
     Calibration calibration;
     calibration.Camera().InitializeWithName(CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name, 1000,
                                             800, 600);
-    calibration.Camera().SetRefracModelIdFromName(
-        HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerPlanarRefractive).model_name);
-    calibration.Camera().SetRefracParams({0, 0, 1, 0.12, 1, 1.44, 1.32});
 
-    calibration.SetCalibrationRms(1.32313);
-    calibration.SetIntrinsicsStdDeviations({1.1, 1.2, 1.3});
-
-    std::vector<double> rmss;
-    for (int i = 0; i < 30; i++) {
-      Image img;
-      img.SetName("image_asd_" + std::to_string(i));
-      calibration.AddImage(img);
-      rmss.push_back(sqrt(i));
+    std::vector<Eigen::Vector2d> points;
+    for (size_t i = 0; i < 600; i += 50) {
+      points.push_back({i, i});
     }
-    calibration.SetPerViewRms(rmss);
 
-    CalibrationResultWidget* result = new CalibrationResultWidget(calibration);
-    layout->addWidget(result);
+    Image img;
+    img.SetPoints2D(points);
+    calibration.AddImage(img);
+
+    ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
+    ImageWidget* image = new ImageWidget(this);
+    heatmap_area->setWidget(image);
+    heatmap_area->widget()->resize(calibration.Camera().Width(), calibration.Camera().Height());
+    std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
+    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
+    image->SetImage(std::move(heatmap));
+    CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
+    heatmap_collapse->SetWidget(heatmap_area, 500);
+    layout->addWidget(heatmap_collapse);
   }
 }

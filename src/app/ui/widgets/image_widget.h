@@ -12,6 +12,7 @@ namespace calibmar {
     ImageWidget(QWidget* parent = nullptr);
 
     void SetImage(std::unique_ptr<Pixmap> image);
+    std::unique_ptr<Pixmap> TakeImage();
 
     QSize drawSize() const;
     QSize sizeHint() const;

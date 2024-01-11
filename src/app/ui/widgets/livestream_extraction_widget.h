@@ -28,8 +28,11 @@ namespace calibmar {
     QPropertyAnimation* flash_animation_;
     QPushButton* done_button_;
     ImageWidget* image_widget_;
-    QScrollArea* side_scroll_area_;
-    QVBoxLayout* side_layout_;
+    QScrollArea* extraction_images_scroll_area_;
+    QVBoxLayout* extraction_images_layout_;
     QVBoxLayout* live_layout_;
+        
+    ImageWidget* heatmap_widget_;
+    std::unique_ptr<Pixmap> heatmap_;
   };
 }

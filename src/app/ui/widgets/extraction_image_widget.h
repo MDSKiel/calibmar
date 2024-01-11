@@ -7,6 +7,7 @@
 #include <Eigen/Core>
 #include <QtCore>
 #include <QtWidgets>
+#include <optional>
 
 namespace calibmar {
   // Wiget that displays an extracted image
@@ -20,7 +21,7 @@ namespace calibmar {
       std::string image_name; // image name is kept separately in case extraction fails
     };
 
-    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr);
+    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr, std::optional<int> target_width = {});
 
     const class TargetVisualizer& TargetVisualizer();
     const std::string& ImageName();

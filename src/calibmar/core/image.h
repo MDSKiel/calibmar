@@ -5,7 +5,7 @@
 #include <unordered_map>
 
 namespace calibmar {
-  // Image holds 2D-3D corresponence and pose information.
+  // Image is a single view of a calibration and holds e.g. 2D-3D corresponence and pose information.
   class Image {
    public:
     inline const std::string& Name() const;

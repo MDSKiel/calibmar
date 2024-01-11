@@ -72,18 +72,25 @@ namespace {
 namespace calibmar {
 
   ExtractionImageWidget::ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer,
-                                               QWidget* parent)
+                                               QWidget* parent, std::optional<int> target_width)
       : QWidget(parent), target_visualizer_(target_visualizer), image_name_(data->image_name) {
-    widget_width = QGuiApplication::screens().first()->availableGeometry().width() * (1.0 / 8);
-    widget_height = QGuiApplication::screens().first()->availableGeometry().height() * (1.0 / 8);
+
+    if (target_width.has_value()) {
+      widget_width = target_width.value();
+      widget_height = widget_width * ((double)data->image->Width() / data->image->Height());
+    }
+    else {
+      widget_width = QGuiApplication::screens().first()->availableGeometry().width() * (1.0 / 8);
+      widget_height = QGuiApplication::screens().first()->availableGeometry().height() * (1.0 / 8);
+    }
 
     QWidget* content;
     switch (data->status) {
       case Status::SUCCESS:
-        content = CreateImageWidget(*(data.get()), target_visualizer);
+        content = CreateImageWidget(*data, target_visualizer);
         break;
       case Status::DETECTION_ERROR:
-        content = CreateUndetectedWidget(*(data.get()));
+        content = CreateUndetectedWidget(*data);
         break;
       case Status::READ_ERROR:
         content = CreateErrorWidget("Could not read image");

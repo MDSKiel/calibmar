@@ -1,10 +1,17 @@
 #include "livestream_extraction_widget.h"
 #include "extraction_image_widget.h"
+#include "ui/utils/heatmap.h"
+#include <opencv2/imgproc.hpp>
+
+namespace {
+  const int sidebar_width = 330;
+}
 
 namespace calibmar {
   LiveStreamExtractionWidget::LiveStreamExtractionWidget(QWidget* parent) : QWidget(parent) {
     QVBoxLayout* main_layout = new QVBoxLayout(this);
     QHBoxLayout* top_layout = new QHBoxLayout(this);
+    QVBoxLayout* side_layout = new QVBoxLayout(this);
 
     image_widget_ = new ImageWidget(this);
 
@@ -19,23 +26,28 @@ namespace calibmar {
     live_layout_->setAlignment(Qt::AlignTop);
     live_layout_->addWidget(image_frame);
 
-    side_scroll_area_ = new QScrollArea(this);
-    QWidget* side_bar = new QWidget(side_scroll_area_);
-    side_layout_ = new QVBoxLayout(side_bar);
-    side_layout_->setAlignment(Qt::AlignTop);
-    side_scroll_area_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    side_scroll_area_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    side_scroll_area_->setWidgetResizable(true);
-    side_scroll_area_->setWidget(side_bar);
-    side_scroll_area_->setFixedWidth(330);
+    extraction_images_scroll_area_ = new QScrollArea(this);
+    QWidget* extraction_images_side_bar = new QWidget(extraction_images_scroll_area_);
+    extraction_images_layout_ = new QVBoxLayout(extraction_images_side_bar);
+    extraction_images_layout_->setAlignment(Qt::AlignTop);
+    extraction_images_scroll_area_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    extraction_images_scroll_area_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    extraction_images_scroll_area_->setWidgetResizable(true);
+    extraction_images_scroll_area_->setWidget(extraction_images_side_bar);
+    extraction_images_scroll_area_->setFixedWidth(sidebar_width);
 
-    connect(side_scroll_area_->verticalScrollBar(), &QScrollBar::rangeChanged, this,
-            [this](int min, int max) { this->side_scroll_area_->verticalScrollBar()->setValue(max); });
+    heatmap_widget_ = new ImageWidget(this);
+    heatmap_widget_->setVisible(false);
+
+    connect(extraction_images_scroll_area_->verticalScrollBar(), &QScrollBar::rangeChanged, this,
+            [this](int min, int max) { this->extraction_images_scroll_area_->verticalScrollBar()->setValue(max); });
 
     done_button_ = new QPushButton("Calibrate", this);
 
+    side_layout->addWidget(heatmap_widget_);
+    side_layout->addWidget(extraction_images_scroll_area_);
     top_layout->addLayout(live_layout_);
-    top_layout->addWidget(side_scroll_area_);
+    top_layout->addLayout(side_layout);
     main_layout->addLayout(top_layout);
     main_layout->addWidget(done_button_);
     main_layout->setAlignment(done_button_, Qt::AlignRight);
@@ -59,9 +71,31 @@ namespace calibmar {
     image_widget_->update();
   }
 
-  void LiveStreamExtractionWidget::AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data, const TargetVisualizer& target_visualizer) {
-    ExtractionImageWidget* extraction_image = new ExtractionImageWidget(std::move(data), target_visualizer, this);
-    side_layout_->addWidget(extraction_image);
+  void LiveStreamExtractionWidget::AddExtractionItem(std::unique_ptr<ExtractionImageWidget::Data> data,
+                                                     const TargetVisualizer& target_visualizer) {
+    // Update heatmap
+    int width = data->image->Width();
+    int height = data->image->Height();
+    if (!heatmap_) {
+      heatmap_ = std::make_unique<Pixmap>();
+      heatmap_->Data() = cv::Mat::zeros(height, width, CV_8UC1);
+    }
+
+    heatmap::AddPointsToRawHeatmap(data->image_data->Points2D(), *heatmap_);
+    std::unique_ptr<Pixmap> display_heatmap = image_widget_->TakeImage();
+    heatmap::ApplyColorMapToRawHeatmap(*heatmap_, *display_heatmap);
+    heatmap_widget_->SetImage(std::move(display_heatmap));
+
+    heatmap_widget_->setFixedSize(
+        QSize(width, height).scaled(sidebar_width, sidebar_width, Qt::AspectRatioMode::KeepAspectRatio));
+    heatmap_widget_->setVisible(true);
+
+    // Image
+    int top, right, bottom, left;
+    extraction_images_layout_->getContentsMargins(&top, &right, &bottom, &left);
+    ExtractionImageWidget* extraction_image =
+        new ExtractionImageWidget(std::move(data), target_visualizer, this, sidebar_width - (left + right));
+    extraction_images_layout_->addWidget(extraction_image);
   }
 
   void LiveStreamExtractionWidget::AddLiveModeWidget(QWidget* widget) {
@@ -83,10 +117,10 @@ namespace calibmar {
   std::vector<ExtractionImageWidget*> LiveStreamExtractionWidget::RemoveExtractionImagesWidgets() {
     std::vector<ExtractionImageWidget*> widgets;
 
-    int num_widgets = side_layout_->count();
+    int num_widgets = extraction_images_layout_->count();
     for (int i = 0; i < num_widgets; i++) {
-      ExtractionImageWidget* widget = static_cast<ExtractionImageWidget*>(side_layout_->itemAt(0)->widget());
-      side_layout_->removeWidget(widget);
+      ExtractionImageWidget* widget = static_cast<ExtractionImageWidget*>(extraction_images_layout_->itemAt(0)->widget());
+      extraction_images_layout_->removeWidget(widget);
       widgets.push_back(widget);
     }
 

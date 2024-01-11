@@ -19,6 +19,12 @@ namespace calibmar {
     update();
   }
 
+  std::unique_ptr<Pixmap> ImageWidget::TakeImage(){
+    qimage_ = QImage(); // invalidate the qimage referencing the pixmap data
+    size_hint_ = QSize();
+    return std::move(image_);
+  }
+
   QSize ImageWidget::drawSize() const {
     return image_rect_.size();
   }
@@ -33,6 +39,10 @@ namespace calibmar {
     }
 
     QPainter painter(this);
+    // If the image is shrunk do so smoothely (for zoom nearest nieghbor is desired)
+    if (image_rect_.width() < qimage_.width()) {
+      painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    }
     painter.drawImage(image_rect_, qimage_);
   }
 
