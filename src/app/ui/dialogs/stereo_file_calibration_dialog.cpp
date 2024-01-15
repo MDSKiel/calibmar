@@ -1,8 +1,41 @@
 #include "stereo_file_calibration_dialog.h"
 
+#include "ui/utils/parse_params.h"
 #include <calibmar/core/report.h>
 #include <colmap/util/misc.h>
 #include <filesystem>
+
+namespace {
+  std::optional<std::string> ConvertInitialParameters(const std::optional<std::vector<double>>& parameters) {
+    return parameters.has_value() ? colmap::VectorToCSV(*parameters) : std::optional<std::string>();
+  }
+
+  std::optional<std::vector<double>> ParseInitialParameters(const std::optional<std::string>& parameters_string) {
+    std::vector<double> params;
+    if (!parameters_string.has_value() || !calibmar::TryParseParams(params, parameters_string.value())) {
+      return {};
+    }
+
+    return params;
+  }
+
+  bool ValidateParameters(const std::optional<std::string>& parameters_string, calibmar::CameraModelType camera_model,
+                          std::string& error_message) {
+    if (parameters_string.has_value()) {
+      std::vector<double> params;
+      if (!calibmar::TryParseParams(params, parameters_string.value())) {
+        error_message = "Invalid camera parameter format.";
+        return false;
+      }
+      else if (params.size() != calibmar::CameraModel::CameraModels().at(camera_model).num_params) {
+        error_message = "Camera parameters dont match camera model.";
+        return false;
+      }
+    }
+
+    return true;
+  }
+}
 
 namespace calibmar {
 
@@ -28,8 +61,25 @@ namespace calibmar {
     layout_directory->addWidget(directory_edit2_, 1, 0);
     layout_directory->addWidget(select_directory_button2, 1, 1);
 
-    // common options
-    camera_model_selector_ = new CameraModelSelectorWidget(this);
+    // Camera Model & Intrinsics
+    QGroupBox* camera_model_groupbox = new QGroupBox("Camera Model");
+    QGridLayout* camera_model_layout = new QGridLayout(camera_model_groupbox);
+    camera_model_ = new CameraModelWidget(camera_model_groupbox);
+    use_initial_parameters_checkbox_ = new QCheckBox(camera_model_groupbox);
+    initial_parameters_1_ = new InitialParametersWidget(camera_model_groupbox, false);
+    initial_parameters_2_ = new InitialParametersWidget(camera_model_groupbox, false);
+    connect(use_initial_parameters_checkbox_, &QCheckBox::stateChanged, this, [this](int state) {
+      initial_parameters_1_->SetChecked(use_initial_parameters_checkbox_->isChecked());
+      initial_parameters_2_->SetChecked(use_initial_parameters_checkbox_->isChecked());
+    });
+
+    only_estimate_pose_checkbox_ = new QCheckBox("Only estimate relative pose", camera_model_groupbox);
+
+    camera_model_layout->addWidget(camera_model_, 0, 0, 1, 2);
+    camera_model_layout->addWidget(use_initial_parameters_checkbox_, 1, 0);
+    camera_model_layout->addWidget(initial_parameters_1_, 1, 1);
+    camera_model_layout->addWidget(initial_parameters_2_, 2, 1);
+    camera_model_layout->addWidget(only_estimate_pose_checkbox_, 3, 0, 1, 2);
 
     // chessboard target
     QGroupBox* chessboard_groupbox = new QGroupBox("Chessboard target");
@@ -60,7 +110,7 @@ namespace calibmar {
     // main layout
     QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(directory_groupbox);
-    layout->addWidget(camera_model_selector_);
+    layout->addWidget(camera_model_groupbox);
     layout->addWidget(chessboard_groupbox);
     layout->addLayout(horizontalLayout_run);
     setWindowTitle("Stereo Calibrate from Files");
@@ -72,15 +122,37 @@ namespace calibmar {
     directory_edit1_->setText(QString::fromStdString(options.images_directory1));
     directory_edit2_->setText(QString::fromStdString(options.images_directory2));
 
-    camera_model_selector_->SetCameraModel(options.camera_model);
-    camera_model_selector_->SetInitialCameraParameters(options.initial_camera_parameters);
+    only_estimate_pose_checkbox_->setChecked(options.estimate_pose_only);
+
+    camera_model_->SetCameraModel(options.camera_model);
+    if (options.initial_camera_parameters.has_value()) {
+      initial_parameters_1_->SetInitialParameters(ConvertInitialParameters(options.initial_camera_parameters->first));
+      initial_parameters_2_->SetInitialParameters(ConvertInitialParameters(options.initial_camera_parameters->second));
+      use_initial_parameters_checkbox_->setChecked(true);
+    }
+    else {
+      initial_parameters_1_->SetInitialParameters({});
+      initial_parameters_2_->SetInitialParameters({});
+      use_initial_parameters_checkbox_->setChecked(true);
+    }
+
     calibration_target_options_->SetChessBoardTargetOptions(options.calibration_target_options);
   }
 
   StereoFileCalibrationDialog::Options StereoFileCalibrationDialog::GetOptions() {
     Options options;
-    options.camera_model = camera_model_selector_->CameraModel();
-    options.initial_camera_parameters = camera_model_selector_->InitialCameraParameters();
+    options.camera_model = camera_model_->CameraModel();
+
+    if (use_initial_parameters_checkbox_->isChecked()) {
+      std::optional<std::vector<double>> params1 = ParseInitialParameters(initial_parameters_1_->InitialParameters());
+      std::optional<std::vector<double>> params2 = ParseInitialParameters(initial_parameters_2_->InitialParameters());
+      options.initial_camera_parameters = {*params1, *params2};
+    }
+    else {
+      options.initial_camera_parameters = {};
+    }
+
+    options.estimate_pose_only = only_estimate_pose_checkbox_->isChecked();
 
     options.images_directory1 = directory_edit1_->text().toStdString();
     options.images_directory2 = directory_edit2_->text().toStdString();
@@ -100,8 +172,15 @@ namespace calibmar {
     }
 
     std::string message;
-    if (!camera_model_selector_->Validate(message)) {
+    CameraModelType camera_model = camera_model_->CameraModel();
+    if (!ValidateParameters(initial_parameters_1_->InitialParameters(), camera_model, message) ||
+        !ValidateParameters(initial_parameters_2_->InitialParameters(), camera_model, message)) {
       QMessageBox::information(this, "Validation Error", QString::fromStdString(message));
+      return false;
+    }
+
+    if(only_estimate_pose_checkbox_->isChecked() && !use_initial_parameters_checkbox_->isChecked()){
+      QMessageBox::information(this, "Validation Error", "To estimate the relative pose only, intrinsics must be provided!");
       return false;
     }
 
@@ -126,7 +205,7 @@ namespace calibmar {
     options.images_directory2 = parameters.directory;
 
     options.camera_model = parameters.camera_model;
-    options.initial_camera_parameters = parameters.camera_parameters;
+    options.initial_camera_parameters = {parameters.camera_parameters, parameters.camera_parameters};
 
     SetOptions(options);
   }

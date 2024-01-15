@@ -3,6 +3,7 @@
 #include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/core/report.h"
 #include "ui/widgets/initial_parameters_widget.h"
+#include "ui/widgets/camera_model_widget.h"
 
 #include <QtCore>
 #include <QtWidgets>
@@ -23,11 +24,7 @@ namespace calibmar {
     bool Validate(std::string& error_message);
 
    private:
-    void SetCameraParametersLabel(int index);
-
-    std::vector<std::tuple<CameraModelType, std::string, std::string>> camera_models_;
-    QComboBox* camera_model_combobox_;
-    QLabel* camera_parameters_label_;
+    CameraModelWidget* camera_model_;
     InitialParametersWidget* initial_parameters_;
   };
 }

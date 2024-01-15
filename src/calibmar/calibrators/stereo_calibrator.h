@@ -14,6 +14,8 @@ namespace calibmar {
       CameraModelType camera_model = CameraModelType::OpenCVCameraModel;
       // If true, the calibration camera model will be used as an initial intrinsics guess as is.
       bool use_intrinsics_guess = false;
+
+      bool estimate_pose_only = false;
       // Image size in pixel (width, height)
       std::pair<int, int> image_size = {0, 0};
 

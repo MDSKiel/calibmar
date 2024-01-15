@@ -8,11 +8,12 @@ namespace calibmar {
 
   class InitialParametersWidget : public QWidget {
    public:
-    InitialParametersWidget(QWidget* parent = nullptr);
+    InitialParametersWidget(QWidget* parent = nullptr, bool show_checkbox = true);
 
     void SetInitialParameters(const std::optional<std::string>& parameters);
-
     std::optional<std::string> InitialParameters();
+
+    void SetChecked(bool checked);
 
    private:
     QLineEdit* parameters_edit_;

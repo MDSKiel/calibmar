@@ -54,7 +54,7 @@ namespace calibmar {
     std::vector<std::vector<double>> per_view_rms;
     colmap::Rigid3d pose;
     double rms = opencv_calibration::StereoCalibrateCamera(pointSets3D_1, pointSets2D_1, pointSets2D_2, camera1, camera2, pose,
-                                                           options_.use_intrinsics_guess, false, false, per_view_rms);
+                                                           options_.use_intrinsics_guess, options_.estimate_pose_only, false, per_view_rms);
 
     calibration1.SetCalibrationRms(rms);
     calibration1.SetPerViewRms(per_view_rms[0]);

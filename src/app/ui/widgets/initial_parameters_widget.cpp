@@ -2,13 +2,14 @@
 
 namespace calibmar {
 
-  InitialParametersWidget::InitialParametersWidget(QWidget* parent) : QWidget(parent) {
+  InitialParametersWidget::InitialParametersWidget(QWidget* parent, bool show_checkbox) : QWidget(parent) {
     parameters_edit_ = new QLineEdit(this);
     parameters_edit_->setPlaceholderText("Initial Parameters");
     parameters_checkbox_ = new QCheckBox(this);
     connect(parameters_checkbox_, &QCheckBox::stateChanged, this,
             [this](int state) { parameters_edit_->setEnabled(parameters_checkbox_->isChecked()); });
     parameters_edit_->setEnabled(parameters_checkbox_->isChecked());
+    parameters_checkbox_->setVisible(show_checkbox);
 
     QHBoxLayout* parameters_layout = new QHBoxLayout(this);
     parameters_layout->setContentsMargins(0, 0, 0, 0);
@@ -33,5 +34,9 @@ namespace calibmar {
     else {
       return {};
     }
+  }
+
+  void InitialParametersWidget::SetChecked(bool checked) {
+    parameters_checkbox_->setChecked(checked);
   }
 }

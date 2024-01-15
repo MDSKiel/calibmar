@@ -5,6 +5,8 @@ target_sources(calibmar_app PRIVATE
 	calibration_target_widget.h
 	calibration_widget.cpp
 	calibration_widget.h
+	camera_model_widget.cpp
+	camera_model_widget.h
 	capture_button.cpp
 	capture_button.h
 	chessboard_target_widget.cpp

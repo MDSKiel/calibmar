@@ -9,7 +9,7 @@ namespace calibmar {
     setContentsMargins(0, 0, 0, 0);
   }
 
-  void ExtractionImagesWidget::AddImage(QWidget* widget) {
+  void ExtractionImagesWidget::AddImage(QWidget* widget) {    
     main_layout_->addWidget(widget);
     update();
   }

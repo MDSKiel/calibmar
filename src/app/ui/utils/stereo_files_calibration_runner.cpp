@@ -62,9 +62,12 @@ namespace calibmar {
     calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
 
     StereoCalibrator::Options calibrator_options;
-    colmap::Camera camera;
+    calibrator_options.estimate_pose_only = options_.estimate_pose_only;
+    colmap::Camera camera1;
+    colmap::Camera camera2;
     if (options_.initial_camera_parameters.has_value()) {
-      camera = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters.value());
+      camera1 = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters->first);
+      camera2 = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters->second);
       calibrator_options.use_intrinsics_guess = true;
     }
     else {
@@ -72,8 +75,8 @@ namespace calibmar {
       calibrator_options.image_size = image_size;
     }
 
-    calibration1.SetCamera(camera);
-    calibration2.SetCamera(camera);
+    calibration1.SetCamera(camera1);
+    calibration2.SetCamera(camera2);
 
     StereoCalibrator calibrator(calibrator_options);
     std::unique_ptr<TargetVisualizer> target_visualizer = std::make_unique<ChessboardTargetVisualizer>(
