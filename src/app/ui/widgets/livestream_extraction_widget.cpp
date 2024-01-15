@@ -3,10 +3,6 @@
 #include "ui/utils/heatmap.h"
 #include <opencv2/imgproc.hpp>
 
-namespace {
-  const int sidebar_width = 330;
-}
-
 namespace calibmar {
   LiveStreamExtractionWidget::LiveStreamExtractionWidget(QWidget* parent) : QWidget(parent) {
     QVBoxLayout* main_layout = new QVBoxLayout(this);
@@ -34,7 +30,9 @@ namespace calibmar {
     extraction_images_scroll_area_->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     extraction_images_scroll_area_->setWidgetResizable(true);
     extraction_images_scroll_area_->setWidget(extraction_images_side_bar);
-    extraction_images_scroll_area_->setFixedWidth(sidebar_width);
+    int top, right, bottom, left;
+    extraction_images_layout_->getContentsMargins(&top, &right, &bottom, &left);
+    extraction_images_scroll_area_->setFixedWidth(ExtractionImageWidget::GetDefaultWidth() + left + right);
 
     heatmap_widget_ = new ImageWidget(this);
     heatmap_widget_->setVisible(false);
@@ -87,14 +85,13 @@ namespace calibmar {
     heatmap_widget_->SetImage(std::move(display_heatmap));
 
     heatmap_widget_->setFixedSize(
-        QSize(width, height).scaled(sidebar_width, sidebar_width, Qt::AspectRatioMode::KeepAspectRatio));
+        QSize(width, height).scaled(extraction_images_scroll_area_->size(), Qt::AspectRatioMode::KeepAspectRatio));
     heatmap_widget_->setVisible(true);
 
     // Image
     int top, right, bottom, left;
     extraction_images_layout_->getContentsMargins(&top, &right, &bottom, &left);
-    ExtractionImageWidget* extraction_image =
-        new ExtractionImageWidget(std::move(data), target_visualizer, this, sidebar_width - (left + right));
+    ExtractionImageWidget* extraction_image = new ExtractionImageWidget(std::move(data), target_visualizer, this);
     extraction_images_layout_->addWidget(extraction_image);
   }
 
@@ -107,8 +104,13 @@ namespace calibmar {
   }
 
   void LiveStreamExtractionWidget::SignalImageAcquisition() {
-    flash_widget_->resize(image_widget_->drawSize());
-    flash_widget_->move(image_widget_->mapToGlobal(image_widget_->pos()));
+    QSize image_size = image_widget_->drawSize();
+    QPoint image_origin = image_widget_->mapToGlobal(image_widget_->pos());
+    QSize offset = (image_widget_->size() - image_size) / 2;
+    image_origin += {offset.width(), offset.height()};
+
+    flash_widget_->resize(image_size);
+    flash_widget_->move(image_origin);
 
     flash_widget_->show();
     flash_animation_->start();

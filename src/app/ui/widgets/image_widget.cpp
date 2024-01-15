@@ -19,7 +19,7 @@ namespace calibmar {
     update();
   }
 
-  std::unique_ptr<Pixmap> ImageWidget::TakeImage(){
+  std::unique_ptr<Pixmap> ImageWidget::TakeImage() {
     qimage_ = QImage(); // invalidate the qimage referencing the pixmap data
     size_hint_ = QSize();
     return std::move(image_);
@@ -55,19 +55,9 @@ namespace calibmar {
       return;
     }
 
-    int target_width = width();
-    int target_height = height();
-
-    float aspect_s = static_cast<float>(image_->Width()) / image_->Height();
-    float aspect_t = static_cast<float>(target_width) / target_height;
-
-    if (aspect_s < aspect_t) {
-      image_rect_.setHeight(target_height);
-      image_rect_.setWidth(aspect_s * image_rect_.height());
-    }
-    else {
-      image_rect_.setWidth(target_width);
-      image_rect_.setHeight(target_width / aspect_s);
-    }
+    // Draw image in the center of available space preserving the aspect ratio
+    QSize target_size = QSize(image_->Width(), image_->Height()).scaled(size(), Qt::AspectRatioMode::KeepAspectRatio);
+    QSize diff = size() - target_size;
+    image_rect_ = QRect(diff.width() / 2, diff.height() / 2, target_size.width(), target_size.height());
   }
 }

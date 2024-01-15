@@ -184,6 +184,7 @@ namespace calibmar {
     }
 
     ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
+    heatmap_area->setFrameShape(QFrame::Shape::NoFrame);    
     ImageWidget* image = new ImageWidget(this);
     heatmap_area->setWidget(image);
     int target_height = 500;

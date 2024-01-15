@@ -5,7 +5,7 @@ namespace calibmar {
   ExtractionImagesWidget::ExtractionImagesWidget(
       QWidget* parent, const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback)
       : QWidget(parent), double_click_callback_(double_click_callback) {
-    main_layout_ = new FlowLayout(this);
+    main_layout_ = new ImageFlowLayout(this);
     setContentsMargins(0, 0, 0, 0);
   }
 

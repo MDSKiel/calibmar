@@ -5,7 +5,7 @@
 
 #include "calibmar/extractors/chessboard_extractor.h"
 #include "ui/utils/calibration_target_visualization.h"
-#include "ui/utils/flow_layout.h"
+#include "ui/utils/image_flow_layout.h"
 #include "ui/widgets/extraction_image_widget.h"
 
 namespace calibmar {
@@ -22,7 +22,7 @@ namespace calibmar {
     virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
 
    private:
-    FlowLayout* main_layout_;
+    ImageFlowLayout* main_layout_;
     const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback_;
   };
 }

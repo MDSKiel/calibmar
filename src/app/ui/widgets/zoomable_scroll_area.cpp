@@ -1,7 +1,9 @@
 #include "zoomable_scroll_area.h"
 
 namespace calibmar {
-  ZoomableScrollArea::ZoomableScrollArea(QWidget* parent) : QScrollArea(parent) {}
+  ZoomableScrollArea::ZoomableScrollArea(QWidget* parent) : QScrollArea(parent) {
+    setAlignment(Qt::Alignment(Qt::AlignmentFlag::AlignCenter));
+  }
 
   void ZoomableScrollArea::wheelEvent(QWheelEvent* event) {
     if (!event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier) || event->angleDelta().isNull()) {

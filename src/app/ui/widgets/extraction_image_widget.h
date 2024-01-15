@@ -21,7 +21,7 @@ namespace calibmar {
       std::string image_name; // image name is kept separately in case extraction fails
     };
 
-    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr, std::optional<int> target_width = {});
+    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr, std::optional<int> target_width = {});    
 
     const class TargetVisualizer& TargetVisualizer();
     const std::string& ImageName();
@@ -29,8 +29,11 @@ namespace calibmar {
     static Status ConvertStatus(FeatureExtractor::Status status);
     static Status ConvertStatus(ImageReader::Status status);
 
+    static int GetDefaultWidth();
+
    private:
     std::string image_name_;
+    int widget_width_;
     const class TargetVisualizer& target_visualizer_;
   };
 }

@@ -5,12 +5,12 @@ target_sources(calibmar_app PRIVATE
 	calibration_target_visualization.cpp
 	calibration_target_visualization.h
 	cancellation_token.h
-	flow_layout.cpp
-	flow_layout.h
 	files_calibration_runner.cpp
 	files_calibration_runner.h
 	heatmap.cpp
 	heatmap.h
+	image_flow_layout.cpp
+	image_flow_layout.h
 	livestream_calibration_runner.cpp
 	livestream_calibration_runner.h	
 	manual_reset_signal.cpp
