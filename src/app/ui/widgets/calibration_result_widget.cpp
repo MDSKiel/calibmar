@@ -107,6 +107,9 @@ td {
     }
     // overall rms
     stream << std::endl << "<h3>Overall RMS:</h3>\n<p>" << calibration.CalibrationRms() << "</p>\n";
+  }
+
+  void GeneratePerViewHtml(std::ostream& stream, const calibmar::Calibration& calibration) {
     // per view rms & per view observation
     if (calibration.PerViewRms().size() > 0) {
       struct Stats {
@@ -166,6 +169,41 @@ namespace calibmar {
     result_text_->setReadOnly(true);
     result_text_->setFrameStyle(QFrame::NoFrame);
     layout->addWidget(result_text_);
+    layout->addStretch();
+
+    int target_height = 500;
+
+    if (calibration.PerViewRms().size() > 0) {
+      // Preview stats
+      std::stringstream per_view_stream;
+      GeneratePerViewHtml(per_view_stream, calibration);
+      doc = new QTextDocument(this);
+      doc->setDefaultStyleSheet(QString::fromStdString(cssStyle));
+      QString text = QString::fromStdString(per_view_stream.str());
+      QTextEdit* per_view_report = new QTextEdit(this);
+      per_view_report->setDocument(doc);
+      per_view_report->setHtml(text);
+      per_view_report->setReadOnly(true);
+      per_view_report->setFrameStyle(QFrame::NoFrame);
+
+      CollapsibleWidget* per_view_collapse = new CollapsibleWidget("Per View Statistics", nullptr, this);
+      per_view_collapse->SetWidget(per_view_report, target_height);
+      layout->addWidget(per_view_collapse);
+    }
+
+    ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
+    heatmap_area->setFrameShape(QFrame::Shape::NoFrame);
+    ImageWidget* image = new ImageWidget(this);
+    heatmap_area->setWidget(image);
+    heatmap_area->widget()->resize(
+        QSize(calibration.Camera().Width(), calibration.Camera().Height())
+            .scaled(calibration.Camera().Width(), target_height, Qt::AspectRatioMode::KeepAspectRatio));
+    std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
+    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
+    image->SetImage(std::move(heatmap));
+    CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
+    heatmap_collapse->SetWidget(heatmap_area, target_height);
+    layout->addWidget(heatmap_collapse);
 
     // only show offset diagramm with dome port
     if (calibration.Camera().RefracModelId() == colmap::DomePort::kRefracModelId && offset_visu_pixmap_) {
@@ -177,26 +215,11 @@ namespace calibmar {
       area->setWidget(offset_widget);
       area->widget()->resize(offset_visu_pixmap_->Width() * (800.0 / offset_visu_pixmap_->Height()), 800);
       QTimer::singleShot(50, area, [area]() { area->verticalScrollBar()->setValue(area->verticalScrollBar()->maximum()); });
-      CollapsibleWidget* collapse = new CollapsibleWidget("Show Displacement", nullptr, this);
-      collapse->SetWidget(area, 500);
+      CollapsibleWidget* displacement_collapse = new CollapsibleWidget("Show Displacement", nullptr, this);
+      displacement_collapse->SetWidget(area, 500);
 
-      layout->addWidget(collapse);
+      layout->addWidget(displacement_collapse);
     }
-
-    ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
-    heatmap_area->setFrameShape(QFrame::Shape::NoFrame);    
-    ImageWidget* image = new ImageWidget(this);
-    heatmap_area->setWidget(image);
-    int target_height = 500;
-    heatmap_area->widget()->resize(
-        QSize(calibration.Camera().Width(), calibration.Camera().Height())
-            .scaled(calibration.Camera().Width(), target_height, Qt::AspectRatioMode::KeepAspectRatio));
-    std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
-    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
-    image->SetImage(std::move(heatmap));
-    CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
-    heatmap_collapse->SetWidget(heatmap_area, target_height);
-    layout->addWidget(heatmap_collapse);
 
     if (reconstruction != nullptr) {
       options_manager_ = std::make_unique<colmap::OptionManager>();
@@ -204,7 +227,7 @@ namespace calibmar {
       model_viewer_widget->statusbar_status_label = new QLabel("0 Images - 0 Points", this);
       model_viewer_widget->statusbar_status_label->setVisible(false);
       model_viewer_widget->reconstruction = reconstruction;
-      CollapsibleWidget* collapse = new CollapsibleWidget(
+      CollapsibleWidget* reconstruction_collapse = new CollapsibleWidget(
           "Reconstruction",
           [model_viewer_widget](bool visible) {
         if (visible) {
@@ -212,8 +235,8 @@ namespace calibmar {
         }
       },
           this);
-      collapse->SetWidget(model_viewer_widget, 800);
-      layout->addWidget(collapse);
+      reconstruction_collapse->SetWidget(model_viewer_widget, 800);
+      layout->addWidget(reconstruction_collapse);
     }
   }
 

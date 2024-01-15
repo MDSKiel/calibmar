@@ -20,10 +20,10 @@ namespace calibmar {
     QFrame* header_line = new QFrame(this);
     header_line->setFrameShape(QFrame::HLine);
     header_line->setFrameShadow(QFrame::Sunken);
-    header_line->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Maximum);
+    header_line->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
 
     main_layout_ = new QGridLayout(this);
-    main_layout_->setContentsMargins(0,0,0,0);
+    main_layout_->setContentsMargins(0, 0, 0, 0);
     vertical_spacing_ = main_layout_->verticalSpacing();
     main_layout_->setVerticalSpacing(0);
     main_layout_->addWidget(toggle_button, 0, 0, 1, 1, Qt::AlignLeft);
@@ -32,14 +32,18 @@ namespace calibmar {
     QObject::connect(toggle_button, &QToolButton::clicked, [toggle_button, this](const bool checked) {
       toggle_button->setArrowType(checked ? Qt::ArrowType::DownArrow : Qt::ArrowType::RightArrow);
       if (this->widget_) {
+        setUpdatesEnabled(false);
         widget_->setFixedHeight(checked ? target_height_ : 0);
         main_layout_->setVerticalSpacing(checked ? vertical_spacing_ : 0);
+        setUpdatesEnabled(true);
       }
 
-      if(collapse_toggeled_callback_){
+      if (collapse_toggeled_callback_) {
         collapse_toggeled_callback_(checked);
       }
     });
+
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
   }
 
   QWidget* CollapsibleWidget::SetWidget(QWidget* widget, int target_height) {
