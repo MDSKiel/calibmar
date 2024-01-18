@@ -47,7 +47,6 @@
             "name": "linux-default",
             "displayName": "Linux x64",
             "description": "Linux default base preset, inherited by concrete ones.",
-            "generator": "Unix Makefiles",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
             "hidden": true,
