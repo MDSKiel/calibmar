@@ -47,7 +47,7 @@ COLMAP_ADD_EXECUTABLE(
     LINK_LIBS
         colmap_scene
         colmap_controllers
-        colmap_util_cuda
+        # colmap_util_cuda
 )
 
 COLMAP_ADD_EXECUTABLE(

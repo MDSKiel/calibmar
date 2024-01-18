@@ -1,81 +1,105 @@
 {
-    "version": 2,
+    "version": 3,
     "configurePresets": [
         {
-            "name": "windows-default-vcpkg-debug",
-            "displayName": "Windows x64 Debug using vcpkg toolchain",
-            "generator": "Ninja",
+            "name": "windows-default-vcpkg",
+            "hidden": true,
+            "description": "Windows build using the default generator and vcpkg toolchain. Expects %VCPKG_ROOT% environment variable. Use the corresponding build presets to set the config.",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
             },
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "TESTS_ENABLED": "ON",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+                "X_VCPKG_APPLOCAL_DEPS_INSTALL" : "ON",
+                "CUDA_ENABLED" : "OFF",
                 "CMAKE_CUDA_ARCHITECTURES": "native",
                 "CMAKE_TOOLCHAIN_FILE": {
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                     "type": "FILEPATH"
                 }
+            }
+        },
+        {
+            "name": "windows-default-vcpkg-debug",
+            "displayName": "Windows x64 Debug using vcpkg toolchain",
+            "description": "See parent preset. CMAKE_BUILD_TYPE is relevant for linking the correct libraries.",
+            "inherits": [
+                "windows-default-vcpkg"
+            ],
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
             "name": "windows-default-vcpkg-release",
             "displayName": "Windows x64 Release using vcpkg toolchain",
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
+            "description": "See parent preset. CMAKE_BUILD_TYPE is relevant for linking the correct libraries.",
+            "inherits": [
+                "windows-default-vcpkg"
+            ],
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "TESTS_ENABLED": "ON",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_CUDA_ARCHITECTURES": "native",
-                "CMAKE_TOOLCHAIN_FILE": {
-                    "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                    "type": "FILEPATH"
-                }
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "linux-default",
+            "displayName": "Linux x64",
+            "description": "Linux default base preset, inherited by concrete ones.",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}",
+            "hidden": true,
+            "cacheVariables": {
+                "CMAKE_CUDA_ARCHITECTURES": "native"
             }
         },
         {
             "name": "linux-default-debug",
             "displayName": "Linux x64 Debug",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "inherits": [
+                "linux-default"
+            ],
             "cacheVariables": {
-                "TESTS_ENABLED": "ON",
-                "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_CUDA_ARCHITECTURES": "native"
+                "CMAKE_BUILD_TYPE": "Debug"
             }
         },
         {
             "name": "linux-default-release-with-debug-info",
             "displayName": "Linux x64 Release with Debug Info",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "inherits": [
+                "linux-default"
+            ],
             "cacheVariables": {
-                "TESTS_ENABLED": "ON",
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_CUDA_ARCHITECTURES": "native"
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
             }
         },
         {
             "name": "linux-default-release",
             "displayName": "Linux x64 Release",
-            "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "inherits": [
+                "linux-default"
+            ],
             "cacheVariables": {
-                "TESTS_ENABLED": "ON",
-                "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
-                "CMAKE_CUDA_ARCHITECTURES": "native"
+                "CMAKE_BUILD_TYPE": "Release"
             }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "windows-config-release",
+            "description": "Explicitly sets the configuration to 'Release' which is relevant for multi config generators, such as VS Generator",
+            "displayName": "Release",
+            "configurePreset": "windows-default-vcpkg-release",
+            "configuration": "Release"
+        },
+        {
+            "name": "windows-config-debug",
+            "description": "Explicitly sets the configuration to 'Debug' which is relevant for multi config generators, such as VS Generator",
+            "displayName": "Debug",
+            "configurePreset": "windows-default-vcpkg-debug",
+            "configuration": "Debug"
         }
     ]
 }

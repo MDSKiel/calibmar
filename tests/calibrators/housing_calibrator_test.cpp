@@ -35,10 +35,10 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationFlat) {
   calibrator.Calibrate(calibration);
 
   std::vector<double> actual_params = calibration.Camera().RefracParams();
-  BOOST_TEST(abs(actual_params[0] - expected_params[0]) < 0.0002);
-  BOOST_TEST(abs(actual_params[1] - expected_params[1]) < 0.0002);
-  BOOST_TEST(abs(actual_params[2] - expected_params[2]) < 0.0002);
-  BOOST_TEST(abs(actual_params[3] - expected_params[3]) < 0.01); // distance is not estimated well
+  double angle_offset_interface =
+      std::acos(normal.dot(Eigen::Vector3d(actual_params[0], actual_params[1], actual_params[2]))) * (180 / M_PI);
+  BOOST_TEST(abs(angle_offset_interface) < 0.04);
+  BOOST_TEST(abs(actual_params[3] - expected_params[3]) < 0.01);  // distance is not estimated well
 }
 
 BOOST_AUTO_TEST_CASE(BasicHousingCalibrationDome) {

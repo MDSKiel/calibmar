@@ -1,4 +1,6 @@
 #include "aruco_sift_extractor.h"
+#include "calibmar/core/calibration_targets.h"
+
 #include <opencv2/aruco.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -52,12 +54,12 @@ namespace {
   }
 
   void ExtractArucos(calibmar::Image& image, const calibmar::Pixmap& pixmap,
-                     std::vector<std::vector<cv::Point2f>>& marker_corners, cv::aruco::PREDEFINED_DICTIONARY_NAME aruco_type) {
+                     std::vector<std::vector<cv::Point2f>>& marker_corners, calibmar::ArucoMarkerTypes aruco_type) {
     cv::Mat image_data(pixmap.Data());
     std::vector<int> marker_ids;
     std::vector<std::vector<cv::Point2f>> rejected_candidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = std::make_shared<cv::aruco::DetectorParameters>();
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::aruco::getPredefinedDictionary(aruco_type);
+    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(static_cast<int>(aruco_type)));
     cv::aruco::detectMarkers(image_data, dictionary, marker_corners, marker_ids, parameters, rejected_candidates);
 
     // store aruco keypoints in the image

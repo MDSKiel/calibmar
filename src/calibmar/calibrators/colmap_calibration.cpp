@@ -10,6 +10,9 @@ namespace {
   std::unique_ptr<colmap::Database> PrepareColmapDB(calibmar::Calibration& calibration, const std::string& database_path,
                                                     std::map<colmap::image_t, size_t>& colmap_img_to_calib_img) {
     std::unique_ptr<colmap::Database> database = std::make_unique<colmap::Database>(database_path);
+    // this is neccessary because Windows will keep the DB around for the complete process (and potentially longer?)
+    // To avoid key constraint exceptions (i.e. inserting the same object ids multiple times) ensure the DB is clean from the start...
+    database->ClearAllTables();
 
     colmap::DatabaseTransaction database_transaction(database.get());
 
@@ -73,7 +76,7 @@ namespace colmap_calibration {
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
                        bool enable_refraction, colmap::SiftMatchingOptions& matching_options,
                        colmap::TwoViewGeometryOptions& geometry_options, colmap::IncrementalMapperOptions& mapper_options) {
-    std::string database_path = "file::memory:?cache=shared";
+    std::string database_path = "file:memory.db?mode=memory&cache=shared";
     std::map<colmap::image_t, size_t> colmap_img_to_calib_img;
     std::unique_ptr<colmap::Database> database = PrepareColmapDB(calibration, database_path, colmap_img_to_calib_img);
 

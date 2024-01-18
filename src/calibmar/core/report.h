@@ -33,7 +33,7 @@ namespace calibmar {
     int chessboard_rows = 0;
     int chessboard_columns = 0;
     double square_size = 1;
-    cv::aruco::PREDEFINED_DICTIONARY_NAME aruco_type = cv::aruco::DICT_4X4_50;
+    ArucoMarkerTypes aruco_type = ArucoMarkerTypes::DICT_4X4_50;
     double aruco_scale_factor = 3.0;
     CalibrationTargetType calibration_target = CalibrationTargetType::Chessboard;
     std::string directory;

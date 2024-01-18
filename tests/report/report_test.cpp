@@ -36,6 +36,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Structure) {
 BOOST_TEST_DONT_PRINT_LOG_VALUE(CameraModelType)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(HousingInterfaceType)
 BOOST_TEST_DONT_PRINT_LOG_VALUE(CalibrationTargetType)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(ArucoMarkerTypes)
 BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   Calibration calibration;
   colmap::Camera camera;
@@ -88,7 +89,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetAruco) {
 
   // the exported yaml should be importable
   BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Target3DAruco);
-  BOOST_TEST(parameters.aruco_type == cv::aruco::DICT_4X4_50);
+  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_4X4_50);
   BOOST_TEST(parameters.aruco_scale_factor == 3.2);
 }
 

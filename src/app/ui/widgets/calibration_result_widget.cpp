@@ -121,7 +121,7 @@ td {
       bool contains_3d_count = calibration.PerView3DPointCount().size() > 0;
       stats.reserve(calibration.Images().size());
       for (size_t i = 0; i < calibration.Images().size(); i++) {
-        stats.push_back({std::filesystem::path(calibration.Image(i).Name()).filename(), calibration.PerViewRms()[i],
+        stats.push_back({std::filesystem::path(calibration.Image(i).Name()).filename().string(), calibration.PerViewRms()[i],
                          contains_3d_count ? calibration.PerView3DPointCount()[i] : -1});
       }
       std::sort(stats.begin(), stats.end(), [](Stats& a, Stats& b) { return a.rms > b.rms; });
