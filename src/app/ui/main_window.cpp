@@ -244,7 +244,7 @@ namespace calibmar {
     QMessageBox::about(
         this, "About Calibmar",
         QString::fromStdString("<h2>Calibmar " + CALIBMAR_VERSION + "</h2>\n<p>Commit ID: " + CALIBMAR_COMMIT_ID +
-                               "</p>\n<p>Commit date: " + CALIBMAR_COMMIT_DATE + "</p>\n<p>" + CALIBMAR_CUDA_ENABLED + "</p>")); 
+                               "</p>\n<p>Commit date: " + CALIBMAR_COMMIT_DATE + "</p>\n<p>" + CALIBMAR_CUDA_ENABLED + "</p>"));
   }
 
   void MainWindow::CreateActions() {
@@ -301,9 +301,6 @@ namespace calibmar {
 
   // Callback. Used to display an extracted image in a separate dialog
   void MainWindow::DisplayExtractionImage(const std::string& image_name, const TargetVisualizer& target_visualizer) {
-    if (!calibration_) {
-      return;
-    }
     if (!std::filesystem::exists(image_name)) {
       return;
     }
@@ -312,13 +309,16 @@ namespace calibmar {
       return;
     }
 
-    // if known image add point visu
-    for (auto& image : calibration_->Images()) {
-      if (image.Name() == image_name) {
-        target_visualizer.DrawTargetOnImage(*img, image);
-        break;
+    if (calibration_) {
+      // if known image add point visu
+      for (auto& image : calibration_->Images()) {
+        if (image.Name() == image_name) {
+          target_visualizer.DrawTargetOnImage(*img, image);
+          break;
+        }
       }
     }
+
     if (calibration_stereo_) {
       for (auto& image : calibration_stereo_->Images()) {
         if (image.Name() == image_name) {

@@ -33,20 +33,27 @@ namespace {
       cv::cvtColor(cornerMat, cornerMat, cv::COLOR_GRAY2RGB);
     }
 
-    QImage image = QImage(cornerMat.data, cornerMat.cols, cornerMat.rows, cornerMat.step, QImage::Format_BGR888);
-    QImage scaled = image.scaled(widget_width, widget_width, Qt::AspectRatioMode::KeepAspectRatio);
-    QPainter painter(&scaled);
-    painter.setPen(QPen(Qt::red, 4));
-    painter.drawRect(2, 2, scaled.width() - 4, scaled.height() - 4);
+    calibmar::Pixmap pixmap;
+    pixmap.Assign(cornerMat);
 
-    QLabel* image_label = new QLabel();
-    image_label->setPixmap(QPixmap::fromImage(scaled));
-    image_label->adjustSize();
+    std::unique_ptr<calibmar::Pixmap> scaled = std::make_unique<calibmar::Pixmap>();
+    double f = (double)widget_width / pixmap.Width();
+    cv::resize(pixmap.Data(), scaled->Data(), cv::Size(), f, f);
 
-    return image_label;
+    cv::rectangle(scaled->Data(), cv::Point(0, 0), cv::Point(scaled->Width(), scaled->Height()), cv::Scalar(0, 0, 255), 8);
+
+    calibmar::ImageWidget* image_widget = new calibmar::ImageWidget();
+    image_widget->SetImage(std::move(scaled));
+    image_widget->adjustSize();
+
+    // esp. needed for livestream sidebar layout
+    image_widget->setSizePolicy(QSizePolicy::Policy::Minimum, QSizePolicy::Policy::Minimum);
+
+    return image_widget;
   }
 
-  QWidget* CreateImageWidget(calibmar::ExtractionImageWidget::Data& data, const calibmar::TargetVisualizer& target_visualizer, int widget_width) {
+  QWidget* CreateImageWidget(calibmar::ExtractionImageWidget::Data& data, const calibmar::TargetVisualizer& target_visualizer,
+                             int widget_width) {
     cv::Mat& cornerMat = data.image->Data();
 
     if (cornerMat.channels() == 1) {

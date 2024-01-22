@@ -16,6 +16,8 @@ namespace calibmar {
       int chessboard_columns = 0;
       // length of a square edge
       double square_size = 1.0;
+      // if disabled, corner detection will be iteratively attempted with multiple settings
+      bool fast = false;
 
       void Check();
     };

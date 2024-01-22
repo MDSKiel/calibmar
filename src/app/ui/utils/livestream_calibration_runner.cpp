@@ -35,19 +35,16 @@ namespace {
     ProjectPoints(calibration.Camera(), points3D, rotation, translation, current_target_points);
   }
 
-  void SetupChessboardCalibration(const calibmar::ChessboardFeatureExtractor::Options& chessboard_options,
+  void SetupChessboardCalibration(calibmar::ChessboardFeatureExtractor::Options& chessboard_options,
                                   const calibmar::StreamCalibrationDialog::Options& options, calibmar::Calibration& calibration,
                                   std::pair<int, int> image_size, std::unique_ptr<calibmar::FeatureExtractor>& extractor,
                                   std::unique_ptr<calibmar::TargetVisualizer>& target_visualizer,
                                   std::unique_ptr<calibmar::Calibrator>& calibrator,
                                   std::unique_ptr<calibmar::TargetTracker>& target_tracker) {
     using namespace calibmar;
-    ChessboardFeatureExtractor::Options extractor_options;
-    extractor_options.chessboard_columns = chessboard_options.chessboard_columns;
-    extractor_options.chessboard_rows = chessboard_options.chessboard_rows;
-    extractor_options.square_size = chessboard_options.square_size;
+    chessboard_options.fast = true;
     std::unique_ptr<ChessboardFeatureExtractor> chessboard_extractor =
-        std::make_unique<ChessboardFeatureExtractor>(extractor_options);
+        std::make_unique<ChessboardFeatureExtractor>(chessboard_options);
     calibration.SetPoints3D(chessboard_extractor->Points3D());
     calibration.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(chessboard_options));
 
@@ -194,7 +191,6 @@ namespace calibmar {
     if (is_chessboard_calibration) {
       ChessboardFeatureExtractor::Options& chessboard_options =
           std::get<ChessboardFeatureExtractor::Options>(dialog_options_.calibration_target_options);
-
       SetupChessboardCalibration(chessboard_options, dialog_options_, calibration, image_size, extractor_, target_visualizer_,
                                  calibrator, target_tracker);
     }

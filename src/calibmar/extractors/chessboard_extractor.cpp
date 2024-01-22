@@ -30,7 +30,7 @@ namespace calibmar {
     }
   }
 
-  FeatureExtractor::Status ChessboardFeatureExtractor::Extract(Image& image, const Pixmap& pixmap) {    
+  FeatureExtractor::Status ChessboardFeatureExtractor::Extract(Image& image, const Pixmap& pixmap) {
     options_.Check();
 
     if (pixmap.Width() <= 0 || pixmap.Height() <= 0) {
@@ -40,7 +40,17 @@ namespace calibmar {
     std::vector<cv::Point2f> corners;
     // opencv expects "inner corners", that is columns-1/rows-1
     cv::Size pattern = cv::Size(options_.chessboard_columns - 1, options_.chessboard_rows - 1);
-    bool patternfound = cv::findChessboardCornersSB(pixmap.Data(), pattern, corners, cv::CALIB_CB_NORMALIZE_IMAGE);
+
+    bool patternfound = cv::findChessboardCornersSB(pixmap.Data(), pattern, corners);
+
+    if (!options_.fast) {
+      if (!patternfound) {
+        patternfound = cv::findChessboardCornersSB(pixmap.Data(), pattern, corners, cv::CALIB_CB_NORMALIZE_IMAGE);
+      }
+      if (!patternfound) {
+        patternfound = cv::findChessboardCornersSB(pixmap.Data(), pattern, corners, cv::CALIB_CB_EXHAUSTIVE);
+      }
+    }
 
     if (!patternfound || corners.size() != points3D_.size()) {
       return Status::DETECTION_ERROR;
