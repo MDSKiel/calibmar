@@ -13,7 +13,7 @@ build:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - cmake --build . -config Release
+    - cmake --build . -config Release -j 8
   artifacts:
     paths:
       - "build/"
@@ -24,7 +24,7 @@ build-CUDA:
     - mkdir build_CUDA
     - cd build_CUDA
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - cmake --build . -config Release
+    - cmake --build . -config Release -j 8
   artifacts:
     paths:
       - "build_CUDA/"
@@ -35,7 +35,7 @@ test:
     - build
   script:
     - cd build
-    - ctest -j 8
+    - ctest -C Release -j 8
 
 test-CUDA:
   stage: test
@@ -43,7 +43,7 @@ test-CUDA:
     - build-CUDA
   script:
     - cd build_CUDA
-    - ctest -j 8
+    - ctest -C Release -j 8
 
 release:
   stage: deploy

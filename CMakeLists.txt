@@ -5,7 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 option(CALIBMAR_TESTS_ENABLED "Whether to build test binaries" ON)
 
 project(calibmar
-        VERSION 1.0
+        VERSION 0.8
         LANGUAGES CXX)
 
 add_subdirectory(lib)

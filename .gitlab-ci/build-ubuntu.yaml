@@ -19,7 +19,7 @@ build:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF
-    - cmake --build .
+    - cmake --build . -j 8
   artifacts:
     paths:
       - "build/"
@@ -30,7 +30,7 @@ build-CUDA:
     - mkdir build_CUDA
     - cd build_CUDA
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major
-    - cmake --build .
+    - cmake --build . - j 8
   artifacts:
     paths:
       - "build_CUDA/"
