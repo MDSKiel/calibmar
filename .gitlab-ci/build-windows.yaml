@@ -13,7 +13,7 @@ build:
     - mkdir build
     - cd build
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - cmake --build . -config Release -j 8
+    - cmake --build . --config Release -j 8
   artifacts:
     paths:
       - "build/"
@@ -24,7 +24,7 @@ build-CUDA:
     - mkdir build_CUDA
     - cd build_CUDA
     - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - cmake --build . -config Release -j 8
+    - cmake --build . --config Release -j 8
   artifacts:
     paths:
       - "build_CUDA/"
@@ -51,7 +51,7 @@ release:
   rules:
   - if: $CI_COMMIT_TAG && $CI_COMMIT_TAG ~= \A(\.?[\w\+-]+\.?)+\z # Run this job when a git tag is created and the tag conforms to the generic package version regex
   script:
-    - Compress-Archive -Path .\build\src\app\Release\* -DestinationPath .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip
-    - Compress-Archive -Path .\build_CUDA\src\app\Release\* -DestinationPath .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip
-    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows-no-cuda/$CI_COMMIT_TAG/Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip" -Method put
-    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows-cuda/$CI_COMMIT_TAG/Calibmar_$CI_COMMIT_TAG_windows_cuda.zip" -Method put
+    - Compress-Archive -Path .\build\src\app\Release\* -DestinationPath .\build\calibmar-windows-no-cuda_$CI_COMMIT_TAG.zip
+    - Compress-Archive -Path .\build_CUDA\src\app\Release\* -DestinationPath .\build_CUDA\calibmar-windows-cuda$CI_COMMIT_TAG.zip
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/calibmar-windows-no-cuda_$CI_COMMIT_TAG.zip" -Method put
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/calibmar-windows-cuda$CI_COMMIT_TAG.zip" -Method put
