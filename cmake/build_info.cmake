@@ -1,0 +1,25 @@
+
+find_package(Git)
+
+if(Git_FOUND)
+    execute_process(COMMAND
+        "${GIT_EXECUTABLE}" rev-parse --short HEAD
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_COMMIT_ID
+        RESULT_VARIABLE RESULT_CODE1
+        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    execute_process(COMMAND
+        "${GIT_EXECUTABLE}" log -1 --format=%ad --date=short
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        OUTPUT_VARIABLE GIT_COMMIT_DATE
+        RESULT_VARIABLE RESULT_CODE2
+        ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()
+
+if(NOT RESULT_CODE1 EQUAL "0")
+    set(GIT_COMMIT_ID "Unknown")
+endif()
+if(NOT RESULT_CODE2 EQUAL "0")
+    set(GIT_COMMIT_DATE "Unknown")
+endif()

@@ -13,7 +13,7 @@ namespace {
         found == std::string::npos ? QString::fromStdString(image_name) : QString::fromStdString(image_name.substr(found + 1));
 
     QLabel* name_label = new QLabel();
-    name = name_label->fontMetrics().elidedText(name, Qt::TextElideMode::ElideLeft, width);
+    name = name_label->fontMetrics().elidedText(name, Qt::TextElideMode::ElideLeft, width - 20);
     name_label->setText(name);
     return name_label;
   }
@@ -107,7 +107,7 @@ namespace calibmar {
     layout->addWidget(content);
 
     if (!data->image_name.empty()) {
-      QWidget* name = CreateImageNameLabel(data->image_name, content->width());
+      QWidget* name = CreateImageNameLabel(data->image_name, widget_width_);
       layout->addWidget(name);
       layout->setAlignment(name, Qt::AlignHCenter | Qt::AlignBottom);
     }

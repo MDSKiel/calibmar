@@ -1,0 +1,57 @@
+stages:
+  - build
+  - test
+  - deploy
+
+default:
+  tags:
+    - windows # all jobs must be run on windows
+
+build:
+  stage: build
+  script:
+    - mkdir build
+    - cd build
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
+    - cmake --build . -config Release
+  artifacts:
+    paths:
+      - "build/"
+
+build-CUDA:
+  stage: build
+  script:
+    - mkdir build_CUDA
+    - cd build_CUDA
+    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
+    - cmake --build . -config Release
+  artifacts:
+    paths:
+      - "build_CUDA/"
+
+test:
+  stage: test
+  dependencies:
+    - build
+  script:
+    - cd build
+    - ctest -j 8
+
+test-CUDA:
+  stage: test
+  dependencies:
+    - build-CUDA
+  script:
+    - cd build_CUDA
+    - ctest -j 8
+
+release:
+  stage: deploy
+  dependencies: [build, build_CUDA]
+  rules:
+  - if: $CI_COMMIT_TAG && $CI_COMMIT_TAG ~= \A(\.?[\w\+-]+\.?)+\z # Run this job when a git tag is created and the tag conforms to the generic package version regex
+  script:
+    - Compress-Archive -Path .\build\src\app\Release\* -DestinationPath .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip
+    - Compress-Archive -Path .\build_CUDA\src\app\Release\* -DestinationPath .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows-no-cuda/$CI_COMMIT_TAG/Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip" -Method put
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows-cuda/$CI_COMMIT_TAG/Calibmar_$CI_COMMIT_TAG_windows_cuda.zip" -Method put

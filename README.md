@@ -14,7 +14,6 @@ Features include:
 ### CUDA
 
 To build with CUDA support install the latest CUDA from NVIDIA's homepage.
-To build without CUDA support add the `-DCUDA_ENABLED=OFF` option to cmake configure calls (i.e. `cmake .. -DCUDA_ENABLED=OFF`).
 
 You will also need to specify a CUDA architecture during cmake configuration as e.g. `-DCMAKE_CUDA_ARCHITECTURES=native`.
 
@@ -36,17 +35,17 @@ Dependencies from default Ubuntu repositories:
         libboost-system-dev \
         libboost-test-dev \
         libeigen3-dev \
-        libsuitesparse-dev \
+        libflann-dev \
         libfreeimage-dev \
         libmetis-dev \
         libgoogle-glog-dev \
-        libgflags-dev \
         libglew-dev \
+        libsqlite3-dev \
         qtbase5-dev \
         libqt5opengl5-dev \
         libcgal-dev \
         libceres-dev \
-		libopencv-dev
+        libopencv-dev
 
 Configure and compile Calibmar:
 
@@ -54,7 +53,7 @@ Configure and compile Calibmar:
     mkdir build
     cd build
     cmake .. 
-    cmake --build . --config Release
+    cmake --build . 
 
 ### Windows
 For Windows it is recommended to use [vcpkg](https://github.com/microsoft/vcpkg). You will also need Visual Studio Build Tools ().

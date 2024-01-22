@@ -1,8 +1,17 @@
 #pragma once
 
+#include <string>
+
 namespace calibmar {
 
-const static std::string CALIBMAR_VERSION = "@calibmar_VERSION_MAJOR@.@calibmar_VERSION_MINOR@";
-const static int CALIBMAR_VERSION_MAJOR = @calibmar_VERSION_MAJOR@;
-const static int CALIBMAR_VERSION_MINOR = @calibmar_VERSION_MINOR@;
+  const static std::string CALIBMAR_VERSION = "@calibmar_VERSION_MAJOR@.@calibmar_VERSION_MINOR@";
+  const static std::string CALIBMAR_COMMIT_ID = "@GIT_COMMIT_ID@";
+  const static std::string CALIBMAR_COMMIT_DATE = "@GIT_COMMIT_DATE@";
+#if defined(COLMAP_CUDA_ENABLED)
+  const static std::string CALIBMAR_CUDA_ENABLED = "CUDA enabled";
+#else
+  const static std::string CALIBMAR_CUDA_ENABLED = "CUDA disabled";
+#endif
+  const static int CALIBMAR_VERSION_MAJOR = @calibmar_VERSION_MAJOR@;
+  const static int CALIBMAR_VERSION_MINOR = @calibmar_VERSION_MINOR@;
 }
