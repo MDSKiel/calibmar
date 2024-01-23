@@ -6,6 +6,8 @@ target_sources(calibmar PRIVATE
 	calibrator3D.h
 	colmap_calibration.cpp
 	colmap_calibration.h
+	general_calibration.cpp
+	general_calibration.h
 	housing_calibrator.cpp
 	housing_calibrator.h
 	non_svp_calibration.cpp

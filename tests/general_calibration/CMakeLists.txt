@@ -1,0 +1,4 @@
+target_sources(calibmar_tests PRIVATE
+	general_calibration_test.cpp)
+
+add_test(NAME general_calibration_test COMMAND calibmar_tests)

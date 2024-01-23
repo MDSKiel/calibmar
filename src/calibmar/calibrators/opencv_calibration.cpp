@@ -60,6 +60,10 @@ namespace {
                            bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs, std::vector<double>& std_deviations_intrinsics,
                            std::vector<double>& std_deviations_extrinsics, std::vector<double>& per_view_rms) {
+    if (camera.Width() <= 0 || camera.Height() <= 0 || camera.ModelId() == colmap::kInvalidCameraModelId) {
+      throw std::runtime_error("Camera width, height and model must be initialized!");
+    }
+
     int flags = TranslateToOpenCVFlags(camera.ModelId());
 
     cv::Mat camera_mat;
