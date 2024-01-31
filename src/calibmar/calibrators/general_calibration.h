@@ -10,6 +10,14 @@
 
 namespace calibmar::general_calibration {
 
+  // Undistort image pixel coordinates to image pixel coordinates using the distortion parameters of provided camera. If the
+  // camera has no distortion (IsUndistorted() == true), image_points will be copied to undistorted_points.
+  // @param image_points Original image pixel locations
+  // @param camera Camera belonging to the distorted pixel locations
+  // @param undistorted_points Result of undistorting image_points into new pixel coordinates
+  void UndistortImagePoints(const std::vector<std::vector<Eigen::Vector2d>>& image_points, const colmap::Camera& camera,
+                            std::vector<std::vector<Eigen::Vector2d>>& undistorted_points);
+
   // Estimate camera intrinsics from observations of a planar calibration target . Uses the method from Z. Zhang, "A flexible new
   // technique for camera calibration", i.e. constraints from homography. Also adds constraints for square pixels (aspect ratio 1)
   // and no skew.
@@ -40,7 +48,8 @@ namespace calibmar::general_calibration {
   // @param poses The resulting extrinsic poses per view.
   void CalibrateCamera(std::vector<std::vector<Eigen::Vector3d>>& object_points,
                        const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
-                       bool use_intrinsic_guess, std::vector<colmap::Rigid3d>& poses, std::vector<double>* std_deviations_intrinsics = nullptr);
+                       bool use_intrinsic_guess, std::vector<colmap::Rigid3d>& poses,
+                       std::vector<double>* std_deviations_intrinsics = nullptr);
 
   // Calculate the per view and overall RMS given a set of 2D-3D correspondences, poses and a calibrated camera.
   // @param object_points 3D object points

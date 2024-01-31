@@ -25,7 +25,16 @@ namespace {
   colmap::Camera CreateUndistortedCamera(colmap::Camera camera) {
     colmap::Camera undistort_camera;
     undistort_camera.SetModelId(colmap::PinholeCameraModel::model_id);
-    undistort_camera.SetFocalLengthY(camera.FocalLengthY());
+    undistort_camera.SetPrincipalPointX(camera.PrincipalPointX());
+    undistort_camera.SetPrincipalPointY(camera.PrincipalPointY());
+
+    if (camera.FocalLengthIdxs().size() == 1) {
+      undistort_camera.SetFocalLength(camera.FocalLength());
+    }
+    else {
+      undistort_camera.SetFocalLengthX(camera.FocalLengthX());
+      undistort_camera.SetFocalLengthY(camera.FocalLengthY());
+    }
 
     return undistort_camera;
   }
@@ -61,6 +70,27 @@ namespace {
 }
 
 namespace calibmar::general_calibration {
+  void UndistortImagePoints(const std::vector<std::vector<Eigen::Vector2d>>& image_points, const colmap::Camera& camera,
+                            std::vector<std::vector<Eigen::Vector2d>>& undistorted_points) {
+    undistorted_points.clear();
+    undistorted_points.resize(image_points.size());
+
+    if (camera.IsUndistorted()) {
+      for (size_t i = 0; i < image_points.size(); i++) {
+        undistorted_points[i] = image_points[i];
+      }
+    }
+    else {
+      colmap::Camera undistort_camera = CreateUndistortedCamera(camera);
+
+      for (size_t i = 0; i < image_points.size(); i++) {
+        undistorted_points[i].reserve(image_points[i].size());
+        for (const auto& point : image_points[i]) {
+          undistorted_points[i].push_back(undistort_camera.ImgFromCam(camera.CamFromImg(point)));
+        }
+      }
+    }
+  }
 
   void EstimateKFromHomographies(const std::vector<std::vector<Eigen::Vector2d>>& object_plane_points,
                                  const std::vector<std::vector<Eigen::Vector2d>>& image_points, double& fx, double& fy,
@@ -159,29 +189,22 @@ namespace calibmar::general_calibration {
       camera.InitializeWithId(camera.ModelId(), (fx + fy) / 2, camera.Width(), camera.Height());
     }
 
-    std::vector<std::vector<Eigen::Vector2d>> undistorted_points(image_points.size());
+    const std::vector<std::vector<Eigen::Vector2d>>* undistorted_points_ptr;
+    std::vector<std::vector<Eigen::Vector2d>> undistorted_points;
+    undistorted_points_ptr = &undistorted_points;
 
     if (use_intrinsic_guess && !camera.IsUndistorted()) {
-      colmap::Camera undistort_camera = CreateUndistortedCamera(camera);
-
-      for (size_t i = 0; i < image_points.size(); i++) {
-        undistorted_points[i].reserve(image_points[i].size());
-        for (const auto& point : image_points[i]) {
-          undistorted_points[i].push_back(undistort_camera.ImgFromCam(camera.CamFromImg(point)));
-        }
-      }
+      UndistortImagePoints(image_points, camera, undistorted_points);
     }
     else {
-      for (size_t i = 0; i < image_points.size(); i++) {
-        undistorted_points[i] = image_points[i];
-      }
+      undistorted_points_ptr = &image_points;
     }
 
     ceres::Problem problem;
     poses.clear();
     poses.reserve(image_points.size());
     for (size_t i = 0; i < image_points.size(); i++) {
-      Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], undistorted_points[i])[0];
+      Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], (*undistorted_points_ptr)[i])[0];
 
       colmap::Rigid3d pose;
       EstimatePoseFromHomography(H, camera.CalibrationMatrix(), pose);
@@ -189,6 +212,15 @@ namespace calibmar::general_calibration {
       poses.push_back(pose);
 
       AddImageToProblem(problem, camera, poses[i], image_points[i], object_points[i]);
+    }
+
+    if (camera.ModelId() == colmap::PinholeCameraModel::model_id ||
+        camera.ModelId() == colmap::SimplePinholeCameraModel::model_id) {
+      // in case we have simple models keep the principal point constant
+      std::vector<int> const_camera_params;
+      const std::vector<size_t>& params_idxs = camera.PrincipalPointIdxs();
+      const_camera_params.insert(const_camera_params.end(), params_idxs.begin(), params_idxs.end());
+      colmap::SetSubsetManifold(static_cast<int>(camera.NumParams()), const_camera_params, &problem, camera.ParamsData());
     }
 
     // Solve
