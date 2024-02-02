@@ -4,6 +4,8 @@
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "colmap/sensor/models.h"
+
 namespace calibmar {
   namespace render {
     void DrawChessboardCorners(Pixmap& pixmap, int columns, int rows, const std::vector<cv::Point2f>& corners) {
@@ -68,6 +70,47 @@ namespace calibmar {
       const cv::Mat& mat = pixmap.Data();
       QImage::Format format = mat.channels() == 1 ? QImage::Format::Format_Grayscale8 : QImage::Format::Format_BGR888;
       return QImage(mat.data, mat.cols, mat.rows, mat.step, format);
+    }
+
+    void DistortPixmap(const Pixmap& input, Pixmap output, const colmap::Camera& distortion_camera,
+                       std::optional<double> distance) {
+      if (input.Width() != output.Width() || input.Height() != output.Height()) {
+        throw std::runtime_error("input and output size must match!");
+      }
+
+      colmap::Camera undistort_camera;
+      undistort_camera.SetModelId(colmap::PinholeCameraModel::model_id);
+      undistort_camera.SetPrincipalPointX(distortion_camera.PrincipalPointX());
+      undistort_camera.SetPrincipalPointY(distortion_camera.PrincipalPointY());
+
+      if (distortion_camera.FocalLengthIdxs().size() == 1) {
+        undistort_camera.SetFocalLength(distortion_camera.FocalLength());
+      }
+      else {
+        undistort_camera.SetFocalLengthX(distortion_camera.FocalLengthX());
+        undistort_camera.SetFocalLengthY(distortion_camera.FocalLengthY());
+      }
+
+      cv::Mat map(distortion_camera.Width(), distortion_camera.Height(), CV_32FC2);
+
+      for (int y = 0; y < input.Height(); y++) {
+        for (int x = 0; x < input.Width(); x++) {
+          Eigen::Vector2d src_px;
+
+          if (distance.has_value() && distortion_camera.IsCameraRefractive()) {
+            Eigen::Vector3d point3D = distortion_camera.CamFromImgRefracPoint({x, y}, *distance);
+            src_px = undistort_camera.ImgFromCam(point3D.hnormalized());
+          }
+          else {
+            Eigen::Vector2d cam_point = distortion_camera.CamFromImg({x, y});
+            src_px = undistort_camera.ImgFromCam(cam_point);
+          }
+
+          map.at<cv::Vec2f>(y, x) = cv::Vec2f(src_px.x(), src_px.y());
+        }
+      }
+
+      cv::remap(input.Data(), output.Data(), map, cv::noArray(), cv::INTER_LINEAR, cv::BorderTypes::BORDER_CONSTANT);
     }
   }
 }

@@ -10,7 +10,9 @@ namespace {
 
 namespace calibmar {
 
-  CameraModelWidget::CameraModelWidget(QWidget* parent) : QWidget(parent) {
+  CameraModelWidget::CameraModelWidget(QWidget* parent) : CameraModelWidget(nullptr, parent) {}
+
+  CameraModelWidget::CameraModelWidget(const std::function<void()> model_changed_callback, QWidget* parent) {
     InitializeCameraModels(camera_models_);
 
     camera_parameters_label_ = new QLabel(this);
@@ -27,6 +29,9 @@ namespace calibmar {
     camera_model_layout->setContentsMargins(0, 0, 0, 0);
     camera_model_layout->addWidget(camera_model_combobox_);
     camera_model_layout->addWidget(camera_parameters_label_);
+
+    // assign last to not call it during construction
+    model_changed_callback_ = model_changed_callback;
   }
 
   CameraModelType CameraModelWidget::CameraModel() {
@@ -46,5 +51,9 @@ namespace calibmar {
 
   void CameraModelWidget::SetCameraParametersLabel(int index) {
     camera_parameters_label_->setText(QString::fromStdString("Model Parameters: " + std::get<2>(camera_models_[index])));
+
+    if (model_changed_callback_) {
+      model_changed_callback_();
+    }
   }
 }

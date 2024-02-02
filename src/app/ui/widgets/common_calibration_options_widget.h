@@ -3,7 +3,7 @@
 #include "calibmar/core/report.h"
 #include "ui/widgets/calibration_target_widget.h"
 #include "ui/widgets/housing_selector_widget.h"
-#include "ui/widgets/model_selector_widget.h"
+#include "ui/widgets/camera_model_selector_widget.h"
 
 #include <QtCore>
 #include <QtWidgets>

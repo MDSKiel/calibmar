@@ -5,6 +5,8 @@
 #include <Eigen/Core>
 #include <QtGui>
 
+#include <optional>
+
 namespace calibmar {
   namespace render {
     void DrawChessboardCorners(Pixmap& pixmap, int columns, int rows, const std::vector<cv::Point2f>& corners);
@@ -16,5 +18,8 @@ namespace calibmar {
 
     // Returns a QImage from a Pixmap. Does not copy and therefore the lifetime is bound to the pixmap.
     QImage GetQImageFromPixmap(const Pixmap& pixmap);
+
+    void DistortPixmap(const Pixmap& input, Pixmap output, const colmap::Camera& distortion_camera,
+                       std::optional<double> distance);
   }
 }

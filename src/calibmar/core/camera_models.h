@@ -41,9 +41,14 @@ namespace calibmar {
 
     static inline colmap::Camera InitCamera(CameraModelType type, const std::pair<int, int>& image_size,
                                             const std::vector<double>& params) {
-      colmap::Camera camera;
-      camera.InitializeWithName(CameraModels().at(type).model_name, 0, image_size.first, image_size.second);
+      colmap::Camera camera = InitCamera(type, image_size, 0);
       camera.SetParams(params);
+      return camera;
+    }
+
+    static inline colmap::Camera InitCamera(CameraModelType type, const std::pair<int, int>& image_size, double focal_length) {
+      colmap::Camera camera;
+      camera.InitializeWithName(CameraModels().at(type).model_name, focal_length, image_size.first, image_size.second);
       return camera;
     }
 
@@ -104,14 +109,12 @@ namespace calibmar {
     size_t num_params;
 
     static inline std::map<HousingInterfaceType, HousingInterface> HousingInterfaces() {
-      return {{HousingInterfaceType::DoubleLayerSphericalRefractive,
-               {"Thick Dome Port", colmap::DomePort::refrac_model_name,
-                colmap::DomePort::params_info,
-                colmap::DomePort::num_params}},
-              {HousingInterfaceType::DoubleLayerPlanarRefractive,
-               {"Thick Flat Port", colmap::FlatPort::refrac_model_name,
-                colmap::FlatPort::params_info,
-                colmap::FlatPort::num_params}}};
+      return {
+          {HousingInterfaceType::DoubleLayerSphericalRefractive,
+           {"Thick Dome Port", colmap::DomePort::refrac_model_name, colmap::DomePort::params_info, colmap::DomePort::num_params}},
+          {HousingInterfaceType::DoubleLayerPlanarRefractive,
+           {"Thick Flat Port", colmap::FlatPort::refrac_model_name, colmap::FlatPort::params_info,
+            colmap::FlatPort::num_params}}};
     }
   };
 }

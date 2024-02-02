@@ -9,6 +9,7 @@
 #include "calibmar/readers/livestream_reader.h"
 #include "calibmar/version.h"
 #include "ui/dialogs/license_dialog.h"
+#include "ui/dialogs/model_explorer_dialog.h"
 #include "ui/dialogs/stereo_file_calibration_dialog.h"
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/dialogs/test_widget_dialog.h"
@@ -264,6 +265,13 @@ namespace calibmar {
     calibration_save_action_->setEnabled(false);
     fileMenu->addSeparator();
     QAction* exitAct = fileMenu->addAction("E&xit", this, &QWidget::close);
+
+    QMenu* toolsMenu = menuBar()->addMenu("&Tools");
+    toolsMenu->addAction("&Camera Model Explorer", this, []() {
+      ModelExplorerDialog dialog;
+      dialog.exec();
+    });
+
     QMenu* helpMenu = menuBar()->addMenu("&Help");
     helpMenu->addAction("&Licenses", this, []() {
       LicenseDialog dialog;

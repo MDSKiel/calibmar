@@ -142,7 +142,7 @@ namespace calibmar {
     QString t1_label = QString::number(axis_max_value_ / 3.0);
     QString t2_label = QString::number(axis_max_value_ / 3.0 * 2);
     for (size_t i = 0; i < ticks.cols(); i++) {
-      QPointF pos(ticks.col(i).x() - fm.width(t1_label) / 2, ticks.col(i).y() + fm.height());
+      QPointF pos(ticks.col(i).x() - fm.horizontalAdvance(t1_label) / 2, ticks.col(i).y() + fm.height());
       painter.drawText(pos, QString::number(ticks_[i]));
     }
 

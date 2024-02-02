@@ -3,6 +3,8 @@ target_sources(calibmar_app PRIVATE
 	file_calibration_dialog.h
 	license_dialog.cpp
 	license_dialog.h
+	model_explorer_dialog.cpp
+	model_explorer_dialog.h
 	stereo_file_calibration_dialog.cpp
 	stereo_file_calibration_dialog.h
 	stream_calibration_dialog.cpp

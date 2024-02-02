@@ -5,7 +5,7 @@
 #include "calibmar/readers/livestream_reader.h"
 #include "ui/widgets/calibration_target_widget.h"
 #include "ui/widgets/housing_selector_widget.h"
-#include "ui/widgets/model_selector_widget.h"
+#include "ui/widgets/camera_model_selector_widget.h"
 
 #include <colmap/controllers/option_manager.h>
 

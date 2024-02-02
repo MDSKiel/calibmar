@@ -1,7 +1,7 @@
-#include "ui/widgets/model_selector_widget.h"
+#include "camera_model_selector_widget.h"
 #include "ui/utils/parse_params.h"
 
-#include "model_selector_widget.h"
+
 #include <colmap/sensor/models.h>
 
 

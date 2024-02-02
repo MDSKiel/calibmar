@@ -21,14 +21,16 @@ target_sources(calibmar_app PRIVATE
 	extraction_images_widget.h
 	housing_selector_widget.cpp
 	housing_selector_widget.h
+	housing_widget.cpp
+	housing_widget.h
 	image_widget.cpp
 	image_widget.h
 	initial_parameters_widget.cpp
 	initial_parameters_widget.h
 	livestream_extraction_widget.cpp
 	livestream_extraction_widget.h
-	model_selector_widget.cpp
-	model_selector_widget.h
+	camera_model_selector_widget.cpp
+	camera_model_selector_widget.h
 	offset_diagram_widget.cpp
 	offset_diagram_widget.h
 	target3D_target_widget.cpp
