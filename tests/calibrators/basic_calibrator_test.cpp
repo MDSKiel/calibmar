@@ -37,7 +37,8 @@ std::vector<CameraModelType> models = {CameraModelType::SimplePinholeCameraModel
                                        CameraModelType::SimpleRadialCameraModel,  CameraModelType::RadialCameraModel,
                                        CameraModelType::OpenCVCameraModel,        CameraModelType::FullOpenCVCameraModel,
                                        CameraModelType::OpenCVFisheyeCameraModel};
-// This is more of a regression test. The expected values are not necessarily correct, but used to detect changes.
+// This is more of a regression test. The expected values are not necessarily correct, but used to detect changes. (For FullOpenCV
+// and Fisheye they seem to be quite random)
 BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), model) {
   Calibration calibration;
   BasicCalibrator::Options options;
@@ -52,13 +53,14 @@ BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), mo
   std::vector<double> expected_params = GetExpectedParams(model);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
+
   BOOST_TEST(ElementWiseClose(actual, expected, epsilon));
 }
 
 std::vector<CameraModelType> std_dev_models = {CameraModelType::SimplePinholeCameraModel, CameraModelType::PinholeCameraModel,
                                                CameraModelType::SimpleRadialCameraModel,  CameraModelType::RadialCameraModel,
-                                               CameraModelType::OpenCVCameraModel,        CameraModelType::FullOpenCVCameraModel};
-// OpenCV fisheye calibration does not support returning std deviations
+                                               CameraModelType::OpenCVCameraModel,        CameraModelType::FullOpenCVCameraModel,
+                                               CameraModelType::OpenCVFisheyeCameraModel};
 BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength, boost::unit_test::data::make(std_dev_models), model) {
   Calibration calibration;
   BasicCalibrator::Options options;
@@ -71,13 +73,7 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength, boost::unit_test::d
 
   std::vector<double> params = calibration.Camera().Params();
   std::vector<double> intrinsics_std_dev = calibration.IntrinsicsStdDeviations();
-  if (model == CameraModelType::PinholeCameraModel || model == CameraModelType::SimplePinholeCameraModel) {
-    // For pinhole models the principal point is not estimated and therefore does not have a std deviation
-    BOOST_TEST(params.size() - 2 == intrinsics_std_dev.size());
-  }
-  else {
-    BOOST_TEST(params.size() == intrinsics_std_dev.size());
-  }
+  BOOST_TEST(params.size() == intrinsics_std_dev.size());
 }
 
 // The expected values are not necessarily correct, but used to detect changes.
@@ -134,10 +130,12 @@ namespace {
         return {2.0188715078245809e+02,  2.1747919060681681e+02, 9.6243850990938085e+01,  7.2696251399402101e+01,
                 -1.4415600464693909e-01, 8.7045274598903946e-02, -1.2333462790628771e-02, -2.8774769110121036e-02};
       case calibmar::CameraModelType::FullOpenCVCameraModel:
-        return {193.232371,     210.251722,    109.709759, 91.0455827, -18.976556, 94.9240243,
-                -0.00211222641, -0.0329466841, 208.921145, -18.95004,  93.7305751, 212.713336};
+        return {197.5669048,    215.6177298,    96.31572183, 93.75865971,  -16.40475496, 53.17328079,
+                -0.00177011571, -0.02803771672, 121.6242772, -16.18306309, 49.42567814,  137.4542887};
       case calibmar::CameraModelType::OpenCVFisheyeCameraModel:
-        return {105.345678, 116.318389, 127.340804, 87.1324962, -0.893005024, 2.89266999, -0.78731496, -1.12493278};
+        return {
+            186.6466814, 205.9930733, 114.6615874, 90.60623142, 0.9544639285, -6.917104695, 22.45205185, -23.71206402,
+        };
       default:
         throw std::runtime_error("Bad CameraModel");
     }

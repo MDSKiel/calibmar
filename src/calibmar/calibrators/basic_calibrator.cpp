@@ -1,5 +1,5 @@
 #include "calibmar/calibrators/basic_calibrator.h"
-#include "calibmar/calibrators/opencv_calibration.h"
+#include "calibmar/calibrators/general_calibration.h"
 
 #include <algorithm>
 #include <colmap/sensor/models.h>
@@ -48,15 +48,15 @@ namespace calibmar {
       translation_vecs.push_back(&image.Translation());
     }
 
-    std::vector<double> std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms;
-    double rms = opencv_calibration::CalibrateCamera(pointSets3D, pointSets2D, camera, options_.use_intrinsics_guess,
-                                                     options_.fast, rotation_vecs, translation_vecs, std_deviations_intrinsics,
-                                                     std_deviations_extrinsics, per_view_rms);
+    std::vector<colmap::Rigid3d> poses;
+    std::vector<double> std_deviations_intrinsics, per_view_rms;
+    general_calibration::CalibrateCamera(pointSets3D, pointSets2D, camera, options_.use_intrinsics_guess, poses,
+                                         &std_deviations_intrinsics);
+
+    double rms = general_calibration::CalculateOverallRMS(pointSets3D, pointSets2D, poses, camera, per_view_rms);
 
     calibration.SetCalibrationRms(rms);
     calibration.SetPerViewRms(per_view_rms);
-    std_deviations_intrinsics.erase(std::remove(std_deviations_intrinsics.begin(), std_deviations_intrinsics.end(), 0.0),
-                                    std_deviations_intrinsics.end());
     calibration.SetIntrinsicsStdDeviations(std_deviations_intrinsics);
   }
 }

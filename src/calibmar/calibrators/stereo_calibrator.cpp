@@ -1,10 +1,8 @@
 #include "calibmar/calibrators/stereo_calibrator.h"
-#include "calibmar/calibrators/opencv_calibration.h"
+#include "calibmar/calibrators/general_calibration.h"
+#include "calibmar/calibrators/stereo_calibration.h"
 
-#include <algorithm>
 #include <colmap/sensor/models.h>
-#include <opencv2/calib3d.hpp>
-#include <opencv2/core/eigen.hpp>
 
 namespace calibmar {
 
@@ -51,19 +49,41 @@ namespace calibmar {
     calibration1.GetCorrespondences(pointSets2D_1, pointSets3D_1);
     calibration2.GetCorrespondences(pointSets2D_2, pointSets3D_2);
 
-    std::vector<std::vector<double>> per_view_rms;
-    colmap::Rigid3d pose;
-    double rms = opencv_calibration::StereoCalibrateCamera(pointSets3D_1, pointSets2D_1, pointSets2D_2, camera1, camera2, pose,
-                                                           options_.use_intrinsics_guess, options_.estimate_pose_only, false, per_view_rms);
+    std::vector<std::vector<double>> per_view_rms(2);
+    colmap::Rigid3d relative_pose;
+    std::vector<colmap::Rigid3d> poses;
 
-    calibration1.SetCalibrationRms(rms);
+    std::vector<double> std_dev_camera1;
+    std::vector<double> std_dev_camera2;
+    stereo_calibration::StereoStdDeviations std_devs;
+    std_devs.std_deviations_intrinsics1 = &std_dev_camera1;
+    std_devs.std_deviations_intrinsics2 = &std_dev_camera2;
+    // extrinsics std devs are currently not used, because their interpretation is unclear
+
+    stereo_calibration::CalibrateStereoCameras(pointSets3D_1, pointSets2D_1, pointSets2D_2, camera1, camera2,
+                                               options_.use_intrinsics_guess, options_.estimate_pose_only, relative_pose, poses,
+                                               &std_devs);
+
+    std::vector<colmap::Rigid3d> poses2;
+    poses2.reserve(poses.size());
+    for (const auto& pose1 : poses) {
+      // calculate poses of the second camera
+      poses2.push_back(relative_pose * pose1);
+    }
+
+    double rms1 = general_calibration::CalculateOverallRMS(pointSets3D_1, pointSets2D_1, poses, camera1, per_view_rms[0]);
+    double rms2 = general_calibration::CalculateOverallRMS(pointSets3D_1, pointSets2D_2, poses2, camera2, per_view_rms[1]);
+
+    calibration1.SetCalibrationRms(rms1);
     calibration1.SetPerViewRms(per_view_rms[0]);
-    calibration2.SetCalibrationRms(rms);
+    calibration1.SetIntrinsicsStdDeviations(*std_devs.std_deviations_intrinsics1);
+    calibration2.SetCalibrationRms(rms2);
     calibration2.SetPerViewRms(per_view_rms[1]);
+    calibration2.SetIntrinsicsStdDeviations(*std_devs.std_deviations_intrinsics2);
 
     // The calibration pose is defined as camera to world and camera 1 is supposed to be world here
     // The pose from StereoCalibrateCamera() is camera1 to camera2, so we need to invert it here (to get 2 to 1, i.e. 2 to world).
     calibration1.SetCameraToWorldStereo(colmap::Rigid3d());
-    calibration2.SetCameraToWorldStereo(colmap::Inverse(pose));
+    calibration2.SetCameraToWorldStereo(colmap::Inverse(relative_pose));
   }
 }
