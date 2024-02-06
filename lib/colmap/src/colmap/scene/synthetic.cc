@@ -33,6 +33,7 @@
 #include "colmap/geometry/pose.h"
 #include "colmap/math/random.h"
 #include "colmap/scene/projection.h"
+#include "colmap/util/eigen_alignment.h"
 
 #include <Eigen/Geometry>
 
@@ -82,8 +83,7 @@ void SynthesizeChainedMatches(Reconstruction* reconstruction,
                               Database* database) {
   std::unordered_map<image_pair_t, TwoViewGeometry> two_view_geometries;
   for (const auto& point3D : reconstruction->Points3D()) {
-    std::vector<TrackElement> track_elements =
-        point3D.second.Track().Elements();
+    std::vector<TrackElement> track_elements = point3D.second.track.Elements();
     std::shuffle(track_elements.begin(), track_elements.end(), *PRNG);
     for (size_t i = 1; i < track_elements.size(); ++i) {
       const auto& prev_track_el = track_elements[i - 1];
@@ -133,15 +133,15 @@ void SynthesizeDataset(const SyntheticDatasetOptions& options,
   std::vector<camera_t> camera_ids(options.num_cameras);
   for (int camera_idx = 0; camera_idx < options.num_cameras; ++camera_idx) {
     Camera camera;
-    camera.SetWidth(options.camera_width);
-    camera.SetHeight(options.camera_height);
-    camera.SetModelId(options.camera_model_id);
-    camera.SetParams(options.camera_params);
+    camera.width = options.camera_width;
+    camera.height = options.camera_height;
+    camera.model_id = options.camera_model_id;
+    camera.params = options.camera_params;
     CHECK(camera.VerifyParams());
     const camera_t camera_id =
         (database == nullptr) ? camera_idx + 1 : database->WriteCamera(camera);
     camera_ids[camera_idx] = camera_id;
-    camera.SetCameraId(camera_id);
+    camera.camera_id = camera_id;
     reconstruction->AddCamera(std::move(camera));
   }
 
@@ -178,7 +178,7 @@ void SynthesizeDataset(const SyntheticDatasetOptions& options,
     for (auto& point3D : reconstruction->Points3D()) {
       Point2D point2D;
       point2D.xy = camera.ImgFromCam(
-          (image.CamFromWorld() * point3D.second.XYZ()).hnormalized());
+          (image.CamFromWorld() * point3D.second.xyz).hnormalized());
       if (options.point2D_stddev > 0) {
         const Eigen::Vector2d noise(
             RandomGaussian<double>(0, options.point2D_stddev),
@@ -186,7 +186,7 @@ void SynthesizeDataset(const SyntheticDatasetOptions& options,
         point2D.xy += noise;
       }
       if (point2D.xy(0) >= 0 && point2D.xy(1) >= 0 &&
-          point2D.xy(0) <= camera.Width() && point2D.xy(1) <= camera.Height()) {
+          point2D.xy(0) <= camera.width && point2D.xy(1) <= camera.height) {
         point2D.point3D_id = point3D.first;
         points2D.push_back(point2D);
       }
@@ -195,9 +195,8 @@ void SynthesizeDataset(const SyntheticDatasetOptions& options,
     // Synthesize uniform random 2D points without 3D points.
     for (int i = 0; i < options.num_points2D_without_point3D; ++i) {
       Point2D point2D;
-      point2D.xy =
-          Eigen::Vector2d(RandomUniformReal<double>(0, camera.Width()),
-                          RandomUniformReal<double>(0, camera.Height()));
+      point2D.xy = Eigen::Vector2d(RandomUniformReal<double>(0, camera.width),
+                                   RandomUniformReal<double>(0, camera.height));
       points2D.push_back(point2D);
     }
 
@@ -221,7 +220,7 @@ void SynthesizeDataset(const SyntheticDatasetOptions& options,
       const auto& point2D = points2D[point2D_idx];
       if (point2D.HasPoint3D()) {
         auto& point3D = reconstruction->Point3D(point2D.point3D_id);
-        point3D.Track().AddElement(image_id, point2D_idx);
+        point3D.track.AddElement(image_id, point2D_idx);
       }
     }
 

@@ -170,12 +170,8 @@ bool PoseGraphOptimizer::Solve() {
 
   ceres::Solve(solver_options, problem_.get(), &summary_);
 
-  if (solver_options.minimizer_progress_to_stdout) {
-    std::cout << std::endl;
-  }
-
   PrintHeading2("Pose graph optimizer report");
-  std::cout << summary_.BriefReport() << std::endl;
+  LOG(INFO) << summary_.BriefReport();
 
   return summary_.IsSolutionUsable();
 }

@@ -30,7 +30,15 @@
 
 set(FOLDER_NAME "tools")
 
-# COLMAP_ADD_EXECUTABLE(example example.cc)
+#COLMAP_ADD_EXECUTABLE(example example.cc)
+
+set(OPTIONAL_LIBS)
+if(CUDA_ENABLED)
+    list(APPEND OPTIONAL_LIBS
+        colmap_util_cuda
+    )
+endif()
+
 COLMAP_ADD_EXECUTABLE(
     NAME colmap_testbed
     SRCS 
@@ -47,7 +55,7 @@ COLMAP_ADD_EXECUTABLE(
     LINK_LIBS
         colmap_scene
         colmap_controllers
-        # colmap_util_cuda
+        ${OPTIONAL_LIBS}
 )
 
 COLMAP_ADD_EXECUTABLE(

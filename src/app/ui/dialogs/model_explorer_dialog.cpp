@@ -157,10 +157,10 @@ namespace calibmar {
     }
 
     std::vector<std::string> param_labels = colmap::CSVToVector<std::string>(camera_.ParamsInfo());
-    param_labels.resize(camera_.Params().size());  // ensure they match (which they should already)
+    param_labels.resize(camera_.params.size());  // ensure they match (which they should already)
 
     for (size_t param_idx : camera_.ExtraParamsIdxs()) {
-      SetupSlider(param_labels[param_idx], &camera_.Params()[param_idx], -1, 1, value_lock_, camera_sliders_side_layout_,
+      SetupSlider(param_labels[param_idx], &camera_.params[param_idx], -1, 1, value_lock_, camera_sliders_side_layout_,
                   camera_changed_);
     }
   }
@@ -178,17 +178,17 @@ namespace calibmar {
     }
 
     if (!housing_type.has_value()) {
-      // camera_.SetRefracModelId(colmap::kInvalidRefractiveCameraModelId);
-      camera_.SetRefracParams({});
+      camera_.refrac_params = {};
+      camera_.refrac_model_id = colmap::CameraRefracModelId::kInvalid;
       return;
     }
 
     if (camera_.FocalLengthIdxs().size() == 1) {
-      SetupSlider("f", &camera_.Params()[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("f", &camera_.params[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
     }
     else {
-      SetupSlider("fx", &camera_.Params()[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
-      SetupSlider("fy", &camera_.Params()[1], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("fx", &camera_.params[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("fy", &camera_.params[1], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
     }
 
     distance_ = 1;
@@ -199,32 +199,32 @@ namespace calibmar {
     divider->setFrameShadow(QFrame::Sunken);
     housing_sliders_side_layout_->addWidget(divider, housing_sliders_side_layout_->rowCount(), 0, 1, 3);
 
-    camera_.SetRefracModelIdFromName(HousingInterface::HousingInterfaces().at(*housing_type).model_name);
+    camera_.refrac_model_id = colmap::CameraRefracModelNameToId(HousingInterface::HousingInterfaces().at(*housing_type).model_name);
     if (*housing_type == HousingInterfaceType::DoubleLayerPlanarRefractive) {
       // Nx, Ny, Nz, int_dist, int_thick, na, ng, nw
-      camera_.SetRefracParams({0, 0, 1, 0.015, 0.005, 1.003, 1.473, 1.333});
+      camera_.refrac_params = {0, 0, 1, 0.015, 0.005, 1.003, 1.473, 1.333};
 
       rotations_ = {0, 0};
       SetupHousingRotationSlider("α", &(rotations_[0]), -0.5, 0.5, value_lock_, housing_sliders_side_layout_, camera_changed_,
-                                 rotations_, camera_.RefracParams());
+                                 rotations_, camera_.refrac_params);
       SetupHousingRotationSlider("β", &(rotations_[1]), -0.5, 0.5, value_lock_, housing_sliders_side_layout_, camera_changed_,
-                                 rotations_, camera_.RefracParams());
+                                 rotations_, camera_.refrac_params);
     }
     else if (*housing_type == HousingInterfaceType::DoubleLayerSphericalRefractive) {
       // Cx, Cy, Cz, int_radius, int_thick, na, ng, nw
-      camera_.SetRefracParams({0, 0, 0, 0.015, 0.005, 1.003, 1.473, 1.333});
+      camera_.refrac_params = {0, 0, 0, 0.015, 0.005, 1.003, 1.473, 1.333};
 
-      SetupSlider("Cx", &camera_.RefracParams()[0], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
-      SetupSlider("Cy", &camera_.RefracParams()[1], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
-      SetupSlider("Cz", &camera_.RefracParams()[2], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("Cx", &camera_.refrac_params[0], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("Cy", &camera_.refrac_params[1], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
+      SetupSlider("Cz", &camera_.refrac_params[2], -0.1, 0.1, value_lock_, housing_sliders_side_layout_, camera_changed_);
     }
 
     SetupSlider(*housing_type == HousingInterfaceType::DoubleLayerSphericalRefractive ? "radius" : "dist",
-                &camera_.RefracParams()[3], 0, 1, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    SetupSlider("thickness", &camera_.RefracParams()[4], 0, 1, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    SetupSlider("na", &camera_.RefracParams()[5], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    SetupSlider("ng", &camera_.RefracParams()[6], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    SetupSlider("nw", &camera_.RefracParams()[7], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
+                &camera_.refrac_params[3], 0, 1, value_lock_, housing_sliders_side_layout_, camera_changed_);
+    SetupSlider("thickness", &camera_.refrac_params[4], 0, 1, value_lock_, housing_sliders_side_layout_, camera_changed_);
+    SetupSlider("na", &camera_.refrac_params[5], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
+    SetupSlider("ng", &camera_.refrac_params[6], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
+    SetupSlider("nw", &camera_.refrac_params[7], 1, 2, value_lock_, housing_sliders_side_layout_, camera_changed_);
   }
 
   void ModelExplorerDialog::RenderLoop() {

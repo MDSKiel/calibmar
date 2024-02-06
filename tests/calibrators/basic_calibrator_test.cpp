@@ -25,7 +25,7 @@ BOOST_AUTO_TEST_CASE(BasicCalibration) {
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().Params();
+  std::vector<double> params = calibration.Camera().params;
   std::vector<double> expected_params = GetExpectedParams(CameraModelType::OpenCVCameraModel);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
@@ -49,7 +49,7 @@ BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), mo
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().Params();
+  std::vector<double> params = calibration.Camera().params;
   std::vector<double> expected_params = GetExpectedParams(model);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
@@ -71,7 +71,7 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength, boost::unit_test::d
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().Params();
+  std::vector<double> params = calibration.Camera().params;
   std::vector<double> intrinsics_std_dev = calibration.IntrinsicsStdDeviations();
   BOOST_TEST(params.size() == intrinsics_std_dev.size());
 }
@@ -87,7 +87,7 @@ BOOST_AUTO_TEST_CASE(IntrinsicGuess) {
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().Params();
+  std::vector<double> params = calibration.Camera().params;
   std::vector<double> expected_params = GetExpectedParams(CameraModelType::PinholeCameraModel);
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());

@@ -170,7 +170,7 @@ namespace calibmar {
     void EstimateInitialDomeOffset(const std::vector<Eigen::Vector3d>& points_3D, const std::vector<Eigen::Vector2d>& points_2D,
                                    const std::pair<int, int> pattern_cols_rows, colmap::Camera& camera,
                                    double max_expected_offset_percent) {
-      if (camera.RefracModelId() != colmap::DomePort::refrac_model_id) {
+      if (camera.refrac_model_id != colmap::DomePort::refrac_model_id) {
         throw std::runtime_error("Non dome port camera!");
       }
 
@@ -203,7 +203,7 @@ namespace calibmar {
       }
 
       // Cx, Cy, Cz, radius
-      std::vector<double>& params = camera.RefracParams();
+      std::vector<double>& params = camera.refrac_params;
       Eigen::Vector3d dome_center = (max_expected_offset_percent * params[3]) * offset_direction;
       params[0] = dome_center.x();
       params[1] = dome_center.y();
@@ -254,8 +254,8 @@ namespace calibmar {
 
         ceres::CostFunction* cost_function = nullptr;
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel)                                                            \
-  if (camera->ModelId() == colmap::CameraModel::kModelId &&                                                                      \
-      camera->RefracModelId() == colmap::CameraRefracModel::kRefracModelId) {                                                    \
+  if (camera->model_id == colmap::CameraModel::model_id &&                                                                      \
+      camera->refrac_model_id == colmap::CameraRefracModel::refrac_model_id) {                                                    \
     cost_function = colmap::ReprojErrorRefracCostFunction<colmap::CameraRefracModel, colmap::CameraModel>::Create(points_2D[i]); \
   }                                                                                                                              \
   else
@@ -266,7 +266,7 @@ namespace calibmar {
 
         // Circumventing the const point3D by cast. Okay since the block is kept constant.
         problem.AddResidualBlock(cost_function, nullptr, rotation_quaternion->coeffs().data(), translation->data(),
-                                 (double*)point3D.data(), camera->ParamsData(), camera->RefracParamsData());
+                                 (double*)point3D.data(), camera->params.data(), camera->refrac_params.data());
 
         problem.SetParameterBlockConstant(point3D.data());
       }
@@ -277,8 +277,8 @@ namespace calibmar {
         colmap::SetQuaternionManifold(&problem, rotation_quaternion->coeffs().data());
         // Camera parameterization.
 
-        problem.SetParameterBlockConstant(camera->ParamsData());
-        problem.SetParameterBlockConstant(camera->RefracParamsData());
+        problem.SetParameterBlockConstant(camera->params.data());
+        problem.SetParameterBlockConstant(camera->refrac_params.data());
       }
 
       ceres::Solver::Options solver_options;
@@ -302,8 +302,8 @@ namespace calibmar {
       std::vector<calibmar::Image>& images = calibration.Images();
       ceres::Problem problem;
 
-      double* camera_params = camera.ParamsData();
-      double* housing_params = camera.RefracParamsData();
+      double* camera_params = camera.params.data();
+      double* housing_params = camera.refrac_params.data();
 
       for (calibmar::Image& image : images) {
         image.Rotation().normalize();
@@ -313,8 +313,8 @@ namespace calibmar {
         for (const auto& corresponcence : image.Correspondences()) {
           double* point3D = calibration.Point3D(corresponcence.second).data();
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel)                                               \
-  if (camera.ModelId() == colmap::CameraModel::kModelId &&                                                          \
-      camera.RefracModelId() == colmap::CameraRefracModel::kRefracModelId) {                                        \
+  if (camera.model_id == colmap::CameraModel::model_id &&                                                          \
+      camera.refrac_model_id == colmap::CameraRefracModel::refrac_model_id) {                                        \
     ceres::CostFunction* cost_function =                                                                            \
         colmap::ReprojErrorRefracCostFunction<colmap::CameraRefracModel, colmap::CameraModel>::Create(              \
             image.Point2D(corresponcence.first));                                                                   \
@@ -333,7 +333,7 @@ namespace calibmar {
       }
 
       problem.SetParameterBlockConstant(camera_params);
-      std::vector<int> refrac_params_idxs(camera.NumRefracParams());
+      std::vector<int> refrac_params_idxs(camera.refrac_params.size());
       std::iota(refrac_params_idxs.begin(), refrac_params_idxs.end(), 0);
 
       const std::vector<size_t>& optimizable_refrac_params_idxs = camera.OptimizableRefracParamsIdxs();
@@ -347,14 +347,14 @@ namespace calibmar {
         }
 #if CERES_VERSION_MAJOR >= 3 || (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
         ceres::SphereManifold<3> sphere_manifold = ceres::SphereManifold<3>();
-        ceres::SubsetManifold subset_manifold = ceres::SubsetManifold(camera.NumRefracParams() - 3, const_params_idxs);
+        ceres::SubsetManifold subset_manifold = ceres::SubsetManifold(camera.refrac_params.size() - 3, const_params_idxs);
         ceres::ProductManifold<ceres::SphereManifold<3>, ceres::SubsetManifold>* product_manifold =
             new ceres::ProductManifold<ceres::SphereManifold<3>, ceres::SubsetManifold>(sphere_manifold, subset_manifold);
         problem.SetManifold(housing_params, product_manifold);
 #else
         ceres::HomogeneousVectorParameterization* sphere_manifold = new ceres::HomogeneousVectorParameterization(3);        
         ceres::SubsetParameterization* subset_manifold =
-            new ceres::SubsetParameterization(camera.NumRefracParams() - 3, const_params_idxs);
+            new ceres::SubsetParameterization(camera.refrac_params.size() - 3, const_params_idxs);
 
         ceres::ProductParameterization* product_manifold = new ceres::ProductParameterization(sphere_manifold, subset_manifold);
 
@@ -363,7 +363,7 @@ namespace calibmar {
       }
       else {
         if (const_params_idxs.size() > 0) {
-          colmap::SetSubsetManifold(static_cast<int>(camera.NumRefracParams()), const_params_idxs, &problem, housing_params);
+          colmap::SetSubsetManifold(static_cast<int>(camera.refrac_params.size()), const_params_idxs, &problem, housing_params);
         }
       }
 
@@ -384,7 +384,7 @@ namespace calibmar {
       covariance_options.algorithm_type = ceres::CovarianceAlgorithmType::DENSE_SVD;
       ceres::Covariance covariance(covariance_options);
       if (covariance.Compute({housing_params}, &problem)) {
-        size_t num_params = camera.NumRefracParams();
+        size_t num_params = camera.refrac_params.size();
         std::vector<double> covariance_mat(num_params * num_params);
 
         if (covariance.GetCovarianceBlock(housing_params, housing_params, covariance_mat.data())) {
@@ -399,7 +399,7 @@ namespace calibmar {
 
       // normalize flat port normal
       if (camera.RefracModelName() == "FLATPORT") {
-        Eigen::Map<Eigen::Vector3d> plane_normal(camera.RefracParamsData());
+        Eigen::Map<Eigen::Vector3d> plane_normal(camera.refrac_params.data());
         plane_normal.normalize();
       }
     }

@@ -131,9 +131,9 @@ namespace {
 
   void CreateDistortMaps(cv::Mat* map_x, cv::Mat* map_y, const colmap::Camera& camera) {
     colmap::Camera undistorted_camera;
-    undistorted_camera.SetModelId(colmap::PinholeCameraModel::model_id);
-    undistorted_camera.SetWidth(camera.Width());
-    undistorted_camera.SetHeight(camera.Height());
+    undistorted_camera.model_id = colmap::PinholeCameraModel::model_id;
+    undistorted_camera.width = camera.width;
+    undistorted_camera.height = camera.height;
     // Copy focal length parameters.
     const std::vector<size_t>& focal_length_idxs = camera.FocalLengthIdxs();
     if (focal_length_idxs.size() == 1) {
@@ -152,7 +152,7 @@ namespace {
     double min_y = std::numeric_limits<double>::max();
     double max_x = std::numeric_limits<double>::min();
     double max_y = std::numeric_limits<double>::min();
-    cv::Size2i image_size(camera.Width(), camera.Height());
+    cv::Size2i image_size(camera.width, camera.height);
     *map_x = cv::Mat(image_size, CV_32FC1);
     *map_y = cv::Mat(image_size, CV_32FC1);
     for (int y = 0; y < image_size.height; ++y) {
@@ -228,7 +228,7 @@ namespace {
 
       rms_errors.push_back(calibration.CalibrationRms());
       std_devs.push_back(calibration.IntrinsicsStdDeviations());
-      params.push_back(calibration.Camera().Params());
+      params.push_back(calibration.Camera().params);
     }
 
     out << "{" << std::endl;
@@ -276,10 +276,10 @@ namespace {
     ChessboardFeatureExtractor extractor(ex_options);
     calibration.SetPoints3D(extractor.Points3D());
     BasicCalibrator::Options cal_options;
-    cal_options.camera_model = CameraModel::IdToCameraModelType().at(camera.ModelId());
+    cal_options.camera_model = CameraModel::IdToCameraModelType().at(camera.model_id);
     cal_options.image_size = maps.has_value()
                                  ? std::pair<int, int>{std::get<0>(maps.value()).cols, std::get<0>(maps.value()).rows}
-                                 : std::pair<int, int>{camera.Width(), camera.Height()};
+                                 : std::pair<int, int>{camera.width, camera.height};
     BasicCalibrator calibrator(cal_options);
 
     std::filesystem::path target_directory(target_dir);

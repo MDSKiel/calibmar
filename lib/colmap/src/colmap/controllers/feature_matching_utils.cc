@@ -41,22 +41,25 @@
 namespace colmap {
 
 FeatureMatcherCache::FeatureMatcherCache(const size_t cache_size,
-                                         const Database* database)
-    : cache_size_(cache_size), database_(database) {
+                                         const Database* database,
+                                         const bool enable_refraction)
+    : cache_size_(cache_size),
+      database_(database),
+      enable_refraction_(enable_refraction) {
   CHECK_NOTNULL(database_);
 }
 
 void FeatureMatcherCache::Setup() {
-  const std::vector<Camera> cameras = database_->ReadAllCameras();
+  std::vector<Camera> cameras = database_->ReadAllCameras();
   cameras_cache_.reserve(cameras.size());
-  for (const auto& camera : cameras) {
-    cameras_cache_.emplace(camera.CameraId(), camera);
+  for (Camera& camera : cameras) {
+    cameras_cache_.emplace(camera.camera_id, std::move(camera));
   }
 
-  const std::vector<Image> images = database_->ReadAllImages();
+  std::vector<Image> images = database_->ReadAllImages();
   images_cache_.reserve(images.size());
-  for (const auto& image : images) {
-    images_cache_.emplace(image.ImageId(), image);
+  for (Image& image : images) {
+    images_cache_.emplace(image.ImageId(), std::move(image));
   }
 
   keypoints_cache_ =
@@ -74,14 +77,26 @@ void FeatureMatcherCache::Setup() {
           });
 
   keypoints_exists_cache_ = std::make_unique<LRUCache<image_t, bool>>(
-      images.size(), [this](const image_t image_id) {
+      images_cache_.size(), [this](const image_t image_id) {
         return database_->ExistsKeypoints(image_id);
       });
 
   descriptors_exists_cache_ = std::make_unique<LRUCache<image_t, bool>>(
-      images.size(), [this](const image_t image_id) {
+      images_cache_.size(), [this](const image_t image_id) {
         return database_->ExistsDescriptors(image_id);
       });
+
+  if (enable_refraction_) {
+    // Hard coded distance as 5.0 meter to compute the best fit pinhole camera
+    // model of the refractive camera.
+    const double kApproxDepth = 5.0;
+    best_fit_cameras_.reserve(cameras_cache_.size());
+    for (const auto& camera : cameras_cache_) {
+      Camera best_fit = BestFitNonRefracCamera(
+          CameraModelId::kOpenCV, camera.second, kApproxDepth);
+      best_fit_cameras_.emplace(camera.first, std::move(best_fit));
+    }
+  }
 }
 
 const Camera& FeatureMatcherCache::GetCamera(const camera_t camera_id) const {
@@ -168,6 +183,10 @@ void FeatureMatcherCache::DeleteInlierMatches(const image_t image_id1,
   database_->DeleteInlierMatches(image_id1, image_id2);
 }
 
+const Camera& FeatureMatcherCache::GetBestFitCameras(camera_t camera_id) const {
+  return best_fit_cameras_.at(camera_id);
+}
+
 FeatureMatcherWorker::FeatureMatcherWorker(
     const SiftMatchingOptions& matching_options,
     const TwoViewGeometryOptions& geometry_options,
@@ -208,7 +227,7 @@ void FeatureMatcherWorker::Run() {
   std::unique_ptr<FeatureMatcher> matcher =
       CreateSiftFeatureMatcher(matching_options_);
   if (matcher == nullptr) {
-    std::cerr << "ERROR: Failed to create feature matcher." << std::endl;
+    LOG(ERROR) << "Failed to create feature matcher.";
     SignalInvalidSetup();
     return;
   }
@@ -324,6 +343,11 @@ class VerifierWorker : public Thread {
           data.two_view_geometry = EstimateTwoViewGeometry(
               camera1, points1, camera2, points2, data.matches, options_);
         } else {
+          const Camera& best_fit_camera1 =
+              cache_->GetBestFitCameras(camera1.camera_id);
+          const Camera& best_fit_camera2 =
+              cache_->GetBestFitCameras(camera2.camera_id);
+
           std::vector<Camera> virtual_cameras1;
           std::vector<Camera> virtual_cameras2;
           std::vector<Rigid3d> virtual_from_reals1;
@@ -335,14 +359,16 @@ class VerifierWorker : public Thread {
               points2, virtual_cameras2, virtual_from_reals2);
 
           data.two_view_geometry =
-              EstimateRefractiveTwoViewGeometry(points1,
-                                                virtual_cameras1,
-                                                virtual_from_reals1,
-                                                points2,
-                                                virtual_cameras2,
-                                                virtual_from_reals2,
-                                                data.matches,
-                                                options_);
+              EstimateRefractiveTwoViewGeometryUseBestFit(best_fit_camera1,
+                                                          points1,
+                                                          virtual_cameras1,
+                                                          virtual_from_reals1,
+                                                          best_fit_camera2,
+                                                          points2,
+                                                          virtual_cameras2,
+                                                          virtual_from_reals2,
+                                                          data.matches,
+                                                          options_);
         }
 
         CHECK(output_queue_->Push(std::move(data)));
@@ -495,7 +521,7 @@ FeatureMatcherController::~FeatureMatcherController() {
 bool FeatureMatcherController::Setup() {
   // Minimize the amount of allocated GPU memory by computing the maximum number
   // of descriptors for any image over the whole database.
-  const int max_num_features = CHECK_NOTNULL(database_)->MaxNumDescriptors();
+  const int max_num_features = CHECK_NOTNULL(database_)->MaxNumKeypoints();
   matching_options_.max_num_matches =
       std::min(matching_options_.max_num_matches, max_num_features);
 

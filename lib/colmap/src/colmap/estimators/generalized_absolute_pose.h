@@ -30,6 +30,7 @@
 #pragma once
 
 #include "colmap/geometry/rigid3.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/types.h"
 
 #include <vector>
@@ -75,8 +76,9 @@ class GP3PEstimator {
 
   // Estimate the most probable solution of the GP3P problem from a set of
   // three 2D-3D point correspondences.
-  static std::vector<M_t> Estimate(const std::vector<X_t>& points2D,
-                                   const std::vector<Y_t>& points3D);
+  static void Estimate(const std::vector<X_t>& points2D,
+                       const std::vector<Y_t>& points3D,
+                       std::vector<M_t>* models);
 
   // Calculate the squared cosine distance error between the rays given a set of
   // 2D-3D point correspondences and the rig pose of the generalized camera.

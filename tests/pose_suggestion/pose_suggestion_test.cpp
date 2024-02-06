@@ -73,10 +73,10 @@ BOOST_AUTO_TEST_CASE(Jacobian_Reference) {
 
 BOOST_AUTO_TEST_CASE(Jacobian_Fisheye) {
   colmap::Camera camera;
-  camera.SetModelIdFromName("OPENCV_FISHEYE");
-  camera.SetParams({443.253, 441.794, 658.905, 447.884, -0.0134935, -0.0164344, -0.00698698, 0.0062684});
-  camera.SetWidth(1280);
-  camera.SetHeight(800);
+  camera.model_id = colmap::CameraModelNameToId("OPENCV_FISHEYE");
+  camera.params = {443.253, 441.794, 658.905, 447.884, -0.0134935, -0.0164344, -0.00698698, 0.0062684};
+  camera.width = 1280;
+  camera.height = 800;
 
   Eigen::MatrixXd jac_intrinsics;
   Eigen::MatrixXd jac_extrinsics;
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(Jacobian_Fisheye) {
 
   // only roughly checks the shape for correctness
   // the underlying opencv fisheye module forms the jacobian differently than the calib3d module
-  BOOST_TEST(jacobian_actual.cols() == camera.NumParams() + 6);
+  BOOST_TEST(jacobian_actual.cols() == camera.params.size() + 6);
   BOOST_TEST(jacobian_actual.rows() == points3D.size() * 2);
   BOOST_TEST(jacobian_actual(0, 1) == 0);
   BOOST_TEST(jacobian_actual(1, 0) == 0);
@@ -169,10 +169,10 @@ namespace {
     }
 
     colmap::Camera camera;
-    camera.SetModelIdFromName(CameraModel::CameraModels().at(CameraModelType::RadialCameraModel).model_name);
-    camera.SetParams({699.55, 313.98, 216.62, 0.071229, -0.4345});
-    camera.SetWidth(640);
-    camera.SetHeight(480);
+    camera.model_id = colmap::CameraModelNameToId(CameraModel::CameraModels().at(CameraModelType::RadialCameraModel).model_name);
+    camera.params = {699.55, 313.98, 216.62, 0.071229, -0.4345};
+    camera.width = 640;
+    camera.height = 480;
 
     calibration.SetCamera(camera);
   }

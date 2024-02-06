@@ -32,6 +32,7 @@
 #include "colmap/estimators/utils.h"
 #include "colmap/math/math.h"
 #include "colmap/math/polynomial.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/logging.h"
 
 #include <complex>
@@ -42,10 +43,14 @@
 
 namespace colmap {
 
-std::vector<EssentialMatrixFivePointEstimator::M_t>
-EssentialMatrixFivePointEstimator::Estimate(const std::vector<X_t>& points1,
-                                            const std::vector<Y_t>& points2) {
+void EssentialMatrixFivePointEstimator::Estimate(
+    const std::vector<X_t>& points1,
+    const std::vector<Y_t>& points2,
+    std::vector<M_t>* models) {
   CHECK_EQ(points1.size(), points2.size());
+  CHECK(models != nullptr);
+
+  models->clear();
 
   // Step 1: Extraction of the nullspace x, y, z, w.
 
@@ -101,11 +106,10 @@ EssentialMatrixFivePointEstimator::Estimate(const std::vector<X_t>& points1,
   Eigen::VectorXd roots_real;
   Eigen::VectorXd roots_imag;
   if (!FindPolynomialRootsCompanionMatrix(coeffs, &roots_real, &roots_imag)) {
-    return {};
+    return;
   }
 
-  std::vector<M_t> models;
-  models.reserve(roots_real.size());
+  models->reserve(roots_real.size());
 
   for (Eigen::VectorXd::Index i = 0; i < roots_imag.size(); ++i) {
     const double kMaxRootImag = 1e-10;
@@ -142,10 +146,8 @@ EssentialMatrixFivePointEstimator::Estimate(const std::vector<X_t>& points1,
     const Eigen::Matrix3d essential_matrix =
         Eigen::Map<Eigen::Matrix<double, 3, 3, Eigen::RowMajor>>(
             essential_vec.data());
-    models.push_back(essential_matrix);
+    models->push_back(essential_matrix);
   }
-
-  return models;
 }
 
 void EssentialMatrixFivePointEstimator::Residuals(
@@ -156,10 +158,14 @@ void EssentialMatrixFivePointEstimator::Residuals(
   ComputeSquaredSampsonError(points1, points2, E, residuals);
 }
 
-std::vector<EssentialMatrixEightPointEstimator::M_t>
-EssentialMatrixEightPointEstimator::Estimate(const std::vector<X_t>& points1,
-                                             const std::vector<Y_t>& points2) {
+void EssentialMatrixEightPointEstimator::Estimate(
+    const std::vector<X_t>& points1,
+    const std::vector<Y_t>& points2,
+    std::vector<M_t>* models) {
   CHECK_EQ(points1.size(), points2.size());
+  CHECK(models != nullptr);
+
+  models->clear();
 
   // Center and normalize image points for better numerical stability.
   std::vector<X_t> normed_points1;
@@ -200,7 +206,8 @@ EssentialMatrixEightPointEstimator::Estimate(const std::vector<X_t>& points1,
   const Eigen::Matrix3d E = E_raw_svd.matrixU() * singular_values.asDiagonal() *
                             E_raw_svd.matrixV().transpose();
 
-  return {E};
+  models->resize(1);
+  (*models)[0] = E;
 }
 
 void EssentialMatrixEightPointEstimator::Residuals(

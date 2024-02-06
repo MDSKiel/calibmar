@@ -36,6 +36,7 @@
 #include "colmap/scene/point2d.h"
 #include "colmap/scene/point3d.h"
 #include "colmap/scene/track.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/types.h"
 
 #include <memory>
@@ -75,25 +76,25 @@ class Reconstruction {
   inline size_t NumImagePairs() const;
 
   // Get const objects.
-  inline const class Camera& Camera(camera_t camera_id) const;
+  inline const struct Camera& Camera(camera_t camera_id) const;
   inline const class Image& Image(image_t image_id) const;
-  inline const class Point3D& Point3D(point3D_t point3D_id) const;
+  inline const struct Point3D& Point3D(point3D_t point3D_id) const;
   inline const ImagePairStat& ImagePair(image_pair_t pair_id) const;
   inline ImagePairStat& ImagePair(image_t image_id1, image_t image_id2);
 
   // Get mutable objects.
-  inline class Camera& Camera(camera_t camera_id);
+  inline struct Camera& Camera(camera_t camera_id);
   inline class Image& Image(image_t image_id);
-  inline class Point3D& Point3D(point3D_t point3D_id);
+  inline struct Point3D& Point3D(point3D_t point3D_id);
   inline ImagePairStat& ImagePair(image_pair_t pair_id);
   inline const ImagePairStat& ImagePair(image_t image_id1,
                                         image_t image_id2) const;
 
   // Get reference to all objects.
-  inline const std::unordered_map<camera_t, class Camera>& Cameras() const;
+  inline const std::unordered_map<camera_t, struct Camera>& Cameras() const;
   inline const std::unordered_map<image_t, class Image>& Images() const;
   inline const std::vector<image_t>& RegImageIds() const;
-  inline const std::unordered_map<point3D_t, class Point3D>& Points3D() const;
+  inline const std::unordered_map<point3D_t, struct Point3D>& Points3D() const;
   inline const std::unordered_map<image_pair_t, ImagePairStat>& ImagePairs()
       const;
 
@@ -123,7 +124,7 @@ class Reconstruction {
 
   // Add new camera. There is only one camera per image, while multiple images
   // might be taken by the same camera.
-  void AddCamera(class Camera camera);
+  void AddCamera(struct Camera camera);
 
   // Add new image.
   void AddImage(class Image image);
@@ -175,7 +176,8 @@ class Reconstruction {
   void Normalize(double extent = 10.0,
                  double p0 = 0.1,
                  double p1 = 0.9,
-                 bool use_images = true);
+                 bool use_images = true,
+                 bool is_refractive = false);
 
   // Compute the centroid of the 3D points
   Eigen::Vector3d ComputeCentroid(double p0 = 0.1, double p1 = 0.9) const;
@@ -245,7 +247,7 @@ class Reconstruction {
   double ComputeMeanReprojectionError() const;
 
   // Updates mean reprojection errors for all 3D points.
-  void UpdatePoint3DErrors();
+  void UpdatePoint3DErrors(bool is_refractive = false);
 
   // Read data from text or binary file. Prefer binary data if it exists.
   void Read(const std::string& path);
@@ -403,9 +405,9 @@ class Reconstruction {
 
   std::shared_ptr<const CorrespondenceGraph> correspondence_graph_;
 
-  std::unordered_map<camera_t, class Camera> cameras_;
+  std::unordered_map<camera_t, struct Camera> cameras_;
   std::unordered_map<image_t, class Image> images_;
-  std::unordered_map<point3D_t, class Point3D> points3D_;
+  std::unordered_map<point3D_t, struct Point3D> points3D_;
 
   std::unordered_map<image_pair_t, ImagePairStat> image_pair_stats_;
 
@@ -441,7 +443,7 @@ size_t Reconstruction::NumImagePairs() const {
   return image_pair_stats_.size();
 }
 
-const class Camera& Reconstruction::Camera(const camera_t camera_id) const {
+const struct Camera& Reconstruction::Camera(const camera_t camera_id) const {
   return cameras_.at(camera_id);
 }
 
@@ -449,7 +451,8 @@ const class Image& Reconstruction::Image(const image_t image_id) const {
   return images_.at(image_id);
 }
 
-const class Point3D& Reconstruction::Point3D(const point3D_t point3D_id) const {
+const struct Point3D& Reconstruction::Point3D(
+    const point3D_t point3D_id) const {
   return points3D_.at(point3D_id);
 }
 
@@ -464,7 +467,7 @@ const Reconstruction::ImagePairStat& Reconstruction::ImagePair(
   return image_pair_stats_.at(pair_id);
 }
 
-class Camera& Reconstruction::Camera(const camera_t camera_id) {
+struct Camera& Reconstruction::Camera(const camera_t camera_id) {
   return cameras_.at(camera_id);
 }
 
@@ -472,7 +475,7 @@ class Image& Reconstruction::Image(const image_t image_id) {
   return images_.at(image_id);
 }
 
-class Point3D& Reconstruction::Point3D(const point3D_t point3D_id) {
+struct Point3D& Reconstruction::Point3D(const point3D_t point3D_id) {
   return points3D_.at(point3D_id);
 }
 

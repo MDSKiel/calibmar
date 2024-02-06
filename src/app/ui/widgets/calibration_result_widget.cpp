@@ -80,7 +80,7 @@ td {
     stream << "</p>" << std::endl << std::endl;
     // width & height
     stream << "<h3>Width &amp; Height:</h3>" << std::endl;
-    stream << "<p>" << camera.Width() << " " << camera.Height() << "</p>";
+    stream << "<p>" << camera.width << " " << camera.height << "</p>";
     stream << std::endl << std::endl;
     // camera matrix
     stream << "<h3>Camera Matrix:</h3>" << std::endl
@@ -88,14 +88,14 @@ td {
            << std::endl;
     // parameter lables
     std::vector<std::string> param_names = Split(camera.ParamsInfo(), ", ");
-    FormatTableRows(stream, {"Parameters", "Values", "Est. Std. Deviations:"}, param_names, camera.Params(),
+    FormatTableRows(stream, {"Parameters", "Values", "Est. Std. Deviations:"}, param_names, camera.params,
                     calibration.IntrinsicsStdDeviations());
 
     // optional refractive
     if (camera.IsCameraRefractive()) {
       std::vector<std::string> housing_param_names = Split(camera.RefracParamsInfo(), ", ");
       FormatTableRows(stream, {"Housing Parameters", "Values", "Est. Std. Deviations:"},
-                      Split(Split(camera.RefracParamsInfo(), "\n")[0], ", "), camera.RefracParams(),
+                      Split(Split(camera.RefracParamsInfo(), "\n")[0], ", "), camera.refrac_params,
                       calibration.HousingParamsStdDeviations());
     }
     // optional stereo pose
@@ -196,18 +196,18 @@ namespace calibmar {
     ImageWidget* image = new ImageWidget(this);
     heatmap_area->setWidget(image);
     heatmap_area->widget()->resize(
-        QSize(calibration.Camera().Width(), calibration.Camera().Height())
-            .scaled(calibration.Camera().Width(), target_height, Qt::AspectRatioMode::KeepAspectRatio));
+        QSize(calibration.Camera().width, calibration.Camera().height)
+            .scaled(calibration.Camera().width, target_height, Qt::AspectRatioMode::KeepAspectRatio));
     std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
-    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
+    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().width, calibration.Camera().height}, *heatmap);
     image->SetImage(std::move(heatmap));
     CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
     heatmap_collapse->SetWidget(heatmap_area, target_height);
     layout->addWidget(heatmap_collapse);
 
     // only show offset diagramm with dome port
-    if (calibration.Camera().RefracModelId() == colmap::DomePort::kRefracModelId && offset_visu_pixmap_) {
-      std::vector<double>& params = calibration.Camera().RefracParams();
+    if (calibration.Camera().refrac_model_id == colmap::DomePort::refrac_model_id && offset_visu_pixmap_) {
+      std::vector<double>& params = calibration.Camera().refrac_params;
       OffsetDiagramWidget* offset_widget = new OffsetDiagramWidget(
           Eigen::Vector3d(params[0], params[1], params[2]), calibration.Camera().CalibrationMatrix(), *offset_visu_pixmap_, this);
 

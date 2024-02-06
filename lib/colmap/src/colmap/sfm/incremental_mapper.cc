@@ -130,6 +130,8 @@ void IncrementalMapper::BeginReconstruction(
 
   filtered_images_.clear();
   num_reg_trials_.clear();
+
+  best_fit_cameras_.clear();
 }
 
 void IncrementalMapper::EndReconstruction(const bool discard) {
@@ -305,6 +307,7 @@ bool IncrementalMapper::RegisterInitialImagePair(const Options& options,
     // Set the pose of image2 using the estimated two-view geometry scaled by
     // the baseline measured from the projection center priors.
     Rigid3d cam2_from_cam1_scaled = prev_init_two_view_geometry_.cam2_from_cam1;
+    cam2_from_cam1_scaled.translation.normalize();
     cam2_from_cam1_scaled.translation *= scale;
     image2.CamFromWorld() = cam2_from_cam1_scaled * image1.CamFromWorld();
 
@@ -478,7 +481,7 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
       tri_corrs.emplace_back(point2D_idx, corr_point2D.point3D_id);
       corr_point3D_ids.insert(corr_point2D.point3D_id);
       tri_points2D.push_back(point2D.xy);
-      tri_points3D.push_back(point3D.XYZ());
+      tri_points3D.push_back(point3D.xyz);
     }
   }
 
@@ -521,8 +524,8 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
                               options.max_extra_param)) {
       // Previously refined camera has bogus parameters,
       // so reset parameters and try to re-estimage.
-      camera.SetParams(database_cache_->Camera(image.CameraId()).Params());
-      abs_pose_options.estimate_focal_length = !camera.HasPriorFocalLength();
+      camera.params = database_cache_->Camera(image.CameraId()).params;
+      abs_pose_options.estimate_focal_length = !camera.has_prior_focal_length;
       abs_pose_refinement_options.refine_focal_length = true;
       abs_pose_refinement_options.refine_extra_params = true;
     } else {
@@ -534,8 +537,8 @@ bool IncrementalMapper::RegisterNextImage(const Options& options,
     // Camera not refined before. Note that the camera parameters might have
     // been changed before but the image was filtered, so we explicitly reset
     // the camera parameters and try to re-estimate them.
-    camera.SetParams(database_cache_->Camera(image.CameraId()).Params());
-    abs_pose_options.estimate_focal_length = !camera.HasPriorFocalLength();
+    camera.params = database_cache_->Camera(image.CameraId()).params;
+    abs_pose_options.estimate_focal_length = !camera.has_prior_focal_length;
     abs_pose_refinement_options.refine_focal_length = true;
     abs_pose_refinement_options.refine_extra_params = true;
   }
@@ -729,9 +732,12 @@ IncrementalMapper::AdjustLocalBundle(
       const image_t image_id1 = local_bundle[local_bundle.size() - 1];
       const image_t image_id2 = local_bundle[local_bundle.size() - 2];
       ba_config.SetConstantCamPose(image_id1);
-      if (!options.fix_existing_images ||
-          !existing_image_ids_.count(image_id2)) {
-        ba_config.SetConstantCamPositions(image_id2, {0});
+      if (!options.enable_refraction ||
+          (options.enable_refraction && local_bundle.size() < 4)) {
+        if (!options.fix_existing_images ||
+            !existing_image_ids_.count(image_id2)) {
+          ba_config.SetConstantCamPositions(image_id2, {0});
+        }
       }
     }
 
@@ -744,7 +750,7 @@ IncrementalMapper::AdjustLocalBundle(
     for (const point3D_t point3D_id : point3D_ids) {
       const Point3D& point3D = reconstruction_->Point3D(point3D_id);
       const size_t kMaxTrackLength = 15;
-      if (!point3D.HasError() || point3D.Track().Length() <= kMaxTrackLength) {
+      if (!point3D.HasError() || point3D.track.Length() <= kMaxTrackLength) {
         ba_config.AddVariablePoint(point3D_id);
         variable_point3D_ids.insert(point3D_id);
       }
@@ -822,9 +828,12 @@ bool IncrementalMapper::AdjustGlobalBundle(
   // Fix 7-DOFs of the bundle adjustment problem.
   if (!options.use_pose_prior) {
     ba_config.SetConstantCamPose(reg_image_ids[0]);
-    if (!options.fix_existing_images ||
-        !existing_image_ids_.count(reg_image_ids[1])) {
-      ba_config.SetConstantCamPositions(reg_image_ids[1], {0});
+    if (!options.enable_refraction ||
+        (options.enable_refraction && reg_image_ids.size() < 4)) {
+      if (!options.fix_existing_images ||
+          !existing_image_ids_.count(reg_image_ids[1])) {
+        ba_config.SetConstantCamPositions(reg_image_ids[1], {0});
+      }
     }
   }
 
@@ -836,14 +845,13 @@ bool IncrementalMapper::AdjustGlobalBundle(
 
   // Normalize scene for numerical stability and
   // to avoid large scale changes in viewer.
-  if (!options.use_pose_prior && !options.enable_refraction) {
-    reconstruction_->Normalize();
+  if (!options.use_pose_prior) {
+    reconstruction_->Normalize(10.0, 0.1, 0.9, true, options.enable_refraction);
   }
   if (ba_options.refine_prior_from_cam) {
-    std::cout << "Refined prior_from_cam transform: \n"
+    LOG(INFO) << "Refined prior_from_cam transform: \n"
               << reconstruction_->PriorFromCam().rotation.coeffs().transpose()
-              << " " << reconstruction_->PriorFromCam().translation.transpose()
-              << std::endl;
+              << " " << reconstruction_->PriorFromCam().translation.transpose();
   }
 
   return true;
@@ -938,11 +946,11 @@ std::vector<image_t> IncrementalMapper::FindFirstInitialImage(
       continue;
     }
 
-    const class Camera& camera =
+    const struct Camera& camera =
         reconstruction_->Camera(image.second.CameraId());
     ImageInfo image_info;
     image_info.image_id = image.first;
-    image_info.prior_focal_length = camera.HasPriorFocalLength();
+    image_info.prior_focal_length = camera.has_prior_focal_length;
     image_info.num_correspondences = image.second.NumCorrespondences();
     image_infos.push_back(image_info);
   }
@@ -1010,10 +1018,10 @@ std::vector<image_t> IncrementalMapper::FindSecondInitialImage(
   for (const auto elem : num_correspondences) {
     if (elem.second >= init_min_num_inliers) {
       const class Image& image = reconstruction_->Image(elem.first);
-      const class Camera& camera = reconstruction_->Camera(image.CameraId());
+      const struct Camera& camera = reconstruction_->Camera(image.CameraId());
       ImageInfo image_info;
       image_info.image_id = elem.first;
-      image_info.prior_focal_length = camera.HasPriorFocalLength();
+      image_info.prior_focal_length = camera.has_prior_focal_length;
       image_info.num_correspondences = elem.second;
       image_infos.push_back(image_info);
     }
@@ -1067,7 +1075,7 @@ std::vector<image_t> IncrementalMapper::FindLocalBundle(
     if (point2D.HasPoint3D()) {
       point3D_ids.insert(point2D.point3D_id);
       const Point3D& point3D = reconstruction_->Point3D(point2D.point3D_id);
-      for (const TrackElement& track_el : point3D.Track().Elements()) {
+      for (const TrackElement& track_el : point3D.track.Elements()) {
         if (track_el.image_id != image_id) {
           shared_observations[track_el.image_id] += 1;
         }
@@ -1179,7 +1187,7 @@ std::vector<image_t> IncrementalMapper::FindLocalBundle(
         for (const Point2D& point2D : overlapping_image.Points2D()) {
           if (point2D.HasPoint3D() && point3D_ids.count(point2D.point3D_id)) {
             shared_points3D.push_back(
-                reconstruction_->Point3D(point2D.point3D_id).XYZ());
+                reconstruction_->Point3D(point2D.point3D_id).xyz);
 
             if (options.enable_refraction) {
               shared_points3D_ids.push_back(point2D.point3D_id);
@@ -1340,15 +1348,31 @@ bool IncrementalMapper::EstimateInitialTwoViewGeometry(
   two_view_geometry_options.ransac_options.max_error = options.init_max_error;
   TwoViewGeometry two_view_geometry;
 
-  two_view_geometry = EstimateCalibratedTwoViewGeometry(
-      camera1, points1, camera2, points2, matches, two_view_geometry_options);
+  if (!options.enable_refraction) {
+    two_view_geometry = EstimateCalibratedTwoViewGeometry(
+        camera1, points1, camera2, points2, matches, two_view_geometry_options);
 
-  if (!EstimateTwoViewGeometryPose(
-          camera1, points1, camera2, points2, &two_view_geometry)) {
-    return false;
-  }
+    if (!EstimateTwoViewGeometryPose(
+            camera1, points1, camera2, points2, &two_view_geometry)) {
+      return false;
+    }
+  } else {
+    const double kApproxDepth = 5.0;
 
-  if (options.enable_refraction) {
+    if (best_fit_cameras_.count(camera1.camera_id) == 0) {
+      Camera best_fit =
+          BestFitNonRefracCamera(CameraModelId::kOpenCV, camera1, kApproxDepth);
+      best_fit_cameras_.emplace(camera1.camera_id, std::move(best_fit));
+    }
+
+    if (best_fit_cameras_.count(camera2.camera_id) == 0) {
+      Camera best_fit =
+          BestFitNonRefracCamera(CameraModelId::kOpenCV, camera2, kApproxDepth);
+      best_fit_cameras_.emplace(camera2.camera_id, std::move(best_fit));
+    }
+
+    const Camera& best_fit_camera1 = best_fit_cameras_.at(camera1.camera_id);
+    const Camera& best_fit_camera2 = best_fit_cameras_.at(camera2.camera_id);
     std::vector<Camera> virtual_cameras1;
     std::vector<Camera> virtual_cameras2;
     std::vector<Rigid3d> virtual_from_reals1;
@@ -1358,30 +1382,28 @@ bool IncrementalMapper::EstimateInitialTwoViewGeometry(
     camera2.ComputeVirtuals(points2, virtual_cameras2, virtual_from_reals2);
 
     two_view_geometry_options.compute_relative_pose = true;
-    TwoViewGeometry two_view_geometry_refractive =
-        EstimateRefractiveTwoViewGeometry(points1,
-                                          virtual_cameras1,
-                                          virtual_from_reals1,
-                                          points2,
-                                          virtual_cameras2,
-                                          virtual_from_reals2,
-                                          matches,
-                                          two_view_geometry_options);
-    // [Experimental]: Since the refractive two-view geometry can not estimate
-    // scale well, it is not determined whether we should normalize the
-    // estimated translation to unit length.
-    two_view_geometry.cam2_from_cam1.translation.normalize();
-
-    // only use refractive two view geometry if it has more inliers
-    if (two_view_geometry.inlier_matches.size() <
-        two_view_geometry_refractive.inlier_matches.size()) {
-      two_view_geometry = two_view_geometry_refractive;
-    }
+    two_view_geometry =
+        EstimateRefractiveTwoViewGeometryUseBestFit(best_fit_camera1,
+                                                    points1,
+                                                    virtual_cameras1,
+                                                    virtual_from_reals1,
+                                                    best_fit_camera2,
+                                                    points2,
+                                                    virtual_cameras2,
+                                                    virtual_from_reals2,
+                                                    matches,
+                                                    two_view_geometry_options,
+                                                    true);
   }
+
+  // [Experimental]: Since the refractive two-view geometry can not estimate
+  // scale well, it is not determined whether we should normalize the
+  // estimated translation to unit length.
+  two_view_geometry.cam2_from_cam1.translation.normalize();
 
   if (static_cast<int>(two_view_geometry.inlier_matches.size()) >=
           options.init_min_num_inliers &&
-      std::abs(two_view_geometry.cam2_from_cam1.translation.z()) <
+      std::abs(two_view_geometry.cam2_from_cam1.translation.normalized().z()) <
           options.init_max_forward_motion &&
       two_view_geometry.tri_angle > DegToRad(options.init_min_tri_angle)) {
     prev_init_image_pair_id_ = image_pair_id;

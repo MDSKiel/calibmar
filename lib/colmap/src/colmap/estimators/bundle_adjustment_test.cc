@@ -42,10 +42,10 @@
         SimpleRadialCameraModel::focal_length_idxs[0]; \
     const size_t extra_param_idx =                     \
         SimpleRadialCameraModel::extra_params_idxs[0]; \
-    EXPECT_NE((camera).Params(focal_length_idx),       \
-              (orig_camera).Params(focal_length_idx)); \
-    EXPECT_NE((camera).Params(extra_param_idx),        \
-              (orig_camera).Params(extra_param_idx));  \
+    EXPECT_NE((camera).params[focal_length_idx],       \
+              (orig_camera).params[focal_length_idx]); \
+    EXPECT_NE((camera).params[extra_param_idx],        \
+              (orig_camera).params[extra_param_idx]);  \
   }
 
 #define CheckConstantCamera(camera, orig_camera)       \
@@ -54,10 +54,10 @@
         SimpleRadialCameraModel::focal_length_idxs[0]; \
     const size_t extra_param_idx =                     \
         SimpleRadialCameraModel::extra_params_idxs[0]; \
-    EXPECT_EQ((camera).Params(focal_length_idx),       \
-              (orig_camera).Params(focal_length_idx)); \
-    EXPECT_EQ((camera).Params(extra_param_idx),        \
-              (orig_camera).Params(extra_param_idx));  \
+    EXPECT_EQ((camera).params[focal_length_idx],       \
+              (orig_camera).params[focal_length_idx]); \
+    EXPECT_EQ((camera).params[extra_param_idx],        \
+              (orig_camera).params[extra_param_idx]);  \
   }
 
 #define CheckVariableImage(image, orig_image)                 \
@@ -104,10 +104,10 @@
   }
 
 #define CheckVariablePoint(point, orig_point) \
-  { EXPECT_NE((point).XYZ(), (orig_point).XYZ()); }
+  { EXPECT_NE((point).xyz, (orig_point).xyz); }
 
 #define CheckConstantPoint(point, orig_point) \
-  { EXPECT_EQ((point).XYZ(), (orig_point).XYZ()); }
+  { EXPECT_EQ((point).xyz, (orig_point).xyz); }
 
 namespace colmap {
 namespace {
@@ -142,12 +142,12 @@ void GenerateReconstruction(const size_t num_images,
     const camera_t camera_id = static_cast<camera_t>(i);
     const image_t image_id = static_cast<image_t>(i);
 
-    Camera camera;
-    camera.InitializeWithId(SimpleRadialCameraModel::model_id,
-                            kFocalLengthFactor * kImageSize,
-                            kImageSize,
-                            kImageSize);
-    camera.SetCameraId(camera_id);
+    const Camera camera =
+        Camera::CreateFromModelId(camera_id,
+                                  SimpleRadialCameraModel::model_id,
+                                  kFocalLengthFactor * kImageSize,
+                                  kImageSize,
+                                  kImageSize);
     reconstruction->AddCamera(camera);
 
     Image image;
@@ -167,10 +167,10 @@ void GenerateReconstruction(const size_t num_images,
     std::vector<Eigen::Vector2d> points2D;
     for (const auto& point3D : reconstruction->Points3D()) {
       EXPECT_TRUE(
-          HasPointPositiveDepth(cam_from_world_matrix, point3D.second.XYZ()));
+          HasPointPositiveDepth(cam_from_world_matrix, point3D.second.xyz));
       // Get exact projection of 3D point.
       Eigen::Vector2d point2D = camera.ImgFromCam(
-          (image.CamFromWorld() * point3D.second.XYZ()).hnormalized());
+          (image.CamFromWorld() * point3D.second.xyz).hnormalized());
       // Add some uniform noise.
       point2D += Eigen::Vector2d(RandomUniformReal(-2.0, 2.0),
                                  RandomUniformReal(-2.0, 2.0));
@@ -511,17 +511,17 @@ TEST(BundleAdjustment, ConstantFocalLength) {
 
   const auto& camera0 = reconstruction.Camera(0);
   const auto& orig_camera0 = orig_reconstruction.Camera(0);
-  EXPECT_TRUE(camera0.Params(focal_length_idx) ==
-              orig_camera0.Params(focal_length_idx));
-  EXPECT_TRUE(camera0.Params(extra_param_idx) !=
-              orig_camera0.Params(extra_param_idx));
+  EXPECT_TRUE(camera0.params[focal_length_idx] ==
+              orig_camera0.params[focal_length_idx]);
+  EXPECT_TRUE(camera0.params[extra_param_idx] !=
+              orig_camera0.params[extra_param_idx]);
 
   const auto& camera1 = reconstruction.Camera(1);
   const auto& orig_camera1 = orig_reconstruction.Camera(1);
-  EXPECT_TRUE(camera1.Params(focal_length_idx) ==
-              orig_camera1.Params(focal_length_idx));
-  EXPECT_TRUE(camera1.Params(extra_param_idx) !=
-              orig_camera1.Params(extra_param_idx));
+  EXPECT_TRUE(camera1.params[focal_length_idx] ==
+              orig_camera1.params[focal_length_idx]);
+  EXPECT_TRUE(camera1.params[extra_param_idx] !=
+              orig_camera1.params[extra_param_idx]);
 
   for (const auto& point3D : reconstruction.Points3D()) {
     CheckVariablePoint(point3D.second,
@@ -566,25 +566,25 @@ TEST(BundleAdjustment, VariablePrincipalPoint) {
 
   const auto& camera0 = reconstruction.Camera(0);
   const auto& orig_camera0 = orig_reconstruction.Camera(0);
-  EXPECT_TRUE(camera0.Params(focal_length_idx) !=
-              orig_camera0.Params(focal_length_idx));
-  EXPECT_TRUE(camera0.Params(principal_point_idx_x) !=
-              orig_camera0.Params(principal_point_idx_x));
-  EXPECT_TRUE(camera0.Params(principal_point_idx_y) !=
-              orig_camera0.Params(principal_point_idx_y));
-  EXPECT_TRUE(camera0.Params(extra_param_idx) !=
-              orig_camera0.Params(extra_param_idx));
+  EXPECT_TRUE(camera0.params[focal_length_idx] !=
+              orig_camera0.params[focal_length_idx]);
+  EXPECT_TRUE(camera0.params[principal_point_idx_x] !=
+              orig_camera0.params[principal_point_idx_x]);
+  EXPECT_TRUE(camera0.params[principal_point_idx_y] !=
+              orig_camera0.params[principal_point_idx_y]);
+  EXPECT_TRUE(camera0.params[extra_param_idx] !=
+              orig_camera0.params[extra_param_idx]);
 
   const auto& camera1 = reconstruction.Camera(1);
   const auto& orig_camera1 = orig_reconstruction.Camera(1);
-  EXPECT_TRUE(camera1.Params(focal_length_idx) !=
-              orig_camera1.Params(focal_length_idx));
-  EXPECT_TRUE(camera1.Params(principal_point_idx_x) !=
-              orig_camera1.Params(principal_point_idx_x));
-  EXPECT_TRUE(camera1.Params(principal_point_idx_y) !=
-              orig_camera1.Params(principal_point_idx_y));
-  EXPECT_TRUE(camera1.Params(extra_param_idx) !=
-              orig_camera1.Params(extra_param_idx));
+  EXPECT_TRUE(camera1.params[focal_length_idx] !=
+              orig_camera1.params[focal_length_idx]);
+  EXPECT_TRUE(camera1.params[principal_point_idx_x] !=
+              orig_camera1.params[principal_point_idx_x]);
+  EXPECT_TRUE(camera1.params[principal_point_idx_y] !=
+              orig_camera1.params[principal_point_idx_y]);
+  EXPECT_TRUE(camera1.params[extra_param_idx] !=
+              orig_camera1.params[extra_param_idx]);
 
   for (const auto& point3D : reconstruction.Points3D()) {
     CheckVariablePoint(point3D.second,
@@ -625,17 +625,17 @@ TEST(BundleAdjustment, ConstantExtraParam) {
 
   const auto& camera0 = reconstruction.Camera(0);
   const auto& orig_camera0 = orig_reconstruction.Camera(0);
-  EXPECT_TRUE(camera0.Params(focal_length_idx) !=
-              orig_camera0.Params(focal_length_idx));
-  EXPECT_TRUE(camera0.Params(extra_param_idx) ==
-              orig_camera0.Params(extra_param_idx));
+  EXPECT_TRUE(camera0.params[focal_length_idx] !=
+              orig_camera0.params[focal_length_idx]);
+  EXPECT_TRUE(camera0.params[extra_param_idx] ==
+              orig_camera0.params[extra_param_idx]);
 
   const auto& camera1 = reconstruction.Camera(1);
   const auto& orig_camera1 = orig_reconstruction.Camera(1);
-  EXPECT_TRUE(camera1.Params(focal_length_idx) !=
-              orig_camera1.Params(focal_length_idx));
-  EXPECT_TRUE(camera1.Params(extra_param_idx) ==
-              orig_camera1.Params(extra_param_idx));
+  EXPECT_TRUE(camera1.params[focal_length_idx] !=
+              orig_camera1.params[focal_length_idx]);
+  EXPECT_TRUE(camera1.params[extra_param_idx] ==
+              orig_camera1.params[extra_param_idx]);
 
   for (const auto& point3D : reconstruction.Points3D()) {
     CheckVariablePoint(point3D.second,

@@ -44,27 +44,28 @@ namespace colmap {
 // the upper left pixel center has coordinate (0.5, 0.5) and the lower right
 // pixel center has the coordinate (width - 0.5, height - 0.5).
 
-static const int kInvalidRefractiveCameraModelId = -1;
+enum class CameraRefracModelId {
+  kInvalid = -1,
+  kFlatPort = 0,
+  kDomePort = 1,
+};
 
 #ifndef CAMERA_REFRAC_MODEL_DEFINITIONS
 #define CAMERA_REFRAC_MODEL_DEFINITIONS(                                       \
-    refrac_model_id_value, refrac_model_name_value, num_params_value)          \
-  static const int kRefracModelId = refrac_model_id_value;                     \
-  static const size_t kNumParams = num_params_value;                           \
-  static const int refrac_model_id;                                            \
+    refrac_model_id_val, refrac_model_name_val, num_params_val)                \
+  static constexpr size_t num_params = num_params_val;                         \
+  static constexpr CameraRefracModelId refrac_model_id = refrac_model_id_val;  \
   static const std::string refrac_model_name;                                  \
-  static const size_t num_params;                                              \
-  static const std::string params_info;                                        \
+  static const std::string refrac_params_info;                                 \
   static const std::vector<size_t> optimizable_params_idxs;                    \
                                                                                \
-  static inline int InitializeRefracModelId() {                                \
-    return refrac_model_id_value;                                              \
+  static inline CameraRefracModelId InitializeRefracModelId() {                \
+    return refrac_model_id_val;                                                \
   };                                                                           \
   static inline std::string InitializeRefracModelName() {                      \
-    return refrac_model_name_value;                                            \
+    return refrac_model_name_val;                                              \
   }                                                                            \
-  static inline size_t InitializeNumParams() { return num_params_value; }      \
-  static inline std::string InitializeRefracModelParamsInfo();                 \
+  static inline std::string InitializeRefracParamsInfo();                      \
   static inline std::vector<size_t> InitializeOptimizableParamsIdxs();         \
                                                                                \
   template <typename CameraModel, typename T>                                  \
@@ -175,7 +176,7 @@ struct BaseCameraRefracModel {
 // see:
 // https://link.springer.com/chapter/10.1007/978-3-642-33715-4_61
 struct FlatPort : public BaseCameraRefracModel<FlatPort> {
-  CAMERA_REFRAC_MODEL_DEFINITIONS(0, "FLATPORT", 8)
+  CAMERA_REFRAC_MODEL_DEFINITIONS(CameraRefracModelId::kFlatPort, "FLATPORT", 8)
 };
 
 // DomePort (thick spherical glass interface).
@@ -189,20 +190,21 @@ struct FlatPort : public BaseCameraRefracModel<FlatPort> {
 // see:
 // https://link.springer.com/chapter/10.1007/978-3-030-33676-9_6
 struct DomePort : public BaseCameraRefracModel<DomePort> {
-  CAMERA_REFRAC_MODEL_DEFINITIONS(1, "DOMEPORT", 8)
+  CAMERA_REFRAC_MODEL_DEFINITIONS(CameraRefracModelId::kDomePort, "DOMEPORT", 8)
 };
 
 // Check whether refractive camera with given name or identifier
 // exists
 bool ExistsCameraRefracModelWithName(const std::string& refrac_model_name);
-bool ExistsCameraRefracModelWithId(int refrac_model_id);
+bool ExistsCameraRefracModelWithId(CameraRefracModelId refrac_model_id);
 
 // Convert refractive camera name to unique refractive camera model identifier.
 //
 // @param refrac_model_name      Unique name of refractive camera model
 //
 // @return                       Unique identifier of refractive camera model
-int CameraRefracModelNameToId(const std::string& refrac_model_name);
+CameraRefracModelId CameraRefracModelNameToId(
+    const std::string& refrac_model_name);
 
 // Convert refractive camera model identifier to unique refractive camera model
 // name.
@@ -210,28 +212,30 @@ int CameraRefracModelNameToId(const std::string& refrac_model_name);
 // @param refrac_model_id        Unique identifier of refractive camera model
 //
 // @param                        Unique name of refractive camera model
-std::string CameraRefracModelIdToName(int refrac_model_id);
+const std::string& CameraRefracModelIdToName(
+    CameraRefracModelId refrac_model_id);
 
 // Get human-readable information about the refractive parameter vector order.
 //
 // @param refrac_model_id        Unique identifier of refractive camera model
-std::string CameraRefracModelParamsInfo(int refrac_model_id);
+const std::string& CameraRefracModelParamsInfo(
+    CameraRefracModelId refrac_model_id);
 
 // Get the indices of the parameter groups in the parameter vector.
 //
 // @param refrac_model_id     Unique identifier of refractive camera model.
 const std::vector<size_t>& CameraRefracModelOptimizableParamsIdxs(
-    int refrac_model_id);
+    CameraRefracModelId refrac_model_id);
 
 // Get the total number of parameters of a refractive camera model
-size_t CameraRefracModelNumParams(int refrac_model_id);
+size_t CameraRefracModelNumParams(CameraRefracModelId refrac_model_id);
 
 // Check whether parameters are valid, i.e. the parameter vector has
 // the correct dimensions that match the specified refractive camera model.
 //
 // @param refrac_model_id      Unique identifier of refractive camera model.
 // @param params               Array of camera parameters.
-bool CameraRefracModelVerifyParams(int refrac_model_id,
+bool CameraRefracModelVerifyParams(CameraRefracModelId refrac_model_id,
                                    const std::vector<double>& params);
 
 // Transform camera to image coordinates using refractive camera model.
@@ -247,8 +251,8 @@ bool CameraRefracModelVerifyParams(int refrac_model_id,
 // @param u, v, w               Coordinates in camera system as (u, v, w).
 // @param x, y                  Output image coordinates in pixels.
 inline Eigen::Vector2d CameraRefracModelImgFromCam(
-    int model_id,
-    int refrac_model_id,
+    CameraModelId model_id,
+    CameraRefracModelId refrac_model_id,
     const std::vector<double>& cam_params,
     const std::vector<double>& refrac_params,
     const Eigen::Vector3d& uvw);
@@ -266,8 +270,8 @@ inline Eigen::Vector2d CameraRefracModelImgFromCam(
 //
 // @return              Output ray in camera system as Ray3D.
 inline Ray3D CameraRefracModelCamFromImg(
-    int model_id,
-    int refrac_model_id,
+    CameraModelId model_id,
+    CameraRefracModelId refrac_model_id,
     const std::vector<double>& cam_params,
     const std::vector<double>& refrac_params,
     const Eigen::Vector2d& xy);
@@ -286,15 +290,20 @@ inline Ray3D CameraRefracModelCamFromImg(
 //
 // @return              Output Coordinates in camera system as (u, v, w).
 inline Eigen::Vector3d CameraRefracModelCamFromImgPoint(
-    int model_id,
-    int refrac_model_id,
+    CameraModelId model_id,
+    CameraRefracModelId refrac_model_id,
     const std::vector<double>& cam_params,
     const std::vector<double>& refrac_params,
     const Eigen::Vector2d& xy,
     const double d);
 
 inline Eigen::Vector3d CameraRefracModelRefractionAxis(
-    int refrac_model_id, const std::vector<double>& refrac_params);
+    CameraRefracModelId refrac_model_id,
+    const std::vector<double>& refrac_params);
+
+////////////////////////////////////////////////////////////////////////////////
+// Implementation
+////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
 // BaseCameraRefracModel
@@ -357,7 +366,7 @@ void BaseCameraRefracModel<CameraRefracModel>::IterativeProjection(
 ////////////////////////////////////////////////////////////////////////////////
 // FlatPort
 
-std::string FlatPort::InitializeRefracModelParamsInfo() {
+std::string FlatPort::InitializeRefracParamsInfo() {
   return "Nx, Ny, Nz, int_dist, int_thick, na, ng, nw\n(Note that [Nx, Ny, Nz] "
          "must be unit vector)";
 }
@@ -471,7 +480,7 @@ void FlatPort::RefractionAxis(const T* refrac_params,
 ////////////////////////////////////////////////////////////////////////////////
 // DomePort
 
-std::string DomePort::InitializeRefracModelParamsInfo() {
+std::string DomePort::InitializeRefracParamsInfo() {
   return "Cx, Cy, Cz, int_radius, int_thick, na, ng, nw";
 }
 
@@ -588,15 +597,15 @@ void DomePort::RefractionAxis(const T* refrac_params,
 ////////////////////////////////////////////////////////////////////////////////
 
 Eigen::Vector2d CameraRefracModelImgFromCam(
-    const int model_id,
-    const int refrac_model_id,
+    const CameraModelId model_id,
+    const CameraRefracModelId refrac_model_id,
     const std::vector<double>& cam_params,
     const std::vector<double>& refrac_params,
     const Eigen::Vector3d& uvw) {
   Eigen::Vector2d xy;
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel) \
-  if (model_id == CameraModel::kModelId &&                            \
-      refrac_model_id == CameraRefracModel::kRefracModelId) {         \
+  if (model_id == CameraModel::model_id &&                            \
+      refrac_model_id == CameraRefracModel::refrac_model_id) {        \
     CameraRefracModel::ImgFromCam<CameraModel>(cam_params.data(),     \
                                                refrac_params.data(),  \
                                                uvw.x(),               \
@@ -612,15 +621,15 @@ Eigen::Vector2d CameraRefracModelImgFromCam(
   return xy;
 }
 
-Ray3D CameraRefracModelCamFromImg(const int model_id,
-                                  const int refrac_model_id,
+Ray3D CameraRefracModelCamFromImg(const CameraModelId model_id,
+                                  const CameraRefracModelId refrac_model_id,
                                   const std::vector<double>& cam_params,
                                   const std::vector<double>& refrac_params,
                                   const Eigen::Vector2d& xy) {
   Ray3D ray;
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel) \
-  if (model_id == CameraModel::kModelId &&                            \
-      refrac_model_id == CameraRefracModel::kRefracModelId) {         \
+  if (model_id == CameraModel::model_id &&                            \
+      refrac_model_id == CameraRefracModel::refrac_model_id) {        \
     CameraRefracModel::CamFromImg<CameraModel>(cam_params.data(),     \
                                                refrac_params.data(),  \
                                                xy.x(),                \
@@ -636,16 +645,16 @@ Ray3D CameraRefracModelCamFromImg(const int model_id,
 }
 
 Eigen::Vector3d CameraRefracModelCamFromImgPoint(
-    const int model_id,
-    const int refrac_model_id,
+    const CameraModelId model_id,
+    const CameraRefracModelId refrac_model_id,
     const std::vector<double>& cam_params,
     const std::vector<double>& refrac_params,
     const Eigen::Vector2d& xy,
     const double d) {
   Eigen::Vector3d uvw;
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel)      \
-  if (model_id == CameraModel::kModelId &&                                 \
-      refrac_model_id == CameraRefracModel::kRefracModelId) {              \
+  if (model_id == CameraModel::model_id &&                                 \
+      refrac_model_id == CameraRefracModel::refrac_model_id) {             \
     CameraRefracModel::CamFromImgPoint<CameraModel>(                       \
         cam_params.data(), refrac_params.data(), xy.x(), xy.y(), d, &uvw); \
   } else
@@ -657,11 +666,12 @@ Eigen::Vector3d CameraRefracModelCamFromImgPoint(
 }
 
 Eigen::Vector3d CameraRefracModelRefractionAxis(
-    const int refrac_model_id, const std::vector<double>& refrac_params) {
+    const CameraRefracModelId refrac_model_id,
+    const std::vector<double>& refrac_params) {
   Eigen::Vector3d refrac_axis;
   switch (refrac_model_id) {
 #define CAMERA_REFRAC_MODEL_CASE(CameraRefracModel)                        \
-  case CameraRefracModel::kRefracModelId:                                  \
+  case CameraRefracModel::refrac_model_id:                                 \
     CameraRefracModel::RefractionAxis(refrac_params.data(), &refrac_axis); \
     break;
 

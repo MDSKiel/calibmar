@@ -40,7 +40,9 @@ namespace {
       if (object_points[i].size() != image_points[i].size()) {
         throw std::runtime_error("Image points object points size missmatch!");
       }
-      Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], (*undistorted_points_ptr)[i])[0];
+      std::vector<Eigen::Matrix3d> models;
+      colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], (*undistorted_points_ptr)[i], &models);
+      Eigen::Matrix3d H = models[0];
 
       colmap::Rigid3d pose;
       general_calibration::EstimatePoseFromHomography(H, camera.CalibrationMatrix(), pose);
@@ -106,7 +108,7 @@ namespace {
     double* absolute_translation = absolute_pose.translation.data();
     double* relative_rotation = relative_pose.rotation.coeffs().data();
     double* relative_translation = relative_pose.translation.data();
-    double* camera_params = camera.ParamsData();
+    double* camera_params = camera.params.data();
 
     ceres::CostFunction* cost_function;
 
@@ -114,9 +116,9 @@ namespace {
       const auto& point2D = image_points[i];
       auto& point3D = object_points[i];
 
-      switch (camera.ModelId()) {
+      switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                                        \
-  case colmap::CameraModel::kModelId:                                                         \
+  case colmap::CameraModel::model_id:                                                         \
     cost_function = colmap::RigReprojErrorCostFunction<colmap::CameraModel>::Create(point2D); \
     break;
 
@@ -191,24 +193,24 @@ namespace calibmar::stereo_calibration {
     problem.SetParameterBlockConstant(identity.translation.data());
 
     if (fix_intrinsics) {
-      problem.SetParameterBlockConstant(camera1.ParamsData());
-      problem.SetParameterBlockConstant(camera2.ParamsData());
+      problem.SetParameterBlockConstant(camera1.params.data());
+      problem.SetParameterBlockConstant(camera2.params.data());
     }
 
     // in case we have simple models keep the principal point constant
-    if (camera1.ModelId() == colmap::PinholeCameraModel::model_id ||
-        camera1.ModelId() == colmap::SimplePinholeCameraModel::model_id) {
+    if (camera1.model_id == colmap::PinholeCameraModel::model_id ||
+        camera1.model_id == colmap::SimplePinholeCameraModel::model_id) {
       std::vector<int> const_camera_params;
-      const std::vector<size_t>& params_idxs = camera1.PrincipalPointIdxs();
+      const auto& params_idxs = camera1.PrincipalPointIdxs();
       const_camera_params.insert(const_camera_params.end(), params_idxs.begin(), params_idxs.end());
-      colmap::SetSubsetManifold(static_cast<int>(camera1.NumParams()), const_camera_params, &problem, camera1.ParamsData());
+      colmap::SetSubsetManifold(static_cast<int>(camera1.params.size()), const_camera_params, &problem, camera1.params.data());
     }
-    if (camera2.ModelId() == colmap::PinholeCameraModel::model_id ||
-        camera2.ModelId() == colmap::SimplePinholeCameraModel::model_id) {
+    if (camera2.model_id == colmap::PinholeCameraModel::model_id ||
+        camera2.model_id == colmap::SimplePinholeCameraModel::model_id) {
       std::vector<int> const_camera_params;
-      const std::vector<size_t>& params_idxs = camera2.PrincipalPointIdxs();
+      const auto& params_idxs = camera2.PrincipalPointIdxs();
       const_camera_params.insert(const_camera_params.end(), params_idxs.begin(), params_idxs.end());
-      colmap::SetSubsetManifold(static_cast<int>(camera2.NumParams()), const_camera_params, &problem, camera2.ParamsData());
+      colmap::SetSubsetManifold(static_cast<int>(camera2.params.size()), const_camera_params, &problem, camera2.params.data());
     }
 
     // Solve
@@ -232,10 +234,10 @@ namespace calibmar::stereo_calibration {
       // check which parameters are requested
       std::vector<std::pair<const double*, const double*>> requested_params;
       if (std_deviations->std_deviations_intrinsics1) {
-        requested_params.push_back({camera1.ParamsData(), camera1.ParamsData()});
+        requested_params.push_back({camera1.params.data(), camera1.params.data()});
       }
       if (std_deviations->std_deviations_intrinsics2) {
-        requested_params.push_back({camera2.ParamsData(), camera2.ParamsData()});
+        requested_params.push_back({camera2.params.data(), camera2.params.data()});
       }
       if (std_deviations->std_deviations_extrinsics1) {
         // this should always be one, but calculate it anyway
@@ -250,11 +252,11 @@ namespace calibmar::stereo_calibration {
       // compute the requested covariance matrix parts and then extract the std deviation from it
       if (covariance.Compute(requested_params, &problem)) {
         if (std_deviations->std_deviations_intrinsics1) {
-          GetEstimatedStdDeviation(covariance, camera1.ParamsData(), camera1.NumParams(),
+          GetEstimatedStdDeviation(covariance, camera1.params.data(), camera1.params.size(),
                                    *std_deviations->std_deviations_intrinsics1);
         }
         if (std_deviations->std_deviations_intrinsics2) {
-          GetEstimatedStdDeviation(covariance, camera2.ParamsData(), camera2.NumParams(),
+          GetEstimatedStdDeviation(covariance, camera2.params.data(), camera2.params.size(),
                                    *std_deviations->std_deviations_intrinsics2);
         }
         if (std_deviations->std_deviations_extrinsics1) {

@@ -13,12 +13,12 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Structure) {
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
   std::string housing_name =
       HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerSphericalRefractive).model_name;
-  camera.SetModelIdFromName(model_name);
-  camera.SetRefracModelIdFromName(housing_name);
-  camera.SetWidth(1000);
-  camera.SetHeight(2000);
-  camera.SetParams({1.1, -2, 3, 4, 5, 6, 7, 8});
-  camera.SetRefracParams({1, 2, 3, 4, 5, 6, 7, 8});
+  camera.model_id = colmap::CameraModelNameToId(model_name);
+  camera.refrac_model_id = colmap::CameraRefracModelNameToId(housing_name);
+  camera.width = 1000;
+  camera.height = 2000;
+  camera.params = {1.1, -2, 3, 4, 5, 6, 7, 8};
+  camera.refrac_params = {1, 2, 3, 4, 5, 6, 7, 8};
   calibration.SetCamera(camera);
   std::stringstream string;
   report::GenerateCalibrationYaml(string, calibration);
@@ -43,12 +43,12 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
   std::string housing_name =
       HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerSphericalRefractive).model_name;
-  camera.SetModelIdFromName(model_name);
-  camera.SetRefracModelIdFromName(housing_name);
-  camera.SetWidth(1000);
-  camera.SetHeight(2000);
-  camera.SetParams({1.1, -2, 3, 4, 5, 6, 7, 8});
-  camera.SetRefracParams({1, 2, 3, 4, 5, 6, 7, 8});
+  camera.model_id = colmap::CameraModelNameToId(model_name);
+  camera.refrac_model_id = colmap::CameraRefracModelNameToId(housing_name);
+  camera.width = 1000;
+  camera.height = 2000;
+  camera.params = {1.1, -2, 3, 4, 5, 6, 7, 8};
+  camera.refrac_params = {1, 2, 3, 4, 5, 6, 7, 8};
   calibration.SetCamera(camera);
   calibration.SetCalibrationTargetInfo("chessboard, 10, 7, 0.04");
 
@@ -59,16 +59,16 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
 
   // the exported yaml should be importable
   BOOST_TEST(parameters.camera_model == CameraModelType::OpenCVCameraModel);
-  BOOST_TEST(parameters.camera_parameters.size() == camera.Params().size());
+  BOOST_TEST(parameters.camera_parameters.size() == camera.params.size());
   for (size_t i = 0; i < parameters.camera_parameters.size(); i++) {
-    BOOST_TEST(parameters.camera_parameters[i] == camera.Params()[i]);
+    BOOST_TEST(parameters.camera_parameters[i] == camera.params[i]);
   }
   BOOST_TEST(parameters.chessboard_columns == 10);
   BOOST_TEST(parameters.chessboard_rows == 7);
   BOOST_TEST(parameters.housing_model.value() == HousingInterfaceType::DoubleLayerSphericalRefractive);
-  BOOST_TEST(parameters.housing_parameters.size() == camera.RefracParams().size());
+  BOOST_TEST(parameters.housing_parameters.size() == camera.refrac_params.size());
   for (size_t i = 0; i < parameters.housing_parameters.size(); i++) {
-    BOOST_TEST(parameters.housing_parameters[i] == camera.RefracParams()[i]);
+    BOOST_TEST(parameters.housing_parameters[i] == camera.refrac_params[i]);
   }
   BOOST_TEST(parameters.square_size == 0.04);
   BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Chessboard);
@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetAruco) {
   Calibration calibration;
   colmap::Camera camera;
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
-  camera.SetModelIdFromName(model_name);
+  camera.model_id = colmap::CameraModelNameToId(model_name);
   calibration.SetCamera(camera);
   calibration.SetCalibrationTargetInfo("3D target, aruco: 4x4_50, 3.2");
 
@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTarget) {
   Calibration calibration;
   colmap::Camera camera;
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
-  camera.SetModelIdFromName(model_name);
+  camera.model_id = colmap::CameraModelNameToId(model_name);
   calibration.SetCamera(camera);
   calibration.SetCalibrationTargetInfo("3D target");
 

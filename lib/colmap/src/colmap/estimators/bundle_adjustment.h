@@ -31,6 +31,7 @@
 
 #include "colmap/scene/camera_rig.h"
 #include "colmap/scene/reconstruction.h"
+#include "colmap/util/eigen_alignment.h"
 
 #include <memory>
 #include <unordered_set>
@@ -94,7 +95,7 @@ struct BundleAdjustmentOptions {
     solver_options.function_tolerance = 0.0;
     solver_options.gradient_tolerance = 0.0;
     solver_options.parameter_tolerance = 0.0;
-    solver_options.minimizer_progress_to_stdout = false;
+    solver_options.logging_type = ceres::LoggingType::SILENT;
     solver_options.max_num_iterations = 100;
     solver_options.max_linear_solver_iterations = 200;
     solver_options.max_num_consecutive_invalid_steps = 10;
@@ -121,7 +122,7 @@ class BundleAdjustmentConfig {
   size_t NumPoints() const;
   size_t NumConstantCamIntrinsics() const;
   size_t NumConstantCamPoses() const;
-  size_t NumConstantCamPositionss() const;
+  size_t NumConstantCamPositions() const;
   size_t NumVariablePoints() const;
   size_t NumConstantPoints() const;
 

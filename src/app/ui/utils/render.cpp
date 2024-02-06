@@ -56,7 +56,7 @@ namespace calibmar {
       cv::eigen2cv(camera.CalibrationMatrix(), camera_mat);
       std::vector<double> distortion_params;
       for (size_t idx : camera.ExtraParamsIdxs()) {
-        distortion_params.push_back(camera.Params()[idx]);
+        distortion_params.push_back(camera.params[idx]);
       }
 
       Eigen::AngleAxisd angle_axis(Eigen::Quaterniond(rotation(0), rotation(1), rotation(2), rotation(3)));
@@ -78,8 +78,8 @@ namespace calibmar {
         throw std::runtime_error("input and output size must match!");
       }
 
-      colmap::Camera undistort_camera;
-      undistort_camera.SetModelId(colmap::PinholeCameraModel::model_id);
+      colmap::Camera undistort_camera = colmap::Camera::CreateFromModelId(
+          colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, distortion_camera.width, distortion_camera.height);
       undistort_camera.SetPrincipalPointX(distortion_camera.PrincipalPointX());
       undistort_camera.SetPrincipalPointY(distortion_camera.PrincipalPointY());
 
@@ -91,7 +91,7 @@ namespace calibmar {
         undistort_camera.SetFocalLengthY(distortion_camera.FocalLengthY());
       }
 
-      cv::Mat map(distortion_camera.Width(), distortion_camera.Height(), CV_32FC2);
+      cv::Mat map(distortion_camera.width, distortion_camera.height, CV_32FC2);
 
       for (int y = 0; y < input.Height(); y++) {
         for (int x = 0; x < input.Width(); x++) {

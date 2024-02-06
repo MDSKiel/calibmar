@@ -69,12 +69,12 @@ namespace {
 
 BOOST_AUTO_TEST_CASE(EstimateKFromHomographies) {
   // generate 2D points
-  colmap::Camera camera;
   double fx_true = 800;
   double fy_true = fx_true;
   double cx_true = 300;
   double cy_true = 400;
-  camera.InitializeWithId(colmap::SimplePinholeCameraModel::kModelId, fx_true, cx_true * 2, cy_true * 2);
+  colmap::Camera camera = colmap::Camera::CreateFromModelId(colmap::kInvalidImageId, colmap::SimplePinholeCameraModel::model_id,
+                                                            fx_true, cx_true * 2, cy_true * 2);
 
   std::vector<Eigen::Vector3d> points3D = CreatePoints3D(10, 10, 0.01);
 
@@ -106,12 +106,12 @@ BOOST_AUTO_TEST_CASE(EstimateKFromHomographies) {
 
 BOOST_AUTO_TEST_CASE(PoseFromHomography) {
   // generate 2D points
-  colmap::Camera camera;
   double fx_true = 800;
   double fy_true = fx_true;
   double cx_true = 300;
   double cy_true = 400;
-  camera.InitializeWithId(colmap::SimplePinholeCameraModel::kModelId, fx_true, cx_true * 2, cy_true * 2);
+  colmap::Camera camera = colmap::Camera::CreateFromModelId(colmap::kInvalidCameraId, colmap::SimplePinholeCameraModel::model_id,
+                                                            fx_true, cx_true * 2, cy_true * 2);
 
   std::vector<Eigen::Vector3d> points3D = CreatePoints3D(10, 10, 0.01);
 
@@ -132,7 +132,9 @@ BOOST_AUTO_TEST_CASE(PoseFromHomography) {
   }
 
   colmap::Rigid3d pose = poses[0];
-  Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[0], point_sets[0])[0];
+  std::vector<Eigen::Matrix3d> models;
+  colmap::HomographyMatrixEstimator::Estimate(object_plane_points[0], point_sets[0], &models);
+  Eigen::Matrix3d H = models[0];
 
   Eigen::Matrix3d K = camera.CalibrationMatrix();
   colmap::Rigid3d estimated;
@@ -142,25 +144,25 @@ BOOST_AUTO_TEST_CASE(PoseFromHomography) {
 }
 
 struct CameraTestData {
-  int model_id;
+  colmap::CameraModelId model_id;
   std::vector<double> params;
 };
 
 BOOST_TEST_DONT_PRINT_LOG_VALUE(CameraTestData)
 std::vector<CameraTestData> camera_models = {
-    {colmap::SimplePinholeCameraModel::kModelId, {1300, 600, 500}},
-    {colmap::PinholeCameraModel::kModelId, {1300, 1250, 600, 500}},
-    {colmap::SimpleRadialCameraModel::kModelId, {850, 600, 500, 0.8}},
-    {colmap::RadialCameraModel::kModelId, {1000, 600, 500, -0.1, -0.05}},
-    {colmap::OpenCVCameraModel::kModelId, {900, 900, 600, 500, 0.01, -0.08, 0.02, -0.005}},
-    {colmap::FullOpenCVCameraModel::kModelId, {1200, 1200, 600, 500, 0.1, 0.08, 0.02, -0.005, 0.1, -0.02, -0.03, -0.003}},
-    {colmap::OpenCVFisheyeCameraModel::kModelId, {1200, 1200, 600, 500, -0.1, -0.2, -0.4, -0.8}}};
+    {colmap::SimplePinholeCameraModel::model_id, {1300, 600, 500}},
+    {colmap::PinholeCameraModel::model_id, {1300, 1250, 600, 500}},
+    {colmap::SimpleRadialCameraModel::model_id, {850, 600, 500, 0.8}},
+    {colmap::RadialCameraModel::model_id, {1000, 600, 500, -0.1, -0.05}},
+    {colmap::OpenCVCameraModel::model_id, {900, 900, 600, 500, 0.01, -0.08, 0.02, -0.005}},
+    {colmap::FullOpenCVCameraModel::model_id, {1200, 1200, 600, 500, 0.1, 0.08, 0.02, -0.005, 0.1, -0.02, -0.03, -0.003}},
+    {colmap::OpenCVFisheyeCameraModel::model_id, {1200, 1200, 600, 500, -0.1, -0.2, -0.4, -0.8}}};
 BOOST_DATA_TEST_CASE(CalibrateCamera, boost::unit_test::data::make(camera_models), model) {
   colmap::Camera camera;
-  camera.SetModelId(model.model_id);
-  camera.SetWidth(1200);
-  camera.SetHeight(1000);
-  camera.SetParams(model.params);
+  camera.model_id = model.model_id;
+  camera.width = 1200;
+  camera.height = 1000;
+  camera.params = model.params;
   BOOST_ASSERT(camera.VerifyParams());
   std::vector<Eigen::Vector3d> points3D = CreatePoints3D(15, 15, 0.02);
   std::vector<std::vector<Eigen::Vector3d>> object_points;
@@ -175,7 +177,7 @@ BOOST_DATA_TEST_CASE(CalibrateCamera, boost::unit_test::data::make(camera_models
   for (auto image_it = image_points.begin(); image_it != image_points.end();) {
     bool erase = false;
     for (const auto& point : *image_it) {
-      if (point.x() < 0 || point.x() >= camera.Width() || point.y() < 0 || point.y() >= camera.Height()) {
+      if (point.x() < 0 || point.x() >= camera.width || point.y() < 0 || point.y() >= camera.height) {
         erase = true;
         break;
       }
@@ -197,15 +199,15 @@ BOOST_DATA_TEST_CASE(CalibrateCamera, boost::unit_test::data::make(camera_models
   }
 
   colmap::Camera calibration_camera;
-  calibration_camera.SetModelId(model.model_id);
-  calibration_camera.SetWidth(camera.Width());
-  calibration_camera.SetHeight(camera.Height());
+  calibration_camera.model_id = model.model_id;
+  calibration_camera.width = camera.width;
+  calibration_camera.height = camera.height;
   std::vector<colmap::Rigid3d> poses2;
   general_calibration::CalibrateCamera(object_points, image_points, calibration_camera, false, poses2);
 
   // For FullOpenCVCameraModel the poses might be too incomplete (they could be bad in general)
   double tolerance = model.model_id != colmap::FullOpenCVCameraModel::model_id ? 0.001 : 0.1;
 
-  ASSERT_WITH_MSG(ElementWiseClose(camera.Params(), calibration_camera.Params(), tolerance),
+  ASSERT_WITH_MSG(ElementWiseClose(camera.params, calibration_camera.params, tolerance),
                   "Camera calibration out of tolerance for model: " + colmap::CameraModelIdToName(model.model_id));
 }

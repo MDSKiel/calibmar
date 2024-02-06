@@ -23,8 +23,9 @@ namespace {
   }
 
   colmap::Camera CreateUndistortedCamera(colmap::Camera camera) {
-    colmap::Camera undistort_camera;
-    undistort_camera.SetModelId(colmap::PinholeCameraModel::model_id);
+    colmap::Camera undistort_camera = colmap::Camera::CreateFromModelId(
+        colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, camera.width, camera.height);
+
     undistort_camera.SetPrincipalPointX(camera.PrincipalPointX());
     undistort_camera.SetPrincipalPointY(camera.PrincipalPointY());
 
@@ -43,16 +44,16 @@ namespace {
                          const std::vector<Eigen::Vector2d>& image_points, std::vector<Eigen::Vector3d>& object_points) {
     double* rotation = pose.rotation.coeffs().data();
     double* translation = pose.translation.data();
-    double* camera_params = camera.ParamsData();
+    double* camera_params = camera.params.data();
     ceres::CostFunction* cost_function;
 
     for (size_t i = 0; i < image_points.size(); i++) {
       const auto& point2D = image_points[i];
       auto& point3D = object_points[i];
 
-      switch (camera.ModelId()) {
+      switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                                     \
-  case colmap::CameraModel::kModelId:                                                      \
+  case colmap::CameraModel::model_id:                                                      \
     cost_function = colmap::ReprojErrorCostFunction<colmap::CameraModel>::Create(point2D); \
     break;
 
@@ -113,7 +114,9 @@ namespace calibmar::general_calibration {
         throw std::runtime_error("Atleast four points needed per view!");
       }
 
-      Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], image_points[i])[0];
+      std::vector<Eigen::Matrix3d> models;
+      colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], image_points[i], &models);
+      Eigen::Matrix3d H = models[0];
       H /= H(2, 2);  // potentially unnecessary normalization
 
       V.row(2 * i) = v(H, 0, 1);
@@ -169,7 +172,7 @@ namespace calibmar::general_calibration {
                        const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
                        bool use_intrinsic_guess, std::vector<colmap::Rigid3d>& poses,
                        std::vector<double>* std_deviations_intrinsics) {
-    if (camera.Width() <= 0 || camera.Height() <= 0 || camera.ModelId() == colmap::kInvalidCameraModelId) {
+    if (camera.width <= 0 || camera.height <= 0 || camera.model_id == colmap::CameraModelId::kInvalid) {
       throw std::runtime_error("Camera width, height and model must be initialized!");
     }
 
@@ -186,7 +189,7 @@ namespace calibmar::general_calibration {
     if (!use_intrinsic_guess) {
       double fx, fy, cx, cy;
       EstimateKFromHomographies(object_plane_points, image_points, fx, fy, cx, cy);
-      camera.InitializeWithId(camera.ModelId(), (fx + fy) / 2, camera.Width(), camera.Height());
+      camera.params = colmap::CameraModelInitializeParams(camera.model_id, (fx + fy) / 2, camera.width, camera.height);
     }
 
     const std::vector<std::vector<Eigen::Vector2d>>* undistorted_points_ptr;
@@ -204,7 +207,9 @@ namespace calibmar::general_calibration {
     poses.clear();
     poses.reserve(image_points.size());
     for (size_t i = 0; i < image_points.size(); i++) {
-      Eigen::Matrix3d H = colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], (*undistorted_points_ptr)[i])[0];
+      std::vector<Eigen::Matrix3d> models;
+      colmap::HomographyMatrixEstimator::Estimate(object_plane_points[i], (*undistorted_points_ptr)[i], &models);
+      Eigen::Matrix3d H = models[0];
 
       colmap::Rigid3d pose;
       EstimatePoseFromHomography(H, camera.CalibrationMatrix(), pose);
@@ -214,13 +219,13 @@ namespace calibmar::general_calibration {
       AddImageToProblem(problem, camera, poses[i], image_points[i], object_points[i]);
     }
 
-    if (camera.ModelId() == colmap::PinholeCameraModel::model_id ||
-        camera.ModelId() == colmap::SimplePinholeCameraModel::model_id) {
+    if (camera.model_id == colmap::PinholeCameraModel::model_id ||
+        camera.model_id == colmap::SimplePinholeCameraModel::model_id) {
       // in case we have simple models keep the principal point constant
       std::vector<int> const_camera_params;
-      const std::vector<size_t>& params_idxs = camera.PrincipalPointIdxs();
+      const auto& params_idxs = camera.PrincipalPointIdxs();
       const_camera_params.insert(const_camera_params.end(), params_idxs.begin(), params_idxs.end());
-      colmap::SetSubsetManifold(static_cast<int>(camera.NumParams()), const_camera_params, &problem, camera.ParamsData());
+      colmap::SetSubsetManifold(static_cast<int>(camera.params.size()), const_camera_params, &problem, camera.params.data());
     }
 
     // Solve
@@ -240,16 +245,16 @@ namespace calibmar::general_calibration {
 
     if (std_deviations_intrinsics) {
       std_deviations_intrinsics->clear();
-      std_deviations_intrinsics->reserve(camera.NumParams());
+      std_deviations_intrinsics->reserve(camera.params.size());
 
       ceres::Covariance::Options covariance_options;
       covariance_options.algorithm_type = ceres::CovarianceAlgorithmType::DENSE_SVD;
       ceres::Covariance covariance(covariance_options);
-      if (covariance.Compute({camera.ParamsData()}, &problem)) {
-        size_t num_params = camera.NumParams();
+      if (covariance.Compute({camera.params.data()}, &problem)) {
+        size_t num_params = camera.params.size();
         std::vector<double> covariance_mat(num_params * num_params);
 
-        if (covariance.GetCovarianceBlock(camera.ParamsData(), camera.ParamsData(), covariance_mat.data())) {
+        if (covariance.GetCovarianceBlock(camera.params.data(), camera.params.data(), covariance_mat.data())) {
           for (size_t i = 0; i < num_params; i++) {
             // diagonal indices
             size_t idx = i + i * num_params;

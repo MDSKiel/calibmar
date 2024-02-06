@@ -34,6 +34,7 @@
 #include "colmap/math/random.h"
 #include "colmap/optim/ransac.h"
 #include "colmap/sensor/models.h"
+#include "colmap/util/eigen_alignment.h"
 
 #include <Eigen/Core>
 #include <gtest/gtest.h>
@@ -131,7 +132,11 @@ TEST(EssentialMatrix, EightPoint) {
   }
 
   EssentialMatrixEightPointEstimator estimator;
-  const auto E = estimator.Estimate(points1, points2)[0];
+  std::vector<Eigen::Matrix3d> models;
+  estimator.Estimate(points1, points2, &models);
+
+  ASSERT_EQ(models.size(), 1);
+  const Eigen::Matrix3d& E = models[0];
 
   // Reference values.
   EXPECT_TRUE(std::abs(E(0, 0) - -0.0368602) < 1e-5);

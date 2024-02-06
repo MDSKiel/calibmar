@@ -50,25 +50,26 @@ namespace {
   }
 
   struct CameraTestData {
-    int model_id;
+    colmap::CameraModelId model_id;
     std::vector<double> params;
   };
 
-  std::vector<CameraTestData> stereo_camera_models = {{colmap::SimplePinholeCameraModel::kModelId, {1300, 600, 500}},
-                                                      {colmap::PinholeCameraModel::kModelId, {1300, 1250, 600, 500}},
-                                                      {colmap::SimpleRadialCameraModel::kModelId, {850, 600, 500, 0.2}}};
+  std::vector<CameraTestData> stereo_camera_models = {{colmap::SimplePinholeCameraModel::model_id, {1300, 600, 500}},
+                                                      {colmap::PinholeCameraModel::model_id, {1300, 1250, 600, 500}},
+                                                      {colmap::SimpleRadialCameraModel::model_id, {850, 600, 500, 0.2}}};
 
   void SetupData(colmap::Camera& camera1, colmap::Camera& camera2, std::vector<std::vector<Eigen::Vector2d>>& image_points1,
-                 std::vector<std::vector<Eigen::Vector2d>>& image_points2, std::vector<std::vector<Eigen::Vector3d>>& object_points,
-                 const colmap::Rigid3d& relative_pose, const CameraTestData& model) {
-    camera1.SetModelId(model.model_id);
-    camera2.SetModelId(model.model_id);
-    camera1.SetParams(model.params);
-    camera2.SetParams(model.params);
-    camera1.SetWidth(camera1.PrincipalPointX() * 2);
-    camera2.SetWidth(camera2.PrincipalPointX() * 2);
-    camera1.SetHeight(camera1.PrincipalPointY() * 2);
-    camera2.SetHeight(camera2.PrincipalPointY() * 2);
+                 std::vector<std::vector<Eigen::Vector2d>>& image_points2,
+                 std::vector<std::vector<Eigen::Vector3d>>& object_points, const colmap::Rigid3d& relative_pose,
+                 const CameraTestData& model) {
+    camera1.model_id = model.model_id;
+    camera2.model_id = model.model_id;
+    camera1.params = model.params;
+    camera2.params = model.params;
+    camera1.width = camera1.PrincipalPointX() * 2;
+    camera2.width = camera2.PrincipalPointX() * 2;
+    camera1.height = camera1.PrincipalPointY() * 2;
+    camera2.height = camera2.PrincipalPointY() * 2;
 
     std::vector<Eigen::Vector3d> points3D = CreatePoints3D(15, 15, 0.02);
 
@@ -102,19 +103,19 @@ BOOST_DATA_TEST_CASE(StereoCalibration_FullCalibration, boost::unit_test::data::
   colmap::Rigid3d estimated_pose;
   std::vector<colmap::Rigid3d> absolute_poses;
   SetupData(camera1, camera2, image_points1, image_points2, object_points, relative_pose, model);
-  calibration_camera1.SetModelId(camera1.ModelId());
-  calibration_camera1.SetWidth(camera1.Width());
-  calibration_camera1.SetHeight(camera1.Height());
-  calibration_camera2.SetModelId(camera2.ModelId());
-  calibration_camera2.SetWidth(camera2.Width());
-  calibration_camera2.SetHeight(camera2.Height());
+  calibration_camera1.model_id = camera1.model_id;
+  calibration_camera1.width = camera1.width;
+  calibration_camera1.height = camera1.height;
+  calibration_camera2.model_id = camera2.model_id;
+  calibration_camera2.width = camera2.width;
+  calibration_camera2.height = camera2.height;
 
   stereo_calibration::CalibrateStereoCameras(object_points, image_points1, image_points2, calibration_camera1,
                                              calibration_camera2, false, false, estimated_pose, absolute_poses);
 
   // Zero noise should be very close to GT
-  BOOST_TEST(ElementWiseClose(calibration_camera1.Params(), camera1.Params(), 0.0001));
-  BOOST_TEST(ElementWiseClose(calibration_camera2.Params(), camera2.Params(), 0.0001));
+  BOOST_TEST(ElementWiseClose(calibration_camera1.params, camera1.params, 0.0001));
+  BOOST_TEST(ElementWiseClose(calibration_camera2.params, camera2.params, 0.0001));
   BOOST_TEST(ElementWiseClose(estimated_pose.ToMatrix(), relative_pose.ToMatrix(), 0.0001));
 }
 
@@ -137,13 +138,13 @@ BOOST_DATA_TEST_CASE(StereoCalibration_PoseOnly, boost::unit_test::data::make(st
 }
 
 std::vector<CameraTestData> std_dev_models = {
-    {colmap::SimplePinholeCameraModel::kModelId, {1300, 600, 500}},
-    {colmap::PinholeCameraModel::kModelId, {1300, 1300, 600, 500}},
-    {colmap::SimpleRadialCameraModel::kModelId, {1300, 600, 500, 0}},
-    {colmap::RadialCameraModel::kModelId, {1300, 600, 500, 0, 0}},
-    {colmap::OpenCVCameraModel::kModelId, {1300, 1300, 600, 500, 0, 0, 0, 0}},
-    {colmap::FullOpenCVCameraModel::kModelId, {1300, 1300, 600, 500, 0, 0, 0, 0, 0, 0, 0, 0}},
-    {colmap::OpenCVFisheyeCameraModel::kModelId, {1300, 1300, 600, 500, 0, 0, 0, 0}},
+    {colmap::SimplePinholeCameraModel::model_id, {1300, 600, 500}},
+    {colmap::PinholeCameraModel::model_id, {1300, 1300, 600, 500}},
+    {colmap::SimpleRadialCameraModel::model_id, {1300, 600, 500, 0}},
+    {colmap::RadialCameraModel::model_id, {1300, 600, 500, 0, 0}},
+    {colmap::OpenCVCameraModel::model_id, {1300, 1300, 600, 500, 0, 0, 0, 0}},
+    {colmap::FullOpenCVCameraModel::model_id, {1300, 1300, 600, 500, 0, 0, 0, 0, 0, 0, 0, 0}},
+    {colmap::OpenCVFisheyeCameraModel::model_id, {1300, 1300, 600, 500, 0, 0, 0, 0}},
 };
 BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength_Stereo, boost::unit_test::data::make(std_dev_models), model) {
   colmap::Camera camera1;
@@ -157,12 +158,12 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength_Stereo, boost::unit_
   colmap::Rigid3d estimated_pose;
   std::vector<colmap::Rigid3d> absolute_poses;
   SetupData(camera1, camera2, image_points1, image_points2, object_points, relative_pose, model);
-  calibration_camera1.SetModelId(camera1.ModelId());
-  calibration_camera1.SetWidth(camera1.Width());
-  calibration_camera1.SetHeight(camera1.Height());
-  calibration_camera2.SetModelId(camera2.ModelId());
-  calibration_camera2.SetWidth(camera2.Width());
-  calibration_camera2.SetHeight(camera2.Height());
+  calibration_camera1.model_id = camera1.model_id;
+  calibration_camera1.width = camera1.width;
+  calibration_camera1.height = camera1.height;
+  calibration_camera2.model_id = camera2.model_id;
+  calibration_camera2.width = camera2.width;
+  calibration_camera2.height = camera2.height;
 
   std::vector<double> intrinsics1, intrinsics2, extrinsics1, extrinsics2;
   stereo_calibration::StereoStdDeviations std_devs;

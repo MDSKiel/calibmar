@@ -27,14 +27,14 @@ namespace calibmar {
     }
     colmap::Camera& camera = calibration.Camera();
 
-    if (options_.use_intrinsics_guess && camera.ModelId() == colmap::kInvalidCameraModelId) {
+    if (options_.use_intrinsics_guess && camera.model_id == colmap::CameraModelId::kInvalid) {
       throw std::runtime_error("Intrinsics guess specified, but camera not initialized.");
     }
 
     if (!options_.use_intrinsics_guess) {
-      camera.SetWidth(options_.image_size.first);
-      camera.SetHeight(options_.image_size.second);
-      camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
+      camera.width = options_.image_size.first;
+      camera.height = options_.image_size.second;
+      camera.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
     }
 
     std::vector<std::vector<Eigen::Vector2d>> pointSets2D;

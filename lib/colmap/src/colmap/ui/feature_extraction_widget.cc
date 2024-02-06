@@ -261,7 +261,8 @@ QGroupBox* FeatureExtractionWidget::CreateCameraRefracModelBox() {
   camera_refrac_model_cb_ = new QComboBox(this);
 
   camera_refrac_model_cb_->addItem(QString::fromStdString("NONE"));
-  camera_refrac_model_ids_.push_back(kInvalidRefractiveCameraModelId);
+  camera_refrac_model_ids_.push_back(
+      static_cast<int>(CameraRefracModelId::kInvalid));
 #define CAMERA_REFRAC_MODEL_CASE(CameraRefracModel)                    \
   camera_refrac_model_cb_->addItem(QString::fromStdString(             \
       CameraRefracModelIdToName(CameraRefracModel::refrac_model_id))); \
@@ -311,10 +312,10 @@ void FeatureExtractionWidget::hideEvent(QHideEvent* event) {
 }
 
 void FeatureExtractionWidget::ReadOptions() {
-  const auto camera_code =
+  const CameraModelId model_id =
       CameraModelNameToId(options_->image_reader->camera_model);
   for (size_t i = 0; i < camera_model_ids_.size(); ++i) {
-    if (camera_model_ids_[i] == camera_code) {
+    if (camera_model_ids_[i] == static_cast<int>(model_id)) {
       SelectCameraModel(i);
       camera_model_cb_->setCurrentIndex(i);
       break;
@@ -325,20 +326,33 @@ void FeatureExtractionWidget::ReadOptions() {
       options_->image_reader->single_camera_per_folder);
   camera_params_text_->setText(
       QString::fromStdString(options_->image_reader->camera_params));
+
+  const CameraRefracModelId refrac_model_id =
+      CameraRefracModelNameToId(options_->image_reader->camera_refrac_model);
+  for (size_t i = 0; i < camera_refrac_model_ids_.size(); ++i) {
+    if (camera_refrac_model_ids_[i] == static_cast<int>(refrac_model_id)) {
+      SelectCameraRefracModel(i);
+      camera_refrac_model_cb_->setCurrentIndex(i);
+      break;
+    }
+  }
+  camera_refrac_params_text_->setText(
+      QString::fromStdString(options_->image_reader->camera_refrac_params));
 }
 
 void FeatureExtractionWidget::WriteOptions() {
   options_->image_reader->camera_model =
-      CameraModelIdToName(camera_model_ids_[camera_model_cb_->currentIndex()]);
+      CameraModelIdToName(static_cast<CameraModelId>(
+          camera_model_ids_[camera_model_cb_->currentIndex()]));
   options_->image_reader->single_camera = single_camera_cb_->isChecked();
   options_->image_reader->single_camera_per_folder =
       single_camera_per_folder_cb_->isChecked();
   options_->image_reader->camera_params =
       camera_params_text_->text().toUtf8().constData();
 
-  int camera_refrac_model_id =
-      camera_refrac_model_ids_[camera_refrac_model_cb_->currentIndex()];
-  if (camera_refrac_model_id != -1) {
+  CameraRefracModelId camera_refrac_model_id = static_cast<CameraRefracModelId>(
+      camera_refrac_model_ids_[camera_refrac_model_cb_->currentIndex()]);
+  if (camera_refrac_model_id != CameraRefracModelId::kInvalid) {
     options_->image_reader->camera_refrac_model =
         CameraRefracModelIdToName(camera_refrac_model_id);
     options_->image_reader->camera_refrac_params =
@@ -350,14 +364,17 @@ void FeatureExtractionWidget::WriteOptions() {
 }
 
 void FeatureExtractionWidget::SelectCameraModel(const int idx) {
-  const int code = camera_model_ids_[idx];
-  camera_params_info_->setText(QString::fromStdString(StringPrintf(
-      "<small>Parameters: %s</small>", CameraModelParamsInfo(code).c_str())));
+  const CameraModelId model_id =
+      static_cast<CameraModelId>(camera_model_ids_[idx]);
+  camera_params_info_->setText(QString::fromStdString(
+      StringPrintf("<small>Parameters: %s</small>",
+                   CameraModelParamsInfo(model_id).c_str())));
 }
 
 void FeatureExtractionWidget::SelectCameraRefracModel(const int idx) {
-  const int code = camera_refrac_model_ids_[idx];
-  if (code != kInvalidRefractiveCameraModelId) {
+  const CameraRefracModelId code =
+      static_cast<CameraRefracModelId>(camera_refrac_model_ids_[idx]);
+  if (code != CameraRefracModelId::kInvalid) {
     camera_refrac_params_info_->setText(QString::fromStdString(
         StringPrintf("<small>Parameters: %s</small>",
                      CameraRefracModelParamsInfo(code).c_str())));
@@ -413,7 +430,7 @@ void FeatureExtractionWidget::Extract() {
 
     const std::vector<double> camera_refrac_params =
         CSVToVector<double>(options_->image_reader->camera_refrac_params);
-    const int camera_refrac_model_id =
+    const CameraRefracModelId camera_refrac_model_id =
         CameraRefracModelNameToId(camera_refrac_model_code);
     if (!CameraRefracModelVerifyParams(camera_refrac_model_id,
                                        camera_refrac_params)) {

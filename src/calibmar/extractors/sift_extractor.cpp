@@ -2,6 +2,8 @@
 #include <colmap/feature/sift.h>
 #include <opencv2/imgproc.hpp>
 
+#include <FreeImage.h>
+
 namespace calibmar {
 
   SiftFeatureExtractor::SiftFeatureExtractor(const Options& options) : options_(options) {

@@ -79,9 +79,9 @@ namespace {
     }
 
     if (options.housing_calibration.has_value()) {
-      calibration.Camera().SetRefracModelIdFromName(
+      calibration.Camera().refrac_model_id = colmap::CameraRefracModelNameToId(
           calibmar::HousingInterface::HousingInterfaces().at(options.housing_calibration.value().first).model_name);
-      calibration.Camera().SetRefracParams(options.housing_calibration.value().second);
+      calibration.Camera().refrac_params = options.housing_calibration.value().second;
       calibrator_options.enable_refraction = true;
     }
 

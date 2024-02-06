@@ -39,9 +39,12 @@ namespace calibmar {
       stream << "# " << camera.ParamsInfo() << std::endl;
       // parameters
       stream << "parameters: [";
-      const std::vector<double>& params = camera.Params();
-      std::copy(params.begin(), params.end() - 1, std::ostream_iterator<double>(stream, ", "));
-      stream << *(params.end() - 1);
+      if (camera.params.size() > 0) {
+        const std::vector<double>& params = camera.params;
+        std::copy(params.begin(), params.end() - 1, std::ostream_iterator<double>(stream, ", "));
+        stream << *(params.end() - 1);
+      }
+
       stream << "]" << std::endl;
       // std dev parameters
       const std::vector<double>& intrinsics_std_dev = calibration.IntrinsicsStdDeviations();
@@ -60,7 +63,7 @@ namespace calibmar {
       }
       stream << "non_svp_parameters: [";
       if (camera.IsCameraRefractive()) {
-        const std::vector<double>& non_svp_params = camera.RefracParams();
+        const std::vector<double>& non_svp_params = camera.refrac_params;
         std::copy(non_svp_params.begin(), non_svp_params.end() - 1, std::ostream_iterator<double>(stream, ", "));
         stream << *(non_svp_params.end() - 1);
       }
@@ -73,8 +76,8 @@ namespace calibmar {
         stream << *(housing_std_dev.end() - 1) << std::endl;
       }
       // width & height
-      stream << "width: " << camera.Width() << std::endl;
-      stream << "height: " << camera.Height() << std::endl;
+      stream << "width: " << camera.width << std::endl;
+      stream << "height: " << camera.height << std::endl;
       // overall RMS
       stream << "# overall_rms: " << calibration.CalibrationRms() << std::endl;
       // target
@@ -84,7 +87,8 @@ namespace calibmar {
       if (calibration.CameraToWorldStereo().has_value()) {
         Eigen::IOFormat yaml_format(Eigen::StreamPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", "[", "]");
         const colmap::Rigid3d& pose = calibration.CameraToWorldStereo().value();
-        stream << "\n\n# stereo pose (camera to world, camera 3D point X_C can be transformed to 3D world point X_W by X_W = cam_to_world_rotation * X_C + cam_to_world_translation)";
+        stream << "\n\n# stereo pose (camera to world, camera 3D point X_C can be transformed to 3D world point X_W by X_W = "
+                  "cam_to_world_rotation * X_C + cam_to_world_translation)";
         stream << "\ncam_to_world_rotation_rowmajor: " << pose.rotation.normalized().toRotationMatrix().format(yaml_format);
         stream << "\ncam_to_world_translation: " << pose.translation.format(yaml_format);
         stream << "\n# (distance to origin: " << pose.translation.norm() << ")";
@@ -110,7 +114,7 @@ namespace calibmar {
       stream << std::endl << std::endl;
       // width & height
       stream << "Width & Height:" << std::endl;
-      stream << camera.Width() << " " << camera.Height();
+      stream << camera.width << " " << camera.height;
       stream << std::endl << std::endl;
       // camera matrix
       stream << "Camera Matrix:" << std::endl << camera.CalibrationMatrix() << std::endl << std::endl;
@@ -122,7 +126,7 @@ namespace calibmar {
       }
       stream << std::endl;
       // parameter values
-      const std::vector<double>& params = camera.Params();
+      const std::vector<double>& params = camera.params;
       stream << std::left << std::setw(first_column_width) << std::setfill(' ') << "Values:";
       for (auto& value : params) {
         stream << std::left << std::setw(field_width) << std::setfill(' ') << value;
@@ -147,7 +151,7 @@ namespace calibmar {
         }
         stream << std::endl;
         // housing values
-        const std::vector<double>& housing_params = camera.RefracParams();
+        const std::vector<double>& housing_params = camera.refrac_params;
         stream << std::left << std::setw(first_column_width) << std::setfill(' ') << "Values:";
         for (auto& value : housing_params) {
           stream << std::left << std::setw(field_width) << std::setfill(' ') << value;

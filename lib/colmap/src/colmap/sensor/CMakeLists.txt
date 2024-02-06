@@ -42,17 +42,19 @@ COLMAP_ADD_LIBRARY(
     PUBLIC_LINK_LIBS
         Ceres::ceres
         Eigen3::Eigen
-        freeimage::FreeImage
     PRIVATE_LINK_LIBS
         colmap_util
         colmap_math
         colmap_vlfeat
+        freeimage::FreeImage
 )
 
 COLMAP_ADD_TEST(
     NAME bitmap_test
     SRCS bitmap_test.cc
-    LINK_LIBS colmap_sensor
+    LINK_LIBS
+        colmap_sensor
+        freeimage::FreeImage
 )
 COLMAP_ADD_TEST( 
     NAME database_test

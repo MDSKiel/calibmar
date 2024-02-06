@@ -32,8 +32,7 @@ cmake_minimum_required(VERSION 3.10)
 
 project(COLMAP LANGUAGES C CXX)
 
-set(COLMAP_VERSION "3.9")
-set(COLMAP_VERSION_NUMBER "3900")
+set(COLMAP_VERSION "3.10-dev")
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -112,6 +111,8 @@ if(IS_MSVC)
     add_definitions("-DGL_GLEXT_PROTOTYPES")
     add_definitions("-DNOMINMAX")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+    # Disable warning: 'initializing': conversion from 'X' to 'Y', possible loss of data
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4244 /wd4267 /wd4305")
     # Enable object level parallel builds in Visual Studio.
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /MP")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
@@ -319,10 +320,9 @@ add_library(colmap INTERFACE)
 target_link_libraries(colmap INTERFACE ${COLMAP_EXPORT_LIBS})
 set(INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
 target_include_directories(
-    colmap INTERFACE 
-    $<INSTALL_INTERFACE:${INSTALL_INCLUDE_DIR}>
+    colmap INTERFACE $<INSTALL_INTERFACE:${INSTALL_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>)
-    
+
 install(
     TARGETS colmap ${COLMAP_EXPORT_LIBS}
     EXPORT colmap-targets

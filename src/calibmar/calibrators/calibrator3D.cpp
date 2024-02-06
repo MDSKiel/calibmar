@@ -38,11 +38,11 @@ namespace calibmar {
       throw std::runtime_error("No images to calibrate from.");
     }
 
-    if(options_.enable_refraction){
-      if(!options_.use_intrinsics_guess){
+    if (options_.enable_refraction) {
+      if (!options_.use_intrinsics_guess) {
         throw std::runtime_error("Housing calibration requires an intrinsic guess!");
       }
-      if(!calibration.Camera().IsCameraRefractive()){
+      if (!calibration.Camera().IsCameraRefractive()) {
         throw std::runtime_error("Housing calibration requested but refractive parameters not initialized!");
       }
     }
@@ -54,8 +54,9 @@ namespace calibmar {
 
       // for colmap reconstruction camera parameters must always be set to some relatively sane value
       double focal_length = 1.2 * std::max(options_.image_size.first, options_.image_size.second);
-      calibration.Camera().InitializeWithName(CameraModel::CameraModels().at(options_.camera_model).model_name, focal_length,
-                                              options_.image_size.first, options_.image_size.second);
+      calibration.SetCamera(colmap::Camera::CreateFromModelName(
+          colmap::kInvalidCameraId, CameraModel::CameraModels().at(options_.camera_model).model_name, focal_length,
+          options_.image_size.first, options_.image_size.second));
 
       if (options_.contains_arucos) {
         // if arucos were used and no intrinsics given, the aruco corners are used in a first 2D-3D calibration from aruco
@@ -70,9 +71,9 @@ namespace calibmar {
         // estimate always on pinhole. The assumption is, that the aruco marker corners are always relatively close together in
         // the image where the distortion will not have a big effect on the 2D obsevations (and therefore also be ill suited to
         // determine distortion).
-        colmap::Camera init_camera;
-        init_camera.InitializeWithName(CameraModel::CameraModels().at(CameraModelType::SimplePinholeCameraModel).model_name,
-                                       focal_length, options_.image_size.first, options_.image_size.second);
+        colmap::Camera init_camera = colmap::Camera::CreateFromModelName(
+            colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::SimplePinholeCameraModel).model_name,
+            focal_length, options_.image_size.first, options_.image_size.second);
         opencv_calibration::CalibrateCamera(object_points, image_points, init_camera, true, false, rotation_vecs,
                                             translation_vecs);
 

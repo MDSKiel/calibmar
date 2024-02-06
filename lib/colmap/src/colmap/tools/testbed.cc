@@ -1,4 +1,5 @@
 #include "colmap/estimators/cost_functions.h"
+#include "colmap/geometry/pose.h"
 #include "colmap/geometry/rigid3.h"
 #include "colmap/math/random.h"
 #include "colmap/scene/database_cache.h"
@@ -122,53 +123,6 @@ int main(int argc, char* argv[]) {
   }
 
   if (false) {
-    Camera camera;
-    camera.SetWidth(2048);
-    camera.SetHeight(1536);
-    camera.SetModelIdFromName("PINHOLE");
-    std::vector<double> params = {
-        1300.900000, 1300.900000, 1024.000000, 768.000000};
-    camera.SetParams(params);
-
-    // Flatport setup.
-    camera.SetRefracModelIdFromName("FLATPORT");
-    Eigen::Vector3d int_normal;
-    int_normal[0] = RandomUniformReal(-0.3, 0.3);
-    int_normal[1] = RandomUniformReal(-0.3, 0.3);
-    int_normal[2] = RandomUniformReal(0.7, 1.3);
-
-    int_normal.normalize();
-
-    // int_normal = Eigen::Vector3d::UnitZ();
-
-    std::vector<double> flatport_params = {int_normal[0],
-                                           int_normal[1],
-                                           int_normal[2],
-                                           0.01,
-                                           0.014,
-                                           1.0,
-                                           1.52,
-                                           1.334};
-    camera.SetRefracParams(flatport_params);
-
-    for (int i = 0; i < 10; i++) {
-      const double x = RandomUniformReal(
-          0.5, 10.0 /*static_cast<double>(camera.Width()) - 0.5*/);
-      const double y = RandomUniformReal(
-          0.5, 10.0 /*static_cast<double>(camera.Height()) - 0.5*/);
-
-      Eigen::Vector2d point2D(x, y);
-      Ray3D ray_refrac = camera.CamFromImgRefrac(point2D);
-      const Eigen::Vector3d virtual_cam_center =
-          camera.VirtualCameraCenter(ray_refrac);
-
-      std::cout << "point: " << point2D.transpose()
-                << ", virtual cam center: " << virtual_cam_center.transpose()
-                << std::endl;
-    }
-  }
-
-  if (false) {
     Eigen::Vector3d int_normal;
     int_normal[0] = RandomUniformReal(-0.3, 0.3);
     int_normal[1] = RandomUniformReal(-0.3, 0.3);
@@ -213,9 +167,6 @@ int main(int argc, char* argv[]) {
   }
 
   if (false) {
-    std::cout << std::numeric_limits<double>::epsilon() << std::endl;
-  }
-  if (true) {
     // Check projection at the image boundary.
     // Setup parameters
     const size_t width = 1000;
@@ -248,13 +199,13 @@ int main(int argc, char* argv[]) {
                                            1.33};
 
     colmap::Camera camera;
-    camera.SetWidth(width);
-    camera.SetHeight(height);
-    camera.SetModelIdFromName("SIMPLE_PINHOLE");
-    camera.SetParams(cam_params);
+    camera.width = width;
+    camera.height = height;
+    camera.model_id = CameraModelId::kSimplePinhole;
+    camera.params = cam_params;
 
-    camera.SetRefracModelIdFromName("FLATPORT");
-    camera.SetRefracParams(flatport_params);
+    camera.refrac_model_id = CameraRefracModelId::kFlatPort;
+    camera.refrac_params = flatport_params;
 
     Eigen::Vector2d point1(556.0, 798.0);
     double d1 = 1.75;
@@ -263,7 +214,8 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Point3D cam1: " << point3D_cam1.transpose() << std::endl;
 
-    Eigen::Vector2d proj1 = camera.ImgFromCamRefrac(Eigen::Vector3d(-0.3, -0.3, 0.5));
+    Eigen::Vector2d proj1 =
+        camera.ImgFromCamRefrac(Eigen::Vector3d(-0.3, -0.3, 0.5));
 
     Eigen::Vector2d point2(0.0, 789.235);
     double d2 = 1.75;
@@ -283,18 +235,17 @@ int main(int argc, char* argv[]) {
   if (false) {
     SetPRNGSeed(time(NULL));
     Camera camera;
-    camera.SetWidth(2048);
-    camera.SetHeight(1536);
-    camera.SetModelIdFromName("PINHOLE");
-    std::vector<double> params = {
-        1300.900000, 1300.900000, 1024.000000, 768.000000};
-    camera.SetParams(params);
+    camera.width = 2048;
+    camera.height = 1536;
+    camera.model_id = CameraModelId::kPinhole;
+    ;
+    camera.params = {1300.900000, 1300.900000, 1024.000000, 768.000000};
 
     bool flatport = true;
 
     if (flatport) {
       // Flatport setup.
-      camera.SetRefracModelIdFromName("FLATPORT");
+      camera.refrac_model_id = CameraRefracModelId::kFlatPort;
       Eigen::Vector3d int_normal;
       int_normal[0] = RandomUniformReal(-0.3, 0.3);
       int_normal[1] = RandomUniformReal(-0.3, 0.3);
@@ -310,10 +261,10 @@ int main(int argc, char* argv[]) {
                                                 1.0,
                                                 1.52,
                                                 1.334};
-      camera.SetRefracParams(flatport_params_gt);
+      camera.refrac_params = flatport_params_gt;
     } else {
       // Domeport setup.
-      camera.SetRefracModelIdFromName("DOMEPORT");
+      camera.refrac_model_id = CameraRefracModelId::kDomePort;
       Eigen::Vector3d decentering;
       decentering[0] = RandomUniformReal(-0.03, 0.03);
       decentering[1] = RandomUniformReal(-0.001, 0.001);
@@ -330,7 +281,7 @@ int main(int argc, char* argv[]) {
                                                 1.0,
                                                 1.52,
                                                 1.334};
-      camera.SetRefracParams(domeport_params_gt);
+      camera.refrac_params = domeport_params_gt;
     }
 
     std::cout << "GT refrac params: " << std::endl;
@@ -352,9 +303,9 @@ int main(int argc, char* argv[]) {
     for (size_t i = 0; i < num_points; i++) {
       Eigen::Vector2d point2D_refrac;
       point2D_refrac.x() =
-          RandomUniformReal(0.5, static_cast<double>(camera.Width()) - 0.5);
+          RandomUniformReal(0.5, static_cast<double>(camera.width) - 0.5);
       point2D_refrac.y() =
-          RandomUniformReal(0.5, static_cast<double>(camera.Height()) - 0.5);
+          RandomUniformReal(0.5, static_cast<double>(camera.height) - 0.5);
 
       const double depth = RandomUniformReal(0.5, 10.0);
       const Eigen::Vector3d point3D_local =
@@ -377,18 +328,18 @@ int main(int argc, char* argv[]) {
     ceres::Problem problem;
 
     if (flatport) {
-      std::vector<double> flatport_params = camera.RefracParams();
+      std::vector<double> flatport_params = camera.refrac_params;
       flatport_params[0] = 0.0;
       flatport_params[1] = 0.0;
       flatport_params[2] = 1.0;
       flatport_params[3] = 0.005;
-      camera.SetRefracParams(flatport_params);
+      camera.refrac_params = flatport_params;
     } else {
-      std::vector<double> domeport_params = camera.RefracParams();
+      std::vector<double> domeport_params = camera.refrac_params;
       domeport_params[0] = 0.00;
       domeport_params[1] = 0.00;
       domeport_params[2] = 0.002;
-      camera.SetRefracParams(domeport_params);
+      camera.refrac_params = domeport_params;
     }
 
     std::cout << "Initial refrac params: " << std::endl;
@@ -411,14 +362,14 @@ int main(int argc, char* argv[]) {
       problem.AddResidualBlock(cost_function,
                                nullptr,
                                point3D.data(),
-                               camera.ParamsData(),
-                               camera.RefracParamsData());
+                               camera.params.data(),
+                               camera.refrac_params.data());
       problem.SetParameterBlockConstant(point3D.data());
     }
 
-    problem.SetParameterBlockConstant(camera.ParamsData());
+    problem.SetParameterBlockConstant(camera.params.data());
 
-    std::vector<int> refrac_params_idxs(camera.NumRefracParams());
+    std::vector<int> refrac_params_idxs(camera.refrac_params.size());
     std::iota(refrac_params_idxs.begin(), refrac_params_idxs.end(), 0);
 
     const std::vector<size_t>& optimizable_refrac_params_idxs =
@@ -436,18 +387,18 @@ int main(int argc, char* argv[]) {
       }
       ceres::SphereManifold<3> sphere_manifold = ceres::SphereManifold<3>();
       ceres::SubsetManifold subset_manifold = ceres::SubsetManifold(
-          camera.NumRefracParams() - 3, const_params_idxs);
+          camera.refrac_params.size() - 3, const_params_idxs);
       ceres::ProductManifold<ceres::SphereManifold<3>, ceres::SubsetManifold>*
           product_manifold =
               new ceres::ProductManifold<ceres::SphereManifold<3>,
                                          ceres::SubsetManifold>(
                   sphere_manifold, subset_manifold);
-      problem.SetManifold(camera.RefracParamsData(), product_manifold);
+      problem.SetManifold(camera.refrac_params.data(), product_manifold);
     } else {
-      SetSubsetManifold(static_cast<int>(camera.NumRefracParams()),
+      SetSubsetManifold(static_cast<int>(camera.refrac_params.size()),
                         const_params_idxs,
                         &problem,
-                        camera.RefracParamsData());
+                        camera.refrac_params.data());
     }
     ceres::Solver::Options solver_options;
     ceres::Solver::Summary summary;
@@ -463,34 +414,31 @@ int main(int argc, char* argv[]) {
     std::cout << camera.RefracParamsToString() << std::endl;
   }
 
-  if(false){
-    // Given a camera setup, check for total reflection.
-    Camera camera;
-    camera.SetWidth(1113);
-    camera.SetHeight(835);
-    camera.SetModelIdFromName("PINHOLE");
-    std::vector<double> params = {
-        100.476237, 100.476237, 556.500000, 417.500000};
-    camera.SetParams(params);
+  if (true) {
+    Eigen::Vector3d a;
+    a << 0.0, 0.0, 1.0;
 
-    camera.SetRefracModelIdFromName("FLATPORT");
-    std::vector<double> refrac_params = {0.000000, 0.000000, 1.000000, 0.050000, 0.007000, 1.000000, 1.520000, 1.330000};
-    camera.SetRefracParams(refrac_params);
+    Eigen::Matrix3d Rx =
+        Eigen::AngleAxisd(DegToRad(5.0), Eigen::Vector3d::UnitX())
+            .toRotationMatrix();
+    Eigen::Matrix3d Ry =
+        Eigen::AngleAxisd(DegToRad(5.0), Eigen::Vector3d::UnitY())
+            .toRotationMatrix();
 
-    Eigen::Vector2d p1(0.0, 0.0);
-    Eigen::Vector2d p2(static_cast<double>(camera.Width()) + 2000.0, camera.Height());
+    a = Ry * Rx * a;
+    a.normalize();
 
-    //Ray3D ray1 = camera.CamFromImgRefrac(p1);
-    Ray3D ray2 = camera.CamFromImgRefrac(p2);
+    double cos_theta = a.dot(Eigen::Vector3d::UnitZ());
+    if (cos_theta < 0) {
+      cos_theta = -cos_theta;
+    }
+    if (cos_theta > 1) {
+      cos_theta = 1.0;
+    }
+    double angular_diff = RadToDeg(acos(cos_theta));
 
-    //std::cout << "ray1: " << ray1.dir.transpose() << std::endl;
-    std::cout << "ray2: " << ray2.dir.transpose() << std::endl;
-  }
-
-  if(false){
-    Eigen::Quaterniond rot(1.2, 0.1, 0.2, 0.3);
-
-    std::cout << rot.coeffs() << std::endl;
+    LOG(INFO) << "a: " << a.transpose();
+    LOG(INFO) << "angle: " << angular_diff;
   }
 
   return true;

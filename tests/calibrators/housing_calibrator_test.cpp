@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationFlat) {
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> actual_params = calibration.Camera().RefracParams();
+  std::vector<double> actual_params = calibration.Camera().refrac_params;
   double angle_offset_interface =
       std::acos(normal.dot(Eigen::Vector3d(actual_params[0], actual_params[1], actual_params[2]))) * (180 / M_PI);
   BOOST_TEST(abs(angle_offset_interface) < 0.04);
@@ -56,7 +56,7 @@ BOOST_AUTO_TEST_CASE(BasicHousingCalibrationDome) {
 
   calibrator.Calibrate(calibration);
 
-  std::vector<double> params = calibration.Camera().RefracParams();
+  std::vector<double> params = calibration.Camera().refrac_params;
   std::vector<double> expected_params = {7.3261e-10, 7.49404e-09, -0.03, 0.0501, 0.007, 1.003, 1.473, 1.333};
   double tolerance = 0.001;
   BOOST_TEST(abs(params[0] - expected_params[0]) < tolerance);
@@ -120,12 +120,13 @@ namespace {
     std::normal_distribution<double> error_dist(0, 0.125);
 
     colmap::Camera camera;
-    camera.SetWidth(image_size.first);
-    camera.SetHeight(image_size.second);
-    camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(camera_model).model_name);
-    camera.SetRefracModelIdFromName(calibmar::HousingInterface::HousingInterfaces().at(housing_interface).model_name);
-    camera.SetParams(camera_params);
-    camera.SetRefracParams(housing_params);
+    camera.width = image_size.first;
+    camera.height = image_size.second;
+    camera.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(camera_model).model_name);
+    camera.refrac_model_id =
+        colmap::CameraRefracModelNameToId(calibmar::HousingInterface::HousingInterfaces().at(housing_interface).model_name);
+    camera.params = camera_params;
+    camera.refrac_params = housing_params;
 
     for (auto& point3D : points3D) {
       calibration.AddPoint3D(point3D);
@@ -148,7 +149,7 @@ namespace {
         noise_dir.normalize();
         image_point += noise_dir * error_dist(generator);
 
-        if (image_point.x() < 0 || image_point.x() > camera.Width() || image_point.y() < 0 || image_point.y() > camera.Height() ||
+        if (image_point.x() < 0 || image_point.x() > camera.width || image_point.y() < 0 || image_point.y() > camera.height ||
             std::isnan(image_point.x()) || std::isnan(image_point.y())) {
           continue;  // ignore points which did not project into the image
         }

@@ -35,10 +35,10 @@ namespace {
     std::normal_distribution<double> error_dist(0, 0.125);
 
     colmap::Camera camera;
-    camera.SetWidth(image_size.first);
-    camera.SetHeight(image_size.second);
-    camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(camera_model).model_name);
-    camera.SetParams(camera_params);
+    camera.width = image_size.first;
+    camera.height = image_size.second;
+    camera.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(camera_model).model_name);
+    camera.params = camera_params;
 
     std::vector<Eigen::Vector3d> points3D = CreatePoints3D(10, 11, 0.02);
 
@@ -93,8 +93,8 @@ BOOST_AUTO_TEST_CASE(BasicStereoCalibration) {
 
   calibrator.Calibrate(calibration1, calibration2);
 
-  std::vector<double> actual_params1 = calibration1.Camera().Params();
-  std::vector<double> actual_params2 = calibration2.Camera().Params();
+  std::vector<double> actual_params1 = calibration1.Camera().params;
+  std::vector<double> actual_params2 = calibration2.Camera().params;
   colmap::Rigid3d actual_relative_pose = calibration2.CameraToWorldStereo().value();
   double tolerance = 0.3;
   BOOST_TEST(abs(actual_params1[0] - expected_params[0]) < tolerance);

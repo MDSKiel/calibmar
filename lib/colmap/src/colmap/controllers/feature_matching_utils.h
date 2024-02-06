@@ -53,7 +53,9 @@ struct FeatureMatcherData {
 // Cache for feature matching to minimize database access during matching.
 class FeatureMatcherCache {
  public:
-  FeatureMatcherCache(size_t cache_size, const Database* database);
+  FeatureMatcherCache(size_t cache_size,
+                      const Database* database,
+                      bool enable_refraction = false);
 
   void Setup();
 
@@ -80,6 +82,8 @@ class FeatureMatcherCache {
   void DeleteMatches(image_t image_id1, image_t image_id2);
   void DeleteInlierMatches(image_t image_id1, image_t image_id2);
 
+  const Camera& GetBestFitCameras(camera_t camera_id) const;
+
  private:
   const size_t cache_size_;
   const Database* database_;
@@ -92,6 +96,11 @@ class FeatureMatcherCache {
       descriptors_cache_;
   std::unique_ptr<LRUCache<image_t, bool>> keypoints_exists_cache_;
   std::unique_ptr<LRUCache<image_t, bool>> descriptors_exists_cache_;
+
+  // If refraction is enabled, and if the camera is also refractive. We
+  // pre-compute best approximate pinhole model and cache them.
+  const bool enable_refraction_;
+  std::unordered_map<camera_t, Camera> best_fit_cameras_;
 };
 
 class FeatureMatcherWorker : public Thread {

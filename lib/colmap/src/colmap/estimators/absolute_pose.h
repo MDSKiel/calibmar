@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/types.h"
 
 #include <array>
@@ -64,8 +65,9 @@ class P3PEstimator {
   // @param points3D   3D world points as 3x3 matrix.
   //
   // @return           Most probable pose as length-1 vector of a 3x4 matrix.
-  static std::vector<M_t> Estimate(const std::vector<X_t>& points2D,
-                                   const std::vector<Y_t>& points3D);
+  static void Estimate(const std::vector<X_t>& points2D,
+                       const std::vector<Y_t>& points3D,
+                       std::vector<M_t>* models);
 
   // Calculate the squared reprojection error given a set of 2D-3D point
   // correspondences and a projection matrix.
@@ -110,8 +112,9 @@ class EPNPEstimator {
   // @param points3D   3D world points as 3x3 matrix.
   //
   // @return           Most probable pose as length-1 vector of a 3x4 matrix.
-  static std::vector<M_t> Estimate(const std::vector<X_t>& points2D,
-                                   const std::vector<Y_t>& points3D);
+  static void Estimate(const std::vector<X_t>& points2D,
+                       const std::vector<Y_t>& points3D,
+                       std::vector<M_t>* models);
 
   // Calculate the squared reprojection error given a set of 2D-3D point
   // correspondences and a projection matrix.

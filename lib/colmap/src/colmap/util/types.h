@@ -54,6 +54,8 @@ typedef unsigned __int64 uint64_t;
 // NOLINTNEXTLINE(bugprone-macro-parentheses)
 #define NON_MOVABLE(class_name) class_name(class_name&&) = delete;
 
+#include "colmap/util/eigen_alignment.h"
+
 #include <Eigen/Core>
 
 namespace Eigen {
@@ -98,6 +100,27 @@ const image_pair_t kInvalidImagePairId =
     std::numeric_limits<image_pair_t>::max();
 const point2D_t kInvalidPoint2DIdx = std::numeric_limits<point2D_t>::max();
 const point3D_t kInvalidPoint3DId = std::numeric_limits<point3D_t>::max();
+
+// Simple implementation of C++20's std::span, as Ubuntu 20.04's default GCC
+// version does not come with full C++20 and we still want to support it.
+template <typename T>
+class span {
+  T* ptr_;
+  const size_t size_;
+
+ public:
+  span(T* ptr, size_t len) noexcept : ptr_{ptr}, size_{len} {}
+
+  T& operator[](size_t i) noexcept { return ptr_[i]; }
+  T const& operator[](size_t i) const noexcept { return ptr_[i]; }
+
+  size_t size() const noexcept { return size_; }
+
+  T* begin() noexcept { return ptr_; }
+  T* end() noexcept { return ptr_ + size_; }
+  const T* begin() const noexcept { return ptr_; }
+  const T* end() const noexcept { return ptr_ + size_; }
+};
 
 }  // namespace colmap
 

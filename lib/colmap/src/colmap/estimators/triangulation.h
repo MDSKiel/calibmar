@@ -32,6 +32,7 @@
 #include "colmap/math/math.h"
 #include "colmap/optim/ransac.h"
 #include "colmap/scene/camera.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/types.h"
 
 #include <vector>
@@ -95,8 +96,9 @@ class TriangulationEstimator {
   // @param point_data        Camera poses.
   //
   // @return                  Triangulated point if successful, otherwise none.
-  std::vector<M_t> Estimate(const std::vector<X_t>& point_data,
-                            const std::vector<Y_t>& pose_data) const;
+  void Estimate(const std::vector<X_t>& point_data,
+                const std::vector<Y_t>& pose_data,
+                std::vector<M_t>* models) const;
 
   // Calculate residuals in terms of squared reprojection or angular error.
   //

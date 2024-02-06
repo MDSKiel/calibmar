@@ -40,6 +40,10 @@ class HybridMapperController : public Thread {
     // optimization.
     double pgo_smooth_multi = 2.0;
 
+    // Whether to additionally export the optimized pose graph results together
+    // with the reconstruction.
+    bool show_pgo_result = false;
+
     // Options for clustering the scene graph.
     SceneClustering::Options clustering_options;
 

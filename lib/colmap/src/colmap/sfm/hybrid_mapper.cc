@@ -78,7 +78,7 @@ std::shared_ptr<const Reconstruction> HybridMapper::GetReconstruction() const {
 void HybridMapper::PartitionScene(
     const SceneClustering::Options& clustering_options) {
   database_.Open(database_path_);
-  std::cout << "Reading images..." << std::endl;
+  LOG(INFO) << "Reading images...";
   const auto images = database_.ReadAllImages();
   image_id_to_name_.reserve(images.size());
   for (const auto& image : images) {
@@ -149,14 +149,12 @@ void HybridMapper::ReconstructClusters(const Options& options) {
   size_t total_num_images = 0;
   for (size_t i = 0; i < leaf_clusters.size(); ++i) {
     total_num_images += leaf_clusters[i]->image_ids.size();
-    std::cout << StringPrintf("  Cluster %d with %d images",
+    LOG(INFO) << StringPrintf("  Cluster %d with %d images",
                               i + 1,
-                              leaf_clusters[i]->image_ids.size())
-              << std::endl;
+                              leaf_clusters[i]->image_ids.size());
   }
 
-  std::cout << StringPrintf("Clusters have %d images", total_num_images)
-            << std::endl;
+  LOG(INFO) << StringPrintf("Clusters have %d images", total_num_images);
 
   // Determine the number of workers and threads per worker.
   const int kMaxNumThreads = -1;
@@ -250,15 +248,17 @@ void HybridMapper::ReconstructWeakArea(const Options& options) {
     weak_image_ids.insert(image_id2);
   }
 
+  std::stringstream ss;
   if (weak_image_ids.size() > 0) {
-    std::cout << "  => Identified ";
+    ss << "  => Identified ";
     for (const image_t image_id : weak_image_ids) {
-      std::cout << " " << image_id;
+      ss << " " << image_id;
     }
-    std::cout << " as weak areas, and try to revisit these areas" << std::endl;
+    ss << " as weak areas, and try to revisit these areas";
+    LOG(INFO) << ss.str();
   } else {
-    std::cout << "  => No weak area identified, continue reconstruction"
-              << std::endl;
+    ss << "  => No weak area identified, continue reconstruction";
+    LOG(INFO) << ss.str();
     return;
   }
 
@@ -266,17 +266,18 @@ void HybridMapper::ReconstructWeakArea(const Options& options) {
       FindLocalAreas(
           weak_image_ids, options.re_max_num_images, options.re_max_distance);
 
-  std::cout << "  => Searched " << weak_area_clusters.size()
-            << " clusters of images to revisit" << std::endl;
+  LOG(INFO) << "  => Searched " << weak_area_clusters.size()
+            << " clusters of images to revisit";
 
+  ss.clear();
   size_t wr_cnt = 0;
   for (const auto& weak_area : weak_area_clusters) {
-    std::cout << "Weak area " << wr_cnt << ", center image " << weak_area.first
-              << ", contains images:";
+    ss << "Weak area " << wr_cnt << ", center image " << weak_area.first
+       << ", contains images:";
     for (size_t j = 0; j < weak_area.second.size(); j++) {
-      std::cout << " " << weak_area.second[j];
+      ss << " " << weak_area.second[j];
     }
-    std::cout << std::endl;
+    LOG(INFO) << ss.str();
     wr_cnt++;
   }
 
@@ -341,12 +342,13 @@ void HybridMapper::ReconstructWeakArea(const Options& options) {
   for (const auto& recons : weak_area_reconstructions_) {
     for (size_t i = 0; i < recons->Size(); i++) {
       std::shared_ptr<const Reconstruction> recon = recons->Get(i);
-      std::cout << "WR recon: " << i << " contains images:";
+      std::stringstream ss;
+      ss << "WR recon: " << i << " contains images:";
       const std::vector<image_t>& reg_image_ids = recon->RegImageIds();
       for (const auto& image_id : reg_image_ids) {
-        std::cout << " " << image_id;
+        ss << " " << image_id;
       }
-      std::cout << std::endl;
+      LOG(INFO) << ss.str();
     }
   }
 }
@@ -414,7 +416,7 @@ void HybridMapper::GlobalPoseGraphOptim(const Options& options) {
     }
   }
 
-  std::cout << "Saving pgo rel stats to files" << std::endl;
+  LOG(INFO) << "Saving pgo rel stats to files";
   std::ofstream file("pgo_rel_stats.txt", std::ios_base::out);
 
   file << reconstruction_->Images().size() << std::endl;
@@ -480,15 +482,15 @@ void HybridMapper::GlobalPoseGraphOptim(const Options& options) {
     weak_image_ids.insert(image_id2);
   }
 
+  std::stringstream ss;
   if (weak_image_ids.size() > 0) {
-    std::cout << "  => Identified ";
+    ss << "  => Identified ";
     for (const image_t image_id : weak_image_ids) {
-      std::cout << " " << image_id;
+      ss << " " << image_id;
     }
-    std::cout
-        << " as weak images, add smooth motion constraints to these images"
-        << std::endl;
+    ss << " as weak images, add smooth motion constraints to these images";
   }
+  LOG(INFO) << ss.str();
 
   // Sort input images by their names.
   std::vector<image_t> ordered_image_ids = reg_image_ids;
@@ -561,10 +563,10 @@ void HybridMapper::GlobalPoseGraphOptim(const Options& options) {
     }
   }
 
-  std::cout << "  => Pose graph constraints:\n"
+  LOG(INFO) << "  => Pose graph constraints:\n"
             << "Relative pose: " << num_rel << "\n"
             << "Absolute pose: " << num_abs << "\n"
-            << "Smooth motion: " << num_smooth << std::endl;
+            << "Smooth motion: " << num_smooth;
   pgo_optim.Solve();
 }
 
@@ -582,16 +584,15 @@ void HybridMapper::ReconstructInlierTracks(const Options& options) {
       incremental_options_->Triangulation();
 
   const auto& points3Ds = merged_recon->Points3D();
-  std::cout << "  => Re-triangulating " << points3Ds.size() << " 3D points"
-            << std::endl;
+  LOG(INFO) << "  => Re-triangulating " << points3Ds.size() << " 3D points";
 
   for (const auto& point3D_el : points3Ds) {
-    if (point3D_el.second.Track().Length() < 2 ||
-        (point3D_el.second.Track().Length() == 2 &&
+    if (point3D_el.second.track.Length() < 2 ||
+        (point3D_el.second.track.Length() == 2 &&
          tri_options.ignore_two_view_tracks)) {
       continue;
     }
-    const Track& track = point3D_el.second.Track();
+    const Track& track = point3D_el.second.track;
     TriangulateTrack(tri_options, track);
   }
 
@@ -619,8 +620,8 @@ void HybridMapper::PrintViewGraphStats() const {
   for (const auto& image : num_registrations_) {
     if (image.second == 0) {
       un_registered_image_ids.insert(image.first);
-      std::cout << "Image " << image.first
-                << " is not registered in any clusters" << std::endl;
+      LOG(INFO) << "Image " << image.first
+                << " is not registered in any clusters";
     }
   }
 
@@ -642,9 +643,9 @@ void HybridMapper::PrintViewGraphStats() const {
     }
     image_t image_id1, image_id2;
     Database::PairIdToImagePair(image_pair.first, &image_id1, &image_id2);
-    std::cout << "Image pair: " << image_id1 << " -- " << image_id2
+    LOG(INFO) << "Image pair: " << image_id1 << " -- " << image_id2
               << " is weak, " << num_shared_observations << " / "
-              << image_pair.second << std::endl;
+              << image_pair.second;
   }
 
   size_t num_valid_pairs = 0;
@@ -666,25 +667,21 @@ void HybridMapper::PrintViewGraphStats() const {
     }
   }
 
-  std::cout << "Number of un-registered images: "
-            << un_registered_image_ids.size() << std::endl;
+  LOG(INFO) << "Number of un-registered images: "
+            << un_registered_image_ids.size();
 
-  std::cout << "Number of total image pairs: " << image_pair_stats_.size()
-            << std::endl;
-  std::cout << "Number of total upgraded image pairs: "
-            << upgraded_image_pair_stats_.size() << std::endl;
-  std::cout << "Number of total valid image pairs: " << num_valid_pairs
-            << std::endl;
-  std::cout << "Number of total valid upgraded image pairs: " << num_tri_pairs
-            << std::endl;
-  std::cout << "View-graph completeness ratio: "
+  LOG(INFO) << "Number of total image pairs: " << image_pair_stats_.size();
+  LOG(INFO) << "Number of total upgraded image pairs: "
+            << upgraded_image_pair_stats_.size();
+  LOG(INFO) << "Number of total valid image pairs: " << num_valid_pairs;
+  LOG(INFO) << "Number of total valid upgraded image pairs: " << num_tri_pairs;
+  LOG(INFO) << "View-graph completeness ratio: "
             << static_cast<double>(upgraded_image_pair_stats_.size()) /
-                   static_cast<double>(image_pair_stats_.size())
-            << std::endl;
+                   static_cast<double>(image_pair_stats_.size());
 
   // Temporary thing:
   // Save view graph stats in a file.
-  std::cout << "Saving view graph stats to files" << std::endl;
+  LOG(INFO) << "Saving view graph stats to files";
   std::ofstream file("image_pair_stats.txt", std::ios_base::out);
 
   file << reconstruction_->Images().size() << std::endl;
@@ -847,9 +844,9 @@ void HybridMapper::UpdateSubReconstructions() {
         if (point2D.HasPoint3D() &&
             updated_point3D_ids.count(point2D.point3D_id) == 0) {
           Point3D& point3D = recon->Point3D(point2D.point3D_id);
-          Eigen::Vector3d xyz_local = cam_from_world_old * point3D.XYZ();
+          Eigen::Vector3d xyz_local = cam_from_world_old * point3D.xyz;
           Eigen::Vector3d xyz_new = world_from_cam_new * xyz_local;
-          point3D.SetXYZ(xyz_new);
+          point3D.xyz = xyz_new;
           updated_point3D_ids.insert(point2D.point3D_id);
         }
       }
@@ -904,13 +901,11 @@ void HybridMapper::MergeClusters(const SceneClustering::Cluster& cluster) {
                                  *reconstructions[j],
                                  reconstructions[i].get(),
                                  false)) {
-          std::cout
-              << StringPrintf(
-                     " => Merged clusters with %d and %d images into %d images",
-                     num_reg_images_i,
-                     num_reg_images_j,
-                     reconstructions[i]->NumRegImages())
-              << std::endl;
+          LOG(INFO) << StringPrintf(
+              " => Merged clusters with %d and %d images into %d images",
+              num_reg_images_i,
+              num_reg_images_j,
+              reconstructions[i]->NumRegImages());
           reconstructions.erase(reconstructions.begin() + j);
           merge_success = true;
           break;
@@ -946,11 +941,11 @@ void HybridMapper::MergeClusters() {
   // similarity transformation to align them when merging.
   UpdateSubReconstructions();
 
-  std::cout << " => Merging clusters" << std::endl;
+  LOG(INFO) << " => Merging clusters";
 
   MergeClusters(*scene_clustering_->GetRootCluster());
 
-  std::cout << " => Merging weak areas" << std::endl;
+  LOG(INFO) << " => Merging weak areas";
 
   // Also merge weak area reconstructions if there are any.
   std::shared_ptr<Reconstruction> merged_recon =
@@ -965,13 +960,11 @@ void HybridMapper::MergeClusters() {
                            *weak_area_reconstructions_[i]->Get(j),
                            merged_recon.get(),
                            false);
-      std::cout
-          << StringPrintf(
-                 " => Merged weak area with %d and %d images into %d images",
-                 num_reg_images_wr,
-                 num_reg_images_before,
-                 merged_recon->NumRegImages())
-          << std::endl;
+      LOG(INFO) << StringPrintf(
+          " => Merged weak area with %d and %d images into %d images",
+          num_reg_images_wr,
+          num_reg_images_before,
+          merged_recon->NumRegImages());
     }
   }
 }
@@ -988,12 +981,28 @@ bool HybridMapper::TriangulateTrack(
     const Image& image = reconstruction_->Image(track_el.image_id);
     const Point2D& point2D = image.Point2D(track_el.point2D_idx);
     const Camera& camera = reconstruction_->Camera(image.CameraId());
-
-    point_data[i].point = point2D.xy;
-    point_data[i].point_normalized = camera.CamFromImg(point_data[i].point);
-    pose_data[i].proj_matrix = image.CamFromWorld().ToMatrix();
-    pose_data[i].proj_center = image.ProjectionCenter();
-    pose_data[i].camera = &camera;
+    if (!tri_options.enable_refraction) {
+      // Non-refractive case.
+      point_data[i].point = point2D.xy;
+      point_data[i].point_normalized = camera.CamFromImg(point_data[i].point);
+      pose_data[i].proj_matrix = image.CamFromWorld().ToMatrix();
+      pose_data[i].proj_center = image.ProjectionCenter();
+      pose_data[i].camera = &camera;
+    } else {
+      // Refractive case.
+      Rigid3d virtual_from_real;
+      Camera virtual_camera;
+      camera.ComputeVirtual(point2D.xy, virtual_camera, virtual_from_real);
+      point_data[i].point = point2D.xy;
+      point_data[i].point_normalized =
+          virtual_camera.CamFromImg(point_data[i].point);
+      const Rigid3d virtual_from_world =
+          virtual_from_real * image.CamFromWorld();
+      pose_data[i].proj_matrix = virtual_from_world.ToMatrix();
+      pose_data[i].proj_center = virtual_from_world.rotation.inverse() *
+                                 -virtual_from_world.translation;
+      pose_data[i].camera = &virtual_camera;
+    }
   }
 
   // Setup estimation options.

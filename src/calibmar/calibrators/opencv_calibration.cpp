@@ -3,21 +3,21 @@
 #include <opencv2/core/eigen.hpp>
 
 namespace {
-  int TranslateToOpenCVFlags(int colmap_modelid) {
+  int TranslateToOpenCVFlags(colmap::CameraModelId colmap_modelid) {
     switch (colmap_modelid) {
-      case colmap::SimplePinholeCameraModel::kModelId:
+      case colmap::SimplePinholeCameraModel::model_id:
         return cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K1 | cv::CALIB_FIX_K2 | cv::CALIB_FIX_K3;
-      case colmap::PinholeCameraModel::kModelId:
+      case colmap::PinholeCameraModel::model_id:
         return cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K1 | cv::CALIB_FIX_K2 | cv::CALIB_FIX_K3;
-      case colmap::SimpleRadialCameraModel::kModelId:
+      case colmap::SimpleRadialCameraModel::model_id:
         return cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K2 | cv::CALIB_FIX_K3;
-      case colmap::RadialCameraModel::kModelId:
+      case colmap::RadialCameraModel::model_id:
         return cv::CALIB_FIX_ASPECT_RATIO | cv::CALIB_ZERO_TANGENT_DIST | cv::CALIB_FIX_K3;
-      case colmap::OpenCVCameraModel::kModelId:
+      case colmap::OpenCVCameraModel::model_id:
         return cv::CALIB_FIX_K3;
-      case colmap::FullOpenCVCameraModel::kModelId:
+      case colmap::FullOpenCVCameraModel::model_id:
         return cv::CALIB_RATIONAL_MODEL;
-      case colmap::OpenCVFisheyeCameraModel::kModelId:
+      case colmap::OpenCVFisheyeCameraModel::model_id:
         return cv::fisheye::CALIB_FIX_SKEW;
       default:
         throw std::runtime_error("Bad CameraModel");
@@ -29,7 +29,7 @@ namespace {
 
     // colmap ordering matches opencv ordering
     for (const size_t idx : camera.ExtraParamsIdxs()) {
-      distortion_coefficients.push_back(camera.Params().at(idx));
+      distortion_coefficients.push_back(camera.params.at(idx));
     }
   }
 
@@ -52,7 +52,7 @@ namespace {
       params.push_back(distortion_coefficients.at(i));
     }
 
-    camera.SetParams(params);
+    camera.params = params;
   }
 
   double CalibrateCameraCV(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
@@ -60,15 +60,15 @@ namespace {
                            bool use_intrinsic_guess, bool fast, std::vector<Eigen::Quaterniond*>& rotation_vecs,
                            std::vector<Eigen::Vector3d*>& translation_vecs, std::vector<double>& std_deviations_intrinsics,
                            std::vector<double>& std_deviations_extrinsics, std::vector<double>& per_view_rms) {
-    if (camera.Width() <= 0 || camera.Height() <= 0 || camera.ModelId() == colmap::kInvalidCameraModelId) {
+    if (camera.width <= 0 || camera.height <= 0 || camera.model_id == colmap::CameraModelId::kInvalid) {
       throw std::runtime_error("Camera width, height and model must be initialized!");
     }
 
-    int flags = TranslateToOpenCVFlags(camera.ModelId());
+    int flags = TranslateToOpenCVFlags(camera.model_id);
 
     cv::Mat camera_mat;
-    if (camera.ModelId() == colmap::PinholeCameraModel::kModelId ||
-        camera.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+    if (camera.model_id == colmap::PinholeCameraModel::model_id ||
+        camera.model_id == colmap::SimplePinholeCameraModel::model_id) {
       // For pinhole models without distortion, fix the principal point
       flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
     }
@@ -98,8 +98,8 @@ namespace {
     std::vector<cv::Mat> rotation_cv, translation_cv;
     double rms;
     // + 1 to cause principal point initialisation to the expected value
-    cv::Size image_size(camera.Width() + 1, camera.Height() + 1);
-    if (!calibmar::CameraModel::IsFisheyeModel(camera.ModelId())) {
+    cv::Size image_size(camera.width + 1, camera.height + 1);
+    if (!calibmar::CameraModel::IsFisheyeModel(camera.model_id)) {
       rms = cv::calibrateCamera(pointSets3D, pointSets2D, image_size, camera_mat, distortion_coefficients, rotation_cv,
                                 translation_cv, std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms, flags);
     }
@@ -157,7 +157,7 @@ namespace calibmar {
         throw std::runtime_error("Image and objects points must match for stereo calibration!");
       }
 
-      if (camera1.ModelId() != camera2.ModelId()) {
+      if (camera1.model_id != camera2.model_id) {
         throw std::runtime_error("Camera models must be of same type for stereo calibration!");
       }
 
@@ -177,7 +177,7 @@ namespace calibmar {
         }
       }
 
-      int flags = TranslateToOpenCVFlags(camera1.ModelId());
+      int flags = TranslateToOpenCVFlags(camera1.model_id);
 
       if (same_focal_length) {
         flags |= cv::CALIB_SAME_FOCAL_LENGTH;
@@ -188,8 +188,8 @@ namespace calibmar {
       std::vector<double> distortion_coefficients1;
       std::vector<double> distortion_coefficients2;
 
-      if (camera1.ModelId() == colmap::PinholeCameraModel::kModelId ||
-          camera1.ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+      if (camera1.model_id == colmap::PinholeCameraModel::model_id ||
+          camera1.model_id == colmap::SimplePinholeCameraModel::model_id) {
         // For pinhole models without distortion, fix the principal point
         flags |= cv::CALIB_FIX_PRINCIPAL_POINT;
       }
@@ -210,8 +210,8 @@ namespace calibmar {
       cv::Mat R, T, perViewError;
       double rms;
       // + 1 to cause principal point initialisation to the expected value
-      cv::Size image_size(camera1.Width() + 1, camera1.Height() + 1);
-      if (!calibmar::CameraModel::IsFisheyeModel(camera1.ModelId())) {
+      cv::Size image_size(camera1.width + 1, camera1.height + 1);
+      if (!calibmar::CameraModel::IsFisheyeModel(camera1.model_id)) {
         rms = cv::stereoCalibrate(pointSets3D, pointSets2D_1, pointSets2D_2, camera_mat1, distortion_coefficients1, camera_mat2,
                                   distortion_coefficients2, image_size, R, T, cv::noArray(), cv::noArray(), perViewError, flags);
       }

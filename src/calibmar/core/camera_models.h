@@ -42,13 +42,13 @@ namespace calibmar {
     static inline colmap::Camera InitCamera(CameraModelType type, const std::pair<int, int>& image_size,
                                             const std::vector<double>& params) {
       colmap::Camera camera = InitCamera(type, image_size, 0);
-      camera.SetParams(params);
+      camera.params = params;
       return camera;
     }
 
     static inline colmap::Camera InitCamera(CameraModelType type, const std::pair<int, int>& image_size, double focal_length) {
-      colmap::Camera camera;
-      camera.InitializeWithName(CameraModels().at(type).model_name, focal_length, image_size.first, image_size.second);
+      colmap::Camera camera = colmap::Camera::CreateFromModelName(colmap::kInvalidCameraId, CameraModels().at(type).model_name,
+                                                                  focal_length, image_size.first, image_size.second);
       return camera;
     }
 
@@ -77,7 +77,7 @@ namespace calibmar {
                 colmap::OpenCVFisheyeCameraModel::num_params}}};
     }
 
-    static inline std::map<int, CameraModelType> IdToCameraModelType() {
+    static inline std::map<colmap::CameraModelId, CameraModelType> IdToCameraModelType() {
       return {{colmap::SimplePinholeCameraModel::model_id, CameraModelType::SimplePinholeCameraModel},
               {colmap::PinholeCameraModel::model_id, CameraModelType::PinholeCameraModel},
               {colmap::SimpleRadialCameraModel::model_id, CameraModelType::SimpleRadialCameraModel},
@@ -87,13 +87,13 @@ namespace calibmar {
               {colmap::OpenCVFisheyeCameraModel::model_id, CameraModelType::OpenCVFisheyeCameraModel}};
     }
 
-    static inline bool IsFisheyeModel(int colmap_model_id) {
+    static inline bool IsFisheyeModel(colmap::CameraModelId colmap_model_id) {
       switch (colmap_model_id) {
-        case colmap::MetashapeFisheyeCameraModel::kModelId:
-        case colmap::OpenCVFisheyeCameraModel::kModelId:
-        case colmap::RadialFisheyeCameraModel::kModelId:
-        case colmap::SimpleRadialFisheyeCameraModel::kModelId:
-        case colmap::ThinPrismFisheyeCameraModel::kModelId:
+        case colmap::MetashapeFisheyeCameraModel::model_id:
+        case colmap::OpenCVFisheyeCameraModel::model_id:
+        case colmap::RadialFisheyeCameraModel::model_id:
+        case colmap::SimpleRadialFisheyeCameraModel::model_id:
+        case colmap::ThinPrismFisheyeCameraModel::model_id:
           return true;
         default:
           return false;
@@ -109,12 +109,12 @@ namespace calibmar {
     size_t num_params;
 
     static inline std::map<HousingInterfaceType, HousingInterface> HousingInterfaces() {
-      return {
-          {HousingInterfaceType::DoubleLayerSphericalRefractive,
-           {"Thick Dome Port", colmap::DomePort::refrac_model_name, colmap::DomePort::params_info, colmap::DomePort::num_params}},
-          {HousingInterfaceType::DoubleLayerPlanarRefractive,
-           {"Thick Flat Port", colmap::FlatPort::refrac_model_name, colmap::FlatPort::params_info,
-            colmap::FlatPort::num_params}}};
+      return {{HousingInterfaceType::DoubleLayerSphericalRefractive,
+               {"Thick Dome Port", colmap::DomePort::refrac_model_name, colmap::DomePort::refrac_params_info,
+                colmap::DomePort::num_params}},
+              {HousingInterfaceType::DoubleLayerPlanarRefractive,
+               {"Thick Flat Port", colmap::FlatPort::refrac_model_name, colmap::FlatPort::refrac_params_info,
+                colmap::FlatPort::num_params}}};
     }
   };
 }

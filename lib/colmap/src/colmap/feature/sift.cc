@@ -43,6 +43,8 @@
 #include <GL/glew.h>
 #endif  // COLMAP_GUI_ENABLED
 #endif  // COLMAP_GPU_ENABLED
+#include "colmap/util/eigen_alignment.h"
+
 #include "thirdparty/VLFeat/covdet.h"
 #include "thirdparty/VLFeat/sift.h"
 
@@ -86,8 +88,7 @@ bool SiftMatchingOptions::Check() const {
 namespace {
 
 void WarnDarknessAdaptivityNotAvailable() {
-  std::cout << "WARNING: Darkness adaptivity only available for GLSL SiftGPU."
-            << std::endl;
+  LOG(WARNING) << "Darkness adaptivity only available for GLSL SiftGPU.";
 }
 
 // VLFeat uses a different convention to store its descriptors. This transforms
@@ -1256,23 +1257,20 @@ class SiftGPUFeatureMatcher : public FeatureMatcher {
 
     if (!matcher->sift_match_gpu_.Allocate(options.max_num_matches,
                                            options.cross_check)) {
-      std::cout << StringPrintf(
-                       "ERROR: Not enough GPU memory to match %d features. "
-                       "Reduce the maximum number of matches.",
-                       options.max_num_matches)
-                << std::endl;
+      LOG(ERROR) << StringPrintf(
+          "Not enough GPU memory to match %d features. "
+          "Reduce the maximum number of matches.",
+          options.max_num_matches);
       return nullptr;
     }
 
 #if !defined(COLMAP_CUDA_ENABLED)
     if (matcher->sift_match_gpu_.GetMaxSift() < options.max_num_matches) {
-      std::cout
-          << StringPrintf(
-                 "WARNING: OpenGL version of SiftGPU only supports a "
-                 "maximum of %d matches - consider changing to CUDA-based "
-                 "feature matching to avoid this limitation.",
-                 matcher->sift_match_gpu_.GetMaxSift())
-          << std::endl;
+      LOG(WARNING) << StringPrintf(
+          "OpenGL version of SiftGPU only supports a "
+          "maximum of %d matches - consider changing to CUDA-based "
+          "feature matching to avoid this limitation.",
+          matcher->sift_match_gpu_.GetMaxSift());
     }
 #endif  // COLMAP_CUDA_ENABLED
 
@@ -1318,10 +1316,9 @@ class SiftGPUFeatureMatcher : public FeatureMatcher {
         options_.cross_check);
 
     if (num_matches < 0) {
-      std::cerr << "ERROR: Feature matching failed. This is probably caused by "
-                   "insufficient GPU memory. Consider reducing the maximum "
-                   "number of features and/or matches."
-                << std::endl;
+      LOG(ERROR) << "Feature matching failed. This is probably caused by "
+                    "insufficient GPU memory. Consider reducing the maximum "
+                    "number of features and/or matches.";
       matches->clear();
     } else {
       CHECK_LE(num_matches, matches->size());
@@ -1418,10 +1415,9 @@ class SiftGPUFeatureMatcher : public FeatureMatcher {
         options_.cross_check);
 
     if (num_matches < 0) {
-      std::cerr << "ERROR: Feature matching failed. This is probably caused by "
-                   "insufficient GPU memory. Consider reducing the maximum "
-                   "number of features."
-                << std::endl;
+      LOG(ERROR) << "Feature matching failed. This is probably caused by "
+                    "insufficient GPU memory. Consider reducing the maximum "
+                    "number of features.";
       two_view_geometry->inlier_matches.clear();
     } else {
       CHECK_LE(num_matches, two_view_geometry->inlier_matches.size());
@@ -1432,12 +1428,11 @@ class SiftGPUFeatureMatcher : public FeatureMatcher {
  private:
   void WarnIfMaxNumMatchesReachedGPU(const FeatureDescriptors& descriptors) {
     if (sift_match_gpu_.GetMaxSift() < descriptors.rows()) {
-      std::cout << StringPrintf(
-                       "WARNING: Clamping features from %d to %d - consider "
-                       "increasing the maximum number of matches.",
-                       descriptors.rows(),
-                       sift_match_gpu_.GetMaxSift())
-                << std::endl;
+      LOG(WARNING) << StringPrintf(
+          "Clamping features from %d to %d - consider "
+          "increasing the maximum number of matches.",
+          descriptors.rows(),
+          sift_match_gpu_.GetMaxSift());
     }
   }
 

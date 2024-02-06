@@ -176,6 +176,34 @@ TwoViewGeometry EstimateRefractiveTwoViewGeometry(
     const std::vector<Camera>& virtual_cameras2,
     const std::vector<Rigid3d>& virtual_from_reals2,
     const FeatureMatches& matches,
-    const TwoViewGeometryOptions& options);
+    const TwoViewGeometryOptions& options,
+    bool refine = false);
+
+bool RefineRefractiveTwoViewGeometry(
+    const std::vector<Eigen::Vector2d>& inlier_points1_normalized,
+    const std::vector<Rigid3d>& inlier_virtual_from_reals1,
+    const std::vector<Eigen::Vector2d>& inlier_points2_normalized,
+    const std::vector<Rigid3d>& inlier_virtual_from_reals2,
+    Rigid3d* rig2_from_rig1);
+
+// Compute a best approximated non-refractive camera model of the current
+// refractive camera. This approximation can only work for a certain scene
+// distance, the user should input the target scene depth to approximate.
+Camera BestFitNonRefracCamera(CameraModelId tgt_model_id,
+                              const Camera& camera,
+                              double approx_depth);
+
+TwoViewGeometry EstimateRefractiveTwoViewGeometryUseBestFit(
+    const Camera& best_fit_camera1,
+    const std::vector<Eigen::Vector2d>& points1,
+    const std::vector<Camera>& virtual_cameras1,
+    const std::vector<Rigid3d>& virtual_from_reals1,
+    const Camera& best_fit_camera2,
+    const std::vector<Eigen::Vector2d>& points2,
+    const std::vector<Camera>& virtual_cameras2,
+    const std::vector<Rigid3d>& virtual_from_reals2,
+    const FeatureMatches& matches,
+    const TwoViewGeometryOptions& options,
+    bool refine = false);
 
 }  // namespace colmap

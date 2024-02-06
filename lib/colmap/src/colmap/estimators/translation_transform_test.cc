@@ -31,6 +31,7 @@
 
 #include "colmap/math/random.h"
 #include "colmap/optim/ransac.h"
+#include "colmap/util/eigen_alignment.h"
 
 #include <Eigen/Core>
 #include <gtest/gtest.h>
@@ -55,8 +56,11 @@ TEST(TranslationTransform, Estimate) {
     dst.push_back(src[i] + translation);
   }
 
-  const auto estimated_translation =
-      TranslationTransformEstimator<2>::Estimate(src, dst)[0];
+  std::vector<Eigen::Vector2d> models;
+  TranslationTransformEstimator<2>::Estimate(src, dst, &models);
+
+  ASSERT_EQ(models.size(), 1);
+  const Eigen::Vector2d& estimated_translation = models[0];
 
   EXPECT_NEAR(translation(0), estimated_translation(0), 1e-6);
   EXPECT_NEAR(translation(1), estimated_translation(1), 1e-6);

@@ -29,6 +29,7 @@
 
 #include "colmap/util/ply.h"
 
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/logging.h"
 #include "colmap/util/misc.h"
 
@@ -114,8 +115,8 @@ std::vector<PlyPoint> ReadPly(const std::string& path) {
         num_vertices = std::stoll(line_elems[2]);
         in_vertex_section = true;
       } else if (std::stoll(line_elems[2]) > 0) {
-        std::cout << "WARN: Only vertex elements supported; ignoring "
-                  << line_elems[1] << std::endl;
+        LOG(WARNING) << "Only vertex elements supported; ignoring "
+                     << line_elems[1];
       }
     }
 

@@ -27,58 +27,58 @@ bool PosePrior::Read(const std::string& path,
 
   // For old Girona 500 datasets like e.g. Anton131 and Anton132, the header
   // names in the csv files are different. Therefore use this code below:
-  // auto iter_lon = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(
-  //         csv_header_values.begin(), csv_header_values.end(), "longitude"));
-  // auto iter_lat = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(
-  //         csv_header_values.begin(), csv_header_values.end(), "latitude"));
-  // auto iter_depth = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(csv_header_values.begin(), csv_header_values.end(),
-  //     "depth"));
-  // auto iter_yaw = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(csv_header_values.begin(), csv_header_values.end(), "yaw"));
-  // auto iter_pitch = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(csv_header_values.begin(), csv_header_values.end(),
-  //     "pitch"));
-  // auto iter_roll = std::distance(
-  //     csv_header_values.begin(),
-  //     std::find(csv_header_values.begin(), csv_header_values.end(), "roll"));
+  auto iter_lon = std::distance(
+      csv_header_values.begin(),
+      std::find(
+          csv_header_values.begin(), csv_header_values.end(), "longitude"));
+  auto iter_lat = std::distance(
+      csv_header_values.begin(),
+      std::find(
+          csv_header_values.begin(), csv_header_values.end(), "latitude"));
+  auto iter_depth = std::distance(
+      csv_header_values.begin(),
+      std::find(csv_header_values.begin(), csv_header_values.end(),
+      "depth"));
+  auto iter_yaw = std::distance(
+      csv_header_values.begin(),
+      std::find(csv_header_values.begin(), csv_header_values.end(), "yaw"));
+  auto iter_pitch = std::distance(
+      csv_header_values.begin(),
+      std::find(csv_header_values.begin(), csv_header_values.end(),
+      "pitch"));
+  auto iter_roll = std::distance(
+      csv_header_values.begin(),
+      std::find(csv_header_values.begin(), csv_header_values.end(), "roll"));
 
   // For newer Girona 500 datasets, like e.g. Anton248, Anton250, Luise258. Use
   // this code below:
-  auto iter_lon = std::distance(csv_header_values.begin(),
-                                std::find(csv_header_values.begin(),
-                                          csv_header_values.end(),
-                                          "Longitude [deg]"));
-  auto iter_lat = std::distance(csv_header_values.begin(),
-                                std::find(csv_header_values.begin(),
-                                          csv_header_values.end(),
-                                          "Latitude [deg]"));
-  // In the AUV-mapping scenario, we extract depth instead of altitude since
-  // the altitude is a relative measure of distance from the vehicle body to the
-  // object's surface.
-  auto iter_depth = std::distance(
-      csv_header_values.begin(),
-      std::find(
-          csv_header_values.begin(), csv_header_values.end(), "Depth [m]"));
-  auto iter_yaw = std::distance(
-      csv_header_values.begin(),
-      std::find(
-          csv_header_values.begin(), csv_header_values.end(), "Yaw [rad]"));
-  auto iter_pitch = std::distance(
-      csv_header_values.begin(),
-      std::find(
-          csv_header_values.begin(), csv_header_values.end(), "Pitch [rad]"));
-  auto iter_roll = std::distance(
-      csv_header_values.begin(),
-      std::find(
-          csv_header_values.begin(), csv_header_values.end(), "Roll [rad]"));
+  // auto iter_lon = std::distance(csv_header_values.begin(),
+  //                               std::find(csv_header_values.begin(),
+  //                                         csv_header_values.end(),
+  //                                         "Longitude [deg]"));
+  // auto iter_lat = std::distance(csv_header_values.begin(),
+  //                               std::find(csv_header_values.begin(),
+  //                                         csv_header_values.end(),
+  //                                         "Latitude [deg]"));
+  // // In the AUV-mapping scenario, we extract depth instead of altitude since
+  // // the altitude is a relative measure of distance from the vehicle body to the
+  // // object's surface.
+  // auto iter_depth = std::distance(
+  //     csv_header_values.begin(),
+  //     std::find(
+  //         csv_header_values.begin(), csv_header_values.end(), "Depth [m]"));
+  // auto iter_yaw = std::distance(
+  //     csv_header_values.begin(),
+  //     std::find(
+  //         csv_header_values.begin(), csv_header_values.end(), "Yaw [rad]"));
+  // auto iter_pitch = std::distance(
+  //     csv_header_values.begin(),
+  //     std::find(
+  //         csv_header_values.begin(), csv_header_values.end(), "Pitch [rad]"));
+  // auto iter_roll = std::distance(
+  //     csv_header_values.begin(),
+  //     std::find(
+  //         csv_header_values.begin(), csv_header_values.end(), "Roll [rad]"));
 
   // Particularly, GEOMAR's robots measure position covariance in NED coordinate
   // system.

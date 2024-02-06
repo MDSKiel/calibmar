@@ -28,6 +28,13 @@ void AdjustGlobalBundle(const IncrementalMapperOptions& options,
     custom_ba_options.refine_extra_params = false;
   }
 
+  if (options.enable_refraction &&
+      options.ba_fix_refrac_params_until_num_images > 0 &&
+      num_reg_images <
+          static_cast<size_t>(options.ba_fix_refrac_params_until_num_images)) {
+    custom_ba_options.refine_refrac_params = false;
+  }
+
   if (num_reg_images <
       static_cast<size_t>(options.ba_refine_prior_from_cam_after_num_images)) {
     custom_ba_options.refine_prior_from_cam = false;
@@ -41,8 +48,8 @@ void IterativeGlobalRefinement(const IncrementalMapperOptions& options,
                                IncrementalMapper* mapper) {
   PrintHeading1("Retriangulation");
   CompleteAndMergeTracks(options, mapper);
-  std::cout << "  => Retriangulated observations: "
-            << mapper->Retriangulate(options.Triangulation()) << std::endl;
+  LOG(INFO) << "  => Retriangulated observations: "
+            << mapper->Retriangulate(options.Triangulation());
 
   for (int i = 0; i < options.ba_global_max_refinements; ++i) {
     const size_t num_observations =
@@ -55,8 +62,7 @@ void IterativeGlobalRefinement(const IncrementalMapperOptions& options,
         num_observations == 0
             ? 0
             : static_cast<double>(num_changed_observations) / num_observations;
-    std::cout << StringPrintf("  => Changed observations: %.6f", changed)
-              << std::endl;
+    LOG(INFO) << StringPrintf("  => Changed observations: %.6f", changed);
     if (changed < options.ba_global_max_refinement_change) {
       break;
     }
@@ -153,6 +159,12 @@ void HybridMapperController::Run() {
   PrintHeading1("Reconstruct inlier tracks");
   hybrid_mapper.ReconstructInlierTracks(options_.Mapper());
 
+  std::shared_ptr<Reconstruction> pgo_result;
+  if (options_.show_pgo_result) {
+    // Make a copy of the current stage of reconstruction and write out.
+    pgo_result = std::make_shared<Reconstruction>(*global_recon.get());
+  }
+
   PrintHeading1("Print view graph stats");
   hybrid_mapper.PrintViewGraphStats();
 
@@ -180,6 +192,10 @@ void HybridMapperController::Run() {
 
   reconstruction_manager_->Get(reconstruction_manager_->Add()) = global_recon;
 
+  if (options_.show_pgo_result) {
+    reconstruction_manager_->Get(reconstruction_manager_->Add()) = pgo_result;
+  }
+
   // Debug, export the merged reconstruction.
   // auto& reconstruction_managers = hybrid_mapper.GetReconstructionManagers();
   // CHECK_EQ(reconstruction_managers.size(), 1);
@@ -196,7 +212,6 @@ void HybridMapperController::Run() {
   //   }
   // }
 
-  std::cout << std::endl;
   GetTimer().PrintMinutes();
 }
 
@@ -214,15 +229,10 @@ bool HybridMapperController::LoadDatabase() {
                             min_num_matches,
                             options_.incremental_options.ignore_watermarks,
                             image_names);
-  std::cout << std::endl;
   timer.PrintMinutes();
 
-  std::cout << std::endl;
-
   if (database_cache_->NumImages() == 0) {
-    std::cout << "WARNING: No images with matches found in the database."
-              << std::endl
-              << std::endl;
+    LOG(WARNING) << "No images with matches found in the database.";
     return false;
   }
 

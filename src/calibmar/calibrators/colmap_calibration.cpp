@@ -16,12 +16,12 @@ namespace {
 
     colmap::DatabaseTransaction database_transaction(database.get());
 
-    calibration.Camera().SetCameraId(database->WriteCamera(calibration.Camera()));
+    calibration.Camera().camera_id = database->WriteCamera(calibration.Camera());
 
     for (size_t i = 0; i < calibration.Images().size(); i++) {
       const calibmar::Image& image = calibration.Images()[i];
       colmap::Image colmap_img;
-      colmap_img.SetCameraId(calibration.Camera().CameraId());
+      colmap_img.SetCameraId(calibration.Camera().camera_id);
       colmap_img.SetName(image.Name());
 
       colmap::image_t img_id = database->WriteImage(colmap_img);
@@ -54,7 +54,7 @@ namespace {
         if (point2D.HasPoint3D()) {
           const auto& point3D = reconstruction.Point3D(point2D.point3D_id);
           error_sum += std::sqrt(colmap::CalculateSquaredReprojectionError(
-              point2D.xy, point3D.XYZ(), id_image.second.CamFromWorld(), camera, camera.IsCameraRefractive()));
+              point2D.xy, point3D.xyz, id_image.second.CamFromWorld(), camera, camera.IsCameraRefractive()));
           num_image_pts++;
         }
       }
@@ -103,8 +103,8 @@ namespace colmap_calibration {
     mapper_options_ptr->ba_fix_intrin_until_num_images = 4;
 
     // For pinhole models without distortion, fix the principal point
-    if (calibration.Camera().ModelId() == colmap::PinholeCameraModel::kModelId ||
-        calibration.Camera().ModelId() == colmap::SimplePinholeCameraModel::kModelId) {
+    if (calibration.Camera().model_id == colmap::PinholeCameraModel::model_id ||
+        calibration.Camera().model_id == colmap::SimplePinholeCameraModel::model_id) {
       mapper_options_ptr->ba_refine_principal_point = false;
     }
     else {
@@ -132,7 +132,7 @@ namespace colmap_calibration {
     }
     reconstruction = reconstruction_manager->Get(0);
 
-    calibration.SetCamera(reconstruction->Camera(calibration.Camera().CameraId()));
+    calibration.SetCamera(reconstruction->Camera(calibration.Camera().camera_id));
     calibration.SetCalibrationRms(reconstruction->ComputeMeanReprojectionError());
 
     std::map<colmap::image_t, ImageStats> per_img_stats;

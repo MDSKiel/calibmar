@@ -1,3 +1,4 @@
+#include "colmap/estimators/cost_functions.h"
 #include "colmap/estimators/generalized_pose.h"
 #include "colmap/estimators/two_view_geometry.h"
 #include "colmap/geometry/pose.h"
@@ -5,6 +6,7 @@
 #include "colmap/math/math.h"
 #include "colmap/math/random.h"
 #include "colmap/scene/camera.h"
+#include "colmap/scene/projection.h"
 
 #include <fstream>
 
@@ -21,9 +23,37 @@ struct PointsData {
   std::vector<Camera> virtual_cameras2;
   std::vector<Rigid3d> virtual_from_reals1;
   std::vector<Rigid3d> virtual_from_reals2;
+  Camera best_fit_camera;
 
   colmap::Rigid3d cam2_from_cam1_gt;
 };
+
+enum class RelTwoViewMethod {
+  kNonRefrac = -1,
+  kIgnore = 0,
+  kIgnoreRefine = 1,
+  kGR6P = 2,
+  kGR6PRefine = 3,
+  kBestFit = 4,
+  kBestFitRefine = 5,
+};
+
+void GenerateRandomSecondViewPose(const Eigen::Vector3d& proj_center,
+                                  const double distance,
+                                  Rigid3d& cam2_from_cam1) {
+  Eigen::Vector3d target(0.0, 0.0, distance);
+  Eigen::Vector3d zaxis = (target - proj_center).normalized();
+  Eigen::Vector3d yaxis(0, -1, 0);
+  Eigen::Vector3d xaxis = (zaxis.cross(yaxis)).normalized();
+  yaxis = (zaxis.cross(xaxis)).normalized();
+
+  Eigen::Matrix3d R;
+  R.col(0) = xaxis;
+  R.col(1) = yaxis;
+  R.col(2) = zaxis;
+  Rigid3d cam1_from_cam2(Eigen::Quaterniond(R), proj_center);
+  cam2_from_cam1 = Inverse(cam1_from_cam2);
+}
 
 void GenerateRandom2D2DPoints(const Camera& camera,
                               size_t num_points,
@@ -54,13 +84,13 @@ void GenerateRandom2D2DPoints(const Camera& camera,
     }
     Eigen::Vector2d point2D1_refrac;
     point2D1_refrac.x() =
-        RandomUniformReal(0.5, static_cast<double>(camera.Width()) - 0.5);
+        RandomUniformReal(0.5, static_cast<double>(camera.width) - 0.5);
     point2D1_refrac.y() =
-        RandomUniformReal(0.5, static_cast<double>(camera.Height()) - 0.5);
+        RandomUniformReal(0.5, static_cast<double>(camera.height) - 0.5);
 
     Ray3D ray_refrac = camera.CamFromImgRefrac(point2D1_refrac);
 
-    const double d = RandomUniformReal(0.5, 10.0);
+    const double d = RandomUniformReal(6.0, 8.0);
 
     // Now, do projection.
     Eigen::Vector3d point3D1 = ray_refrac.At(d);
@@ -72,8 +102,8 @@ void GenerateRandom2D2DPoints(const Camera& camera,
       continue;
     }
 
-    if (point2D2_refrac.x() < 0 || point2D2_refrac.x() > camera.Width() ||
-        point2D2_refrac.y() < 0 || point2D2_refrac.y() > camera.Height()) {
+    if (point2D2_refrac.x() < 0 || point2D2_refrac.x() > camera.width ||
+        point2D2_refrac.y() < 0 || point2D2_refrac.y() > camera.height) {
       continue;
     }
 
@@ -120,12 +150,74 @@ void GenerateRandom2D2DPoints(const Camera& camera,
   camera.ComputeVirtuals(points_data.points2D2_refrac,
                          points_data.virtual_cameras2,
                          points_data.virtual_from_reals2);
+
+  const double kApproxDepth = 5.0;
+  points_data.best_fit_camera =
+      BestFitNonRefracCamera(CameraModelId::kOpenCV, camera, kApproxDepth);
+}
+
+TwoViewGeometry EstimateRefractiveTwoViewIgnoreRefraction(
+    const Camera& camera1,
+    const std::vector<Eigen::Vector2d>& points1,
+    const std::vector<Camera>& virtual_cameras1,
+    const std::vector<Rigid3d>& virtual_from_reals1,
+    const Camera& camera2,
+    const std::vector<Eigen::Vector2d>& points2,
+    const std::vector<Camera>& virtual_cameras2,
+    const std::vector<Rigid3d>& virtual_from_reals2,
+    const FeatureMatches& matches,
+    const TwoViewGeometryOptions& options,
+    bool refine = false) {
+  // Perform essential matrix estimation
+  TwoViewGeometry geometry = EstimateCalibratedTwoViewGeometry(
+      camera1, points1, camera2, points2, matches, options);
+
+  if (refine) {
+    // Perform refinement afterwards:
+    std::vector<Eigen::Vector2d> inlier_points1_normalized;
+    std::vector<Eigen::Vector2d> inlier_points2_normalized;
+
+    std::vector<Rigid3d> inlier_virtual_from_reals1;
+    std::vector<Rigid3d> inlier_virtual_from_reals2;
+
+    inlier_points1_normalized.reserve(geometry.inlier_matches.size());
+    inlier_points2_normalized.reserve(geometry.inlier_matches.size());
+
+    inlier_virtual_from_reals1.reserve(geometry.inlier_matches.size());
+    inlier_virtual_from_reals2.reserve(geometry.inlier_matches.size());
+
+    for (const auto& match : geometry.inlier_matches) {
+      const Camera& virtual_camera1 = virtual_cameras1[match.point2D_idx1];
+      const Camera& virtual_camera2 = virtual_cameras2[match.point2D_idx2];
+
+      inlier_points1_normalized.push_back(
+          virtual_camera1.CamFromImg(points1[match.point2D_idx1]));
+      inlier_points2_normalized.push_back(
+          virtual_camera2.CamFromImg(points2[match.point2D_idx2]));
+
+      inlier_virtual_from_reals1.push_back(
+          virtual_from_reals1[match.point2D_idx1]);
+      inlier_virtual_from_reals2.push_back(
+          virtual_from_reals2[match.point2D_idx2]);
+    }
+
+    if (!RefineRefractiveTwoViewGeometry(inlier_points1_normalized,
+                                         inlier_virtual_from_reals1,
+                                         inlier_points2_normalized,
+                                         inlier_virtual_from_reals2,
+                                         &geometry.cam2_from_cam1)) {
+      // Optimization failed, directly return and clean up the inlier matches.
+      geometry.inlier_matches.clear();
+      return geometry;
+    };
+  }
+  return geometry;
 }
 
 size_t EstimateRelativePose(Camera& camera,
                             const PointsData& points_data,
                             Rigid3d& cam2_from_cam1,
-                            bool is_refractive) {
+                            RelTwoViewMethod method_id) {
   size_t num_points = points_data.points2D1.size();
   size_t num_inliers = 0;
 
@@ -142,84 +234,154 @@ size_t EstimateRelativePose(Camera& camera,
 
   TwoViewGeometry two_view_geometry;
 
-  if (!is_refractive) {
-    two_view_geometry =
-        EstimateCalibratedTwoViewGeometry(camera,
-                                          points_data.points2D1,
-                                          camera,
-                                          points_data.points2D2,
-                                          matches,
-                                          two_view_geometry_options);
-    cam2_from_cam1 = two_view_geometry.cam2_from_cam1;
-    num_inliers = two_view_geometry.inlier_matches.size();
-  } else {
-    // Refractive case.
-    two_view_geometry_options.compute_relative_pose = false;
-    two_view_geometry =
-        EstimateRefractiveTwoViewGeometry(points_data.points2D1_refrac,
-                                          points_data.virtual_cameras1,
-                                          points_data.virtual_from_reals1,
-                                          points_data.points2D2_refrac,
-                                          points_data.virtual_cameras2,
-                                          points_data.virtual_from_reals2,
-                                          matches,
-                                          two_view_geometry_options);
+  switch (method_id) {
+    case RelTwoViewMethod::kNonRefrac:
+      two_view_geometry =
+          EstimateCalibratedTwoViewGeometry(camera,
+                                            points_data.points2D1,
+                                            camera,
+                                            points_data.points2D2,
+                                            matches,
+                                            two_view_geometry_options);
+      break;
+    case RelTwoViewMethod::kGR6P:
+      two_view_geometry_options.compute_relative_pose = true;
+      two_view_geometry =
+          EstimateRefractiveTwoViewGeometry(points_data.points2D1_refrac,
+                                            points_data.virtual_cameras1,
+                                            points_data.virtual_from_reals1,
+                                            points_data.points2D2_refrac,
+                                            points_data.virtual_cameras2,
+                                            points_data.virtual_from_reals2,
+                                            matches,
+                                            two_view_geometry_options,
+                                            false);
+      break;
+    case RelTwoViewMethod::kGR6PRefine:
+      two_view_geometry_options.compute_relative_pose = true;
+      two_view_geometry =
+          EstimateRefractiveTwoViewGeometry(points_data.points2D1_refrac,
+                                            points_data.virtual_cameras1,
+                                            points_data.virtual_from_reals1,
+                                            points_data.points2D2_refrac,
+                                            points_data.virtual_cameras2,
+                                            points_data.virtual_from_reals2,
+                                            matches,
+                                            two_view_geometry_options,
+                                            true);
+      break;
+    case RelTwoViewMethod::kBestFit:
+
+      two_view_geometry = EstimateRefractiveTwoViewGeometryUseBestFit(
+          points_data.best_fit_camera,
+          points_data.points2D1_refrac,
+          points_data.virtual_cameras1,
+          points_data.virtual_from_reals1,
+          points_data.best_fit_camera,
+          points_data.points2D2_refrac,
+          points_data.virtual_cameras2,
+          points_data.virtual_from_reals2,
+          matches,
+          two_view_geometry_options,
+          false);
+      break;
+    case RelTwoViewMethod::kBestFitRefine:
+      two_view_geometry = EstimateRefractiveTwoViewGeometryUseBestFit(
+          points_data.best_fit_camera,
+          points_data.points2D1_refrac,
+          points_data.virtual_cameras1,
+          points_data.virtual_from_reals1,
+          points_data.best_fit_camera,
+          points_data.points2D2_refrac,
+          points_data.virtual_cameras2,
+          points_data.virtual_from_reals2,
+          matches,
+          two_view_geometry_options,
+          true);
+      break;
+    case RelTwoViewMethod::kIgnore:
+      two_view_geometry = EstimateRefractiveTwoViewIgnoreRefraction(
+          camera,
+          points_data.points2D1_refrac,
+          points_data.virtual_cameras1,
+          points_data.virtual_from_reals1,
+          camera,
+          points_data.points2D2_refrac,
+          points_data.virtual_cameras2,
+          points_data.virtual_from_reals2,
+          matches,
+          two_view_geometry_options,
+          false);
+      break;
+    case RelTwoViewMethod::kIgnoreRefine:
+      two_view_geometry = EstimateRefractiveTwoViewIgnoreRefraction(
+          camera,
+          points_data.points2D1_refrac,
+          points_data.virtual_cameras1,
+          points_data.virtual_from_reals1,
+          camera,
+          points_data.points2D2_refrac,
+          points_data.virtual_cameras2,
+          points_data.virtual_from_reals2,
+          matches,
+          two_view_geometry_options,
+          true);
+      break;
+    default:
+      LOG(ERROR) << "Relative two-view method does not exist!";
+      break;
   }
 
   cam2_from_cam1 = two_view_geometry.cam2_from_cam1;
   num_inliers = two_view_geometry.inlier_matches.size();
-
   return num_inliers;
 }
 
 void RelativePoseError(const colmap::Rigid3d& cam2_from_cam1_gt,
                        const colmap::Rigid3d& cam2_from_cam1_est,
                        double& rotation_error,
-                       double& angular_error,
-                       double& scale_error,
-                       bool is_refractive) {
+                       double& angular_error) {
   colmap::Rigid3d cam2_from_cam1_gt_norm = cam2_from_cam1_gt;
   cam2_from_cam1_gt_norm.translation.normalize();
   colmap::Rigid3d cam2_from_cam1_est_norm = cam2_from_cam1_est;
   cam2_from_cam1_est_norm.translation.normalize();
 
-  colmap::Rigid3d diff =
-      cam2_from_cam1_gt_norm * colmap::Inverse(cam2_from_cam1_est_norm);
-  rotation_error = colmap::RadToDeg(Eigen::AngleAxisd(diff.rotation).angle());
+  Eigen::Quaterniond rotation_diff =
+      cam2_from_cam1_gt.rotation * cam2_from_cam1_est.rotation.inverse();
+  rotation_error = colmap::RadToDeg(Eigen::AngleAxisd(rotation_diff).angle());
 
   double cos_theta = cam2_from_cam1_gt_norm.translation.dot(
       cam2_from_cam1_est_norm.translation);
   if (cos_theta < 0) {
     cos_theta = -cos_theta;
   }
-  angular_error = RadToDeg(acos(cos_theta));
-
-  if (is_refractive) {
-    const double baseline_est = (cam2_from_cam1_est.rotation.inverse() *
-                                 -cam2_from_cam1_est.translation)
-                                    .norm();
-    const double baseline_gt =
-        (cam2_from_cam1_gt.rotation.inverse() * -cam2_from_cam1_gt.translation)
-            .norm();
-    scale_error = (std::abs(baseline_gt - baseline_est) / baseline_gt) * 100.0;
-  } else {
-    scale_error = 0.0;
+  if (cos_theta > 1) {
+    cos_theta = 1.0;
   }
+  angular_error = RadToDeg(acos(cos_theta));
+  // if (is_refractive) {
+  //   const double baseline_est = (cam2_from_cam1_est.rotation.inverse() *
+  //                                -cam2_from_cam1_est.translation)
+  //                                   .norm();
+  //   const double baseline_gt =
+  //       (cam2_from_cam1_gt.rotation.inverse() *
+  //       -cam2_from_cam1_gt.translation)
+  //           .norm();
+  //   scale_error = (1 - baseline_est / baseline_gt);
+  // } else {
+  //   scale_error = 0.0;
+  // }
 }
 
-void Evaluate(colmap::Camera& camera,
-              size_t num_points,
-              size_t num_exps,
-              double inlier_ratio,
-              const std::string& output_path) {
+void EvaluateMultipleMethods(colmap::Camera& camera,
+                             size_t num_points,
+                             size_t num_exps,
+                             double inlier_ratio,
+                             const std::string& output_path) {
   std::vector<double> noise_levels = {0.0, 0.2, 0.5, 0.8, 1.2, 1.5, 1.8, 2.0};
   // std::vector<double> noise_levels = {0.0};
 
   std::ofstream file(output_path, std::ios::out);
-  file << "# noise_level angular_error_mean angular_error_std rot_error_mean "
-          "rot_error_std angular_error_refrac_mean angular_error_refrac_std "
-          "rot_error_refrac_mean rot_error_refrac_std time time_refrac"
-       << std::endl;
 
   for (const double& noise : noise_levels) {
     std::cout << "Noise level: " << noise << std::endl;
@@ -231,127 +393,99 @@ void Evaluate(colmap::Camera& camera,
     std::cout << "Generating random data ..." << std::endl;
     for (size_t i = 0; i < num_exps; i++) {
       // Create a random GT pose.
-      double ry = colmap::RandomUniformReal(colmap::DegToRad(-15.0),
-                                            colmap::DegToRad(15.0));
-      double rx = colmap::RandomUniformReal(colmap::DegToRad(-15.0),
-                                            colmap::DegToRad(15.0));
-      double rz = colmap::RandomUniformReal(colmap::DegToRad(-15.0),
-                                            colmap::DegToRad(15.0));
-      double tx = colmap::RandomUniformReal(-1.0, 1.0);
-      double ty = colmap::RandomUniformReal(-0.2, 0.2);
-      double tz = colmap::RandomUniformReal(-0.2, 0.2);
-      colmap::Rigid3d cam2_from_cam1;
-      cam2_from_cam1.rotation =
-          Eigen::Quaterniond(EulerAnglesToRotationMatrix(rx, ry, rz))
-              .normalized();
-      cam2_from_cam1.translation = Eigen::Vector3d(tx, ty, tz);
+      const double tx = colmap::RandomUniformReal(8.0, 10.0);
+      const double ty = colmap::RandomUniformReal(-2.5, 2.5);
+      const double tz = colmap::RandomUniformReal(-2.5, 2.5);
+      const double distance = colmap::RandomUniformReal(6.0, 8.0);
+      Eigen::Vector3d proj_center(tx, ty, tz);
 
+      colmap::Rigid3d cam2_from_cam1;
+
+      GenerateRandomSecondViewPose(proj_center, distance, cam2_from_cam1);
       PointsData points_data;
       GenerateRandom2D2DPoints(
           camera, num_points, cam2_from_cam1, points_data, noise, inlier_ratio);
       datasets.push_back(points_data);
     }
 
-    std::cout << "Evaluating ..." << std::endl;
+    std::vector<RelTwoViewMethod> methods = {RelTwoViewMethod::kNonRefrac,
+                                             RelTwoViewMethod::kBestFit};
+
+    // std::vector<RelTwoViewMethod> methods = {RelTwoViewMethod::kNonRefrac,
+    //                                          RelTwoViewMethod::kBestFitRefine};
 
     // Evaluate random dataset.
-    std::vector<double> rotation_errors;
-    std::vector<double> angular_errors;
-    std::vector<double> rotation_errors_refrac;
-    std::vector<double> angular_errors_refrac;
+    // Errors of all methods:
+    std::vector<double> rot_error_mean_all_methods;
+    std::vector<double> rot_error_std_all_methods;
+    std::vector<double> ang_error_mean_all_methods;
+    std::vector<double> ang_error_std_all_methods;
+    std::vector<double> inlier_ratio_all_methods;
 
-    std::vector<double> scale_errors;
+    for (const RelTwoViewMethod& method_id : methods) {
+      // Rotation error (degrees).
+      std::vector<double> rotation_errors;
+      // Angular error (error between the estimated translation direction and
+      // ground truth direction)/
+      std::vector<double> angular_errors;
+      // Inlier ratio.
+      std::vector<double> inlier_ratios;
 
-    // Inlier ratio
-    std::vector<double> inlier_ratios;
-    std::vector<double> inlier_ratios_refrac;
+      double time = 0.0;
 
-    double time = 0.0;
-    double time_refrac = 0.0;
+      std::cout << "Evaluating Method: " << static_cast<int>(method_id)
+                << std::endl;
 
-    Timer timer;
+      Timer timer;
 
-    // Perform in-air pose estimation
-    timer.Start();
-    for (size_t i = 0; i < num_exps; i++) {
-      const PointsData& points_data = datasets[i];
-      colmap::Rigid3d cam2_from_cam1_est;
-      size_t num_inliers =
-          EstimateRelativePose(camera, points_data, cam2_from_cam1_est, false);
+      timer.Start();
+      for (size_t i = 0; i < num_exps; i++) {
+        const PointsData& points_data = datasets[i];
+        colmap::Rigid3d cam2_from_cam1_est;
+        size_t num_inliers = EstimateRelativePose(
+            camera, points_data, cam2_from_cam1_est, method_id);
 
-      double rotation_error, angular_error, scale_error;
-      RelativePoseError(points_data.cam2_from_cam1_gt,
-                        cam2_from_cam1_est,
-                        rotation_error,
-                        angular_error,
-                        scale_error,
-                        false);
-      rotation_errors.push_back(rotation_error);
-      angular_errors.push_back(angular_error);
-      inlier_ratios.push_back(static_cast<double>(num_inliers) /
-                              static_cast<double>(num_points));
+        double rotation_error, angular_error;
+        RelativePoseError(points_data.cam2_from_cam1_gt,
+                          cam2_from_cam1_est,
+                          rotation_error,
+                          angular_error);
+        rotation_errors.push_back(rotation_error);
+        angular_errors.push_back(angular_error);
+        inlier_ratios.push_back(static_cast<double>(num_inliers) /
+                                static_cast<double>(num_points));
+      }
+      timer.Pause();
+      time = timer.ElapsedSeconds();
+
+      const double rot_error_mean = Mean(rotation_errors);
+      const double rot_error_std = StdDev(rotation_errors);
+      const double ang_error_mean = Mean(angular_errors);
+      const double ang_error_std = StdDev(angular_errors);
+      const double inlier_ratio_mean = Mean(inlier_ratios);
+
+      rot_error_mean_all_methods.push_back(rot_error_mean);
+      rot_error_std_all_methods.push_back(rot_error_std);
+      ang_error_mean_all_methods.push_back(ang_error_mean);
+      ang_error_std_all_methods.push_back(ang_error_std);
+      inlier_ratio_all_methods.push_back(inlier_ratio_mean);
+
+      std::cout << "Relative pose error : Rotation: " << rot_error_mean
+                << " +/- " << rot_error_std << " -- Angular: " << ang_error_mean
+                << " +/- " << ang_error_std
+                << " -- inlier ratio: " << inlier_ratio_mean
+                << " GT inlier ratio: " << inlier_ratio << std::endl;
     }
-    timer.Pause();
-    time = timer.ElapsedSeconds();
 
-    timer.Restart();
-    // Perform refractive pose estimation
-    for (size_t i = 0; i < num_exps; i++) {
-      const PointsData& points_data = datasets[i];
-      colmap::Rigid3d cam2_from_cam1_est_refrac;
-      size_t num_inliers = EstimateRelativePose(
-          camera, points_data, cam2_from_cam1_est_refrac, true);
-
-      double rotation_error_refrac, angular_error_refrac, scale_error;
-      RelativePoseError(points_data.cam2_from_cam1_gt,
-                        cam2_from_cam1_est_refrac,
-                        rotation_error_refrac,
-                        angular_error_refrac,
-                        scale_error,
-                        true);
-      rotation_errors_refrac.push_back(rotation_error_refrac);
-      angular_errors_refrac.push_back(angular_error_refrac);
-      scale_errors.push_back(scale_error);
-      inlier_ratios_refrac.push_back(static_cast<double>(num_inliers) /
-                                     static_cast<double>(num_points));
+    file << noise;
+    for (size_t i = 0; i < methods.size(); i++) {
+      file << " " << rot_error_mean_all_methods[i] << " "
+           << rot_error_std_all_methods[i] << " "
+           << ang_error_mean_all_methods[i] << " "
+           << ang_error_std_all_methods[i] << " "
+           << inlier_ratio_all_methods[i];
     }
-    timer.Pause();
-    time_refrac = timer.ElapsedSeconds();
-
-    const double ang_error_mean = Mean(angular_errors);
-    const double ang_error_std = StdDev(angular_errors);
-    const double rot_error_mean = Mean(rotation_errors);
-    const double rot_error_std = StdDev(rotation_errors);
-
-    const double ang_error_refrac_mean = Mean(angular_errors_refrac);
-    const double ang_error_refrac_std = StdDev(angular_errors_refrac);
-    const double rot_error_refrac_mean = Mean(rotation_errors_refrac);
-    const double rot_error_refrac_std = StdDev(rotation_errors_refrac);
-
-    const double scale_error_mean = Mean(scale_errors);
-    const double scale_error_std = StdDev(scale_errors);
-
-    const double inlier_ratio_mean = colmap::Mean(inlier_ratios);
-    const double inlier_ratio_refrac_mean = colmap::Mean(inlier_ratios_refrac);
-
-    file << noise << " " << ang_error_mean << " " << ang_error_std << " "
-         << rot_error_mean << " " << rot_error_std << " "
-         << ang_error_refrac_mean << " " << ang_error_refrac_std << " "
-         << rot_error_refrac_mean << " " << rot_error_refrac_std << " "
-         << scale_error_mean << " " << scale_error_std << " " << time << " "
-         << time_refrac << " " << inlier_ratio_mean << " "
-         << inlier_ratio_refrac_mean << std::endl;
-    std::cout << "Pose error in-air: Rotation: " << rot_error_mean << " +/- "
-              << rot_error_std << " -- Angular: " << ang_error_mean << " +/- "
-              << ang_error_std << " -- inlier ratio: " << inlier_ratio_mean
-              << " GT inlier ratio: " << inlier_ratio << std::endl;
-    std::cout << "Pose error refrac: Rotation: " << rot_error_refrac_mean
-              << " +/- " << rot_error_refrac_std
-              << " -- Angular: " << ang_error_refrac_mean << " +/- "
-              << ang_error_refrac_std << " -- Scale: " << scale_error_mean
-              << " +/- " << scale_error_std
-              << " -- inlier ratio: " << inlier_ratio_refrac_mean
-              << " GT inlier ratio: " << inlier_ratio << std::endl;
+    file << std::endl;
   }
 
   file.close();
@@ -360,58 +494,88 @@ void Evaluate(colmap::Camera& camera,
 int main(int argc, char* argv[]) {
   SetPRNGSeed(time(NULL));
 
-  std::cout << "Setup some realistic camera model" << std::endl;
-
   // Camera parameters coming from Anton 131 map.
-  Camera camera;
-  camera.SetWidth(4104);
-  camera.SetHeight(3006);
-  camera.SetModelIdFromName("METASHAPE_FISHEYE");
-  std::vector<double> params = {1000.7964068878537,
-                                1000.6679248258547,
-                                2097.4832274550317,
-                                1641.1207545881762,
-                                0,
-                                0,
-                                0,
-                                0,
-                                0,
-                                0};
   // Camera camera;
-  // camera.SetWidth(2048);
-  // camera.SetHeight(1536);
-  // camera.SetModelIdFromName("PINHOLE");
-  // std::vector<double> params = {
-  //     1300.900000, 1300.900000, 1024.000000, 768.000000};
-
-  camera.SetParams(params);
+  // camera.SetWidth(4104);
+  // camera.SetHeight(3006);
+  // camera.SetModelIdFromName("METASHAPE_FISHEYE");
+  // std::vector<double> params = {1000.7964068878537,
+  //                               1000.6679248258547,
+  //                               2097.4832274550317,
+  //                               1641.1207545881762,
+  //                               0,
+  //                               0,
+  //                               0,
+  //                               0,
+  //                               0,
+  //                               0};
+  Camera camera;
+  camera.width = 1113;
+  camera.height = 835;
+  camera.model_id = CameraModelId::kPinhole;
+  std::vector<double> params = {400.5, 400.5, 556.5, 417.5};
+  camera.params = params;
 
   // Flatport setup.
-  camera.SetRefracModelIdFromName("FLATPORT");
+  camera.refrac_model_id = CameraRefracModelId::kFlatPort;
   Eigen::Vector3d int_normal;
-  int_normal[0] = RandomUniformReal(-0.3, 0.3);
-  int_normal[1] = RandomUniformReal(-0.3, 0.3);
-  int_normal[2] = RandomUniformReal(0.7, 1.3);
+  int_normal[0] = RandomUniformReal(-0.1, 0.1);
+  int_normal[1] = RandomUniformReal(-0.1, 0.1);
+  int_normal[2] = RandomUniformReal(0.9, 1.1);
 
   int_normal.normalize();
 
-  std::vector<double> flatport_params = {
-      int_normal[0], int_normal[1], int_normal[2], 2.0, 1.0, 1.0, 2.5, 1.8};
-  camera.SetRefracParams(flatport_params);
+  std::vector<double> flatport_params = {int_normal[0],
+                                         int_normal[1],
+                                         int_normal[2],
+                                         0.05,
+                                         0.02,
+                                         1.0,
+                                         1.52,
+                                         1.334};
+  camera.refrac_params = flatport_params;
+
+  // camera.refrac_model_id = CameraRefracModelId::kDomePort;
+  // Eigen::Vector3d decentering;
+  // // decentering[0] = RandomUniformReal(-0.001, 0.001);
+  // // decentering[1] = RandomUniformReal(-0.001, 0.001);
+  // // decentering[2] = RandomUniformReal(-0.002, 0.002);
+
+  // decentering[0] = 0;
+  // decentering[1] = 0;
+  // decentering[2] = 0;
+
+  // std::vector<double> domeport_params = {decentering[0],
+  //                                        decentering[1],
+  //                                        decentering[2],
+  //                                        0.05,
+  //                                        0.007,
+  //                                        1.0,
+  //                                        1.52,
+  //                                        1.334};
+  // camera.refrac_params = domeport_params;
 
   // Generate simulated point data.
-  const size_t num_points = 100;
-  const double inlier_ratio = 1.0;
+  const size_t num_points = 200;
+  const double inlier_ratio = 0.7;
 
   std::string output_dir =
-      "/home/mshe/workspace/omv_src/colmap-project/refrac_sfm_eval/data/"
-      "rel_pose/";
+      "/home/mshe/workspace/omv_src/colmap-project/refrac_sfm_eval/plots/"
+      "rel_pose/compare_methods/";
   std::stringstream ss;
-  ss << output_dir << "/eval_refrac_rel_pose_num_points_" << num_points
-     << "_inlier_ratio_" << inlier_ratio << ".txt";
+  ss << output_dir
+     << "/rel_pose_flat_non_ortho_far_num_points_eval_different_distances_"
+        "debug_"
+     << num_points << "_inlier_ratio_" << inlier_ratio << ".txt";
   std::string output_path = ss.str();
 
-  Evaluate(camera, num_points, 20, inlier_ratio, output_path);
+  // Evaluate(camera, num_points, 200, inlier_ratio, output_path);
+  EvaluateMultipleMethods(camera, num_points, 10, inlier_ratio, output_path);
 
+  // Camera best_fit_camera =
+  //     BestFitNonRefracCamera(CameraModelId::kOpenCV, camera, 5.0);
+
+  // LOG(INFO) << "Best fit params: ";
+  // LOG(INFO) << best_fit_camera.ParamsToString();
   return true;
 }

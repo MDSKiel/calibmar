@@ -98,8 +98,9 @@ namespace {
     }
     else {
       double focal_length = 1.2 * std::max(image_size.first, image_size.second);
-      camera.InitializeWithName(CameraModel::CameraModels().at(options.camera_model).model_name, focal_length, image_size.first,
-                                image_size.second);
+      camera = colmap::Camera::CreateFromModelName(colmap::kInvalidCameraId,
+                                                   CameraModel::CameraModels().at(options.camera_model).model_name, focal_length,
+                                                   image_size.first, image_size.second);
     }
 
     calibration.SetCamera(camera);
@@ -420,9 +421,9 @@ namespace calibmar {
 
     // Camera for init phase is always pinhole. Calibrating a complex distortion model with very few images can produce
     // extreme distortion coefficients. Projecting the target pose with those would create badly warped results.
-    colmap::Camera init_camera;
-    init_camera.InitializeWithName(CameraModel::CameraModels().at(CameraModelType::SimplePinholeCameraModel).model_name,
-                                   1.2 * image_width, image_width, image_height);
+    colmap::Camera init_camera = colmap::Camera::CreateFromModelName(
+        colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::SimplePinholeCameraModel).model_name,
+        1.2 * image_width, image_width, image_height);
     calibration.SetCamera(init_camera);
 
     // Pose Suggestion is only allowed for chessboard target
@@ -491,9 +492,9 @@ namespace calibmar {
           // transition out of init phase, now use target camera model
           in_init_phase = false;
           colmap::Camera& init_camera = calibration.Camera();
-          colmap::Camera calib_camera;
-          calib_camera.InitializeWithName(CameraModel::CameraModels().at(dialog_options_.camera_model).model_name,
-                                          init_camera.FocalLength(), init_camera.Width(), init_camera.Height());
+          colmap::Camera calib_camera = colmap::Camera::CreateFromModelName(
+              colmap::kInvalidCameraId, CameraModel::CameraModels().at(dialog_options_.camera_model).model_name,
+              init_camera.FocalLength(), init_camera.width, init_camera.height);
 
           calibration.SetCamera(calib_camera);
         }

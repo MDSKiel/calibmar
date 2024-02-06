@@ -32,6 +32,7 @@
 #include "colmap/estimators/affine_transform.h"
 #include "colmap/math/math.h"
 #include "colmap/optim/ransac.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/logging.h"
 
 #include <array>
@@ -243,7 +244,7 @@ int VoteAndVerify(const VoteAndVerifyOptions& options,
 
   const float trans_norm = 1.0f / (2.0f * max_trans);
   const float scale_norm = 1.0f / (2.0f * max_log_scale);
-  const float angle_norm = 1.0f / (2.0f * M_PI);
+  const float angle_norm = 1.0f / (2.0f * static_cast<float>(M_PI));
 
   //////////////////////////////////////////////////////////////////////////////
   // Fill the multi-resolution voting histogram.
@@ -270,7 +271,7 @@ int VoteAndVerify(const VoteAndVerifyOptions& options,
     const float x = (T.tx + max_trans) * trans_norm;
     const float y = (T.ty + max_trans) * trans_norm;
     const float s = (log_scale + max_log_scale) * scale_norm;
-    const float a = (T.angle + M_PI) * angle_norm;
+    const float a = (T.angle + static_cast<float>(M_PI)) * angle_norm;
 
     int n_x = std::min(static_cast<int>(x * options.num_trans_bins),
                        static_cast<int>(options.num_trans_bins - 1));
@@ -405,8 +406,11 @@ int VoteAndVerify(const VoteAndVerifyOptions& options,
     }
 
     // Local optimization on matching inlier points.
-    const Eigen::Matrix<double, 2, 3> A = AffineTransformEstimator::Estimate(
-        best_inlier_points1, best_inlier_points2)[0];
+    std::vector<Eigen::Matrix<double, 2, 3>> models;
+    AffineTransformEstimator::Estimate(
+        best_inlier_points1, best_inlier_points2, &models);
+    CHECK_EQ(models.size(), 1);
+    const Eigen::Matrix<double, 2, 3>& A = models[0];
     Eigen::Matrix3d A_homogeneous = Eigen::Matrix3d::Identity();
     A_homogeneous.topRows<2>() = A;
     const Eigen::Matrix<double, 2, 3> inv_A =

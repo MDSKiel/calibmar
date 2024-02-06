@@ -39,6 +39,7 @@
 #include "colmap/optim/support_measurement.h"
 #include "colmap/scene/camera.h"
 #include "colmap/sensor/models.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/misc.h"
 
 #include <Eigen/Core>
@@ -176,7 +177,7 @@ bool RefineGeneralizedAbsolutePose(const AbsolutePoseRefinementOptions& options,
 
   std::vector<double*> cameras_params_data;
   for (size_t i = 0; i < cameras->size(); i++) {
-    cameras_params_data.push_back(cameras->at(i).ParamsData());
+    cameras_params_data.push_back(cameras->at(i).params.data());
   }
   std::vector<size_t> camera_counts(cameras->size(), 0);
   double* rig_from_world_rotation = rig_from_world->rotation.coeffs().data();
@@ -198,9 +199,9 @@ bool RefineGeneralizedAbsolutePose(const AbsolutePoseRefinementOptions& options,
     camera_counts[camera_idx] += 1;
 
     ceres::CostFunction* cost_function = nullptr;
-    switch (cameras->at(camera_idx).ModelId()) {
+    switch (cameras->at(camera_idx).model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                \
-  case CameraModel::kModelId:                                         \
+  case CameraModel::model_id:                                         \
     cost_function =                                                   \
         RigReprojErrorCostFunction<CameraModel>::Create(points2D[i]); \
     break;
@@ -237,39 +238,37 @@ bool RefineGeneralizedAbsolutePose(const AbsolutePoseRefinementOptions& options,
           cams_from_rig_copy[i].translation.data());
 
       if (!options.refine_focal_length && !options.refine_extra_params) {
-        problem.SetParameterBlockConstant(camera.ParamsData());
+        problem.SetParameterBlockConstant(camera.params.data());
       } else {
         // Always set the principal point as fixed.
         std::vector<int> camera_params_const;
-        const std::vector<size_t>& principal_point_idxs =
+        const span<const size_t> principal_point_idxs =
             camera.PrincipalPointIdxs();
         camera_params_const.insert(camera_params_const.end(),
                                    principal_point_idxs.begin(),
                                    principal_point_idxs.end());
 
         if (!options.refine_focal_length) {
-          const std::vector<size_t>& focal_length_idxs =
-              camera.FocalLengthIdxs();
+          const span<const size_t> focal_length_idxs = camera.FocalLengthIdxs();
           camera_params_const.insert(camera_params_const.end(),
                                      focal_length_idxs.begin(),
                                      focal_length_idxs.end());
         }
 
         if (!options.refine_extra_params) {
-          const std::vector<size_t>& extra_params_idxs =
-              camera.ExtraParamsIdxs();
+          const span<const size_t> extra_params_idxs = camera.ExtraParamsIdxs();
           camera_params_const.insert(camera_params_const.end(),
                                      extra_params_idxs.begin(),
                                      extra_params_idxs.end());
         }
 
-        if (camera_params_const.size() == camera.NumParams()) {
-          problem.SetParameterBlockConstant(camera.ParamsData());
+        if (camera_params_const.size() == camera.params.size()) {
+          problem.SetParameterBlockConstant(camera.params.data());
         } else {
-          SetSubsetManifold(static_cast<int>(camera.NumParams()),
+          SetSubsetManifold(static_cast<int>(camera.params.size()),
                             camera_params_const,
                             &problem,
-                            camera.ParamsData());
+                            camera.params.data());
         }
       }
     }
@@ -279,6 +278,7 @@ bool RefineGeneralizedAbsolutePose(const AbsolutePoseRefinementOptions& options,
   solver_options.gradient_tolerance = options.gradient_tolerance;
   solver_options.max_num_iterations = options.max_num_iterations;
   solver_options.linear_solver_type = ceres::DENSE_QR;
+  solver_options.logging_type = ceres::LoggingType::SILENT;
 
   // The overhead of creating threads is too large.
   solver_options.num_threads = 1;
@@ -288,10 +288,6 @@ bool RefineGeneralizedAbsolutePose(const AbsolutePoseRefinementOptions& options,
 
   ceres::Solver::Summary summary;
   ceres::Solve(solver_options, &problem, &summary);
-
-  if (solver_options.minimizer_progress_to_stdout) {
-    std::cout << std::endl;
-  }
 
   if (options.print_summary) {
     PrintHeading2("Pose refinement report");

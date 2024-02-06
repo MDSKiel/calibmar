@@ -47,6 +47,7 @@ COLMAP_ADD_LIBRARY(
         colmap_scene
         colmap_util
         Eigen3::Eigen
+        Boost::program_options
     PRIVATE_LINK_LIBS
         colmap_estimators
         colmap_feature
@@ -56,7 +57,8 @@ COLMAP_ADD_LIBRARY(
         colmap_retrieval
         colmap_sfm
         Ceres::ceres
-        Boost::program_options
+        Boost::filesystem
+        Boost::boost
 )
 
 COLMAP_ADD_TEST(

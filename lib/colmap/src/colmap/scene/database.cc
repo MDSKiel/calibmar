@@ -209,29 +209,33 @@ void WriteDynamicMatrixBlob(sqlite3_stmt* sql_stmt,
 Camera ReadCameraRow(sqlite3_stmt* sql_stmt) {
   Camera camera;
 
-  camera.SetCameraId(static_cast<camera_t>(sqlite3_column_int64(sql_stmt, 0)));
-  camera.SetModelId(sqlite3_column_int64(sql_stmt, 1));
-  camera.SetWidth(static_cast<size_t>(sqlite3_column_int64(sql_stmt, 2)));
-  camera.SetHeight(static_cast<size_t>(sqlite3_column_int64(sql_stmt, 3)));
+  camera.camera_id = static_cast<camera_t>(sqlite3_column_int64(sql_stmt, 0));
+  camera.model_id =
+      static_cast<CameraModelId>(sqlite3_column_int64(sql_stmt, 1));
+  camera.width = static_cast<size_t>(sqlite3_column_int64(sql_stmt, 2));
+  camera.height = static_cast<size_t>(sqlite3_column_int64(sql_stmt, 3));
 
   const size_t num_params_bytes =
       static_cast<size_t>(sqlite3_column_bytes(sql_stmt, 4));
   const size_t num_params = num_params_bytes / sizeof(double);
-  CHECK_EQ(num_params, camera.NumParams());
+  CHECK_EQ(num_params, CameraModelNumParams(camera.model_id));
+  camera.params.resize(num_params, 0.);
   memcpy(
-      camera.ParamsData(), sqlite3_column_blob(sql_stmt, 4), num_params_bytes);
+      camera.params.data(), sqlite3_column_blob(sql_stmt, 4), num_params_bytes);
 
-  camera.SetPriorFocalLength(sqlite3_column_int64(sql_stmt, 5) != 0);
+  camera.has_prior_focal_length = sqlite3_column_int64(sql_stmt, 5) != 0;
 
-  const int refrac_model_id = sqlite3_column_int64(sql_stmt, 6);
-  const int kInvalidRefractiveCameraModelId = -1;
-  if (refrac_model_id != kInvalidRefractiveCameraModelId) {
-    camera.SetRefracModelId(refrac_model_id);
+  const CameraRefracModelId refrac_model_id =
+      static_cast<CameraRefracModelId>(sqlite3_column_int64(sql_stmt, 6));
+  if (refrac_model_id != CameraRefracModelId::kInvalid) {
+    camera.refrac_model_id = refrac_model_id;
     const size_t num_refrac_params_bytes =
         static_cast<size_t>(sqlite3_column_bytes(sql_stmt, 7));
     const size_t num_refrac_params = num_refrac_params_bytes / sizeof(double);
-    CHECK_EQ(num_refrac_params, camera.NumRefracParams());
-    memcpy(camera.RefracParamsData(),
+    CHECK_EQ(num_refrac_params,
+             CameraRefracModelNumParams(camera.refrac_model_id));
+    camera.refrac_params.resize(num_refrac_params, 0.);
+    memcpy(camera.refrac_params.data(),
            sqlite3_column_blob(sql_stmt, 7),
            num_refrac_params_bytes);
   }
@@ -651,36 +655,38 @@ void Database::ReadTwoViewGeometryNumInliers(
 camera_t Database::WriteCamera(const Camera& camera,
                                const bool use_camera_id) const {
   if (use_camera_id) {
-    CHECK(!ExistsCamera(camera.CameraId())) << "camera_id must be unique";
-    SQLITE3_CALL(
-        sqlite3_bind_int64(sql_stmt_add_camera_, 1, camera.CameraId()));
+    CHECK(!ExistsCamera(camera.camera_id)) << "camera_id must be unique";
+    SQLITE3_CALL(sqlite3_bind_int64(sql_stmt_add_camera_, 1, camera.camera_id));
   } else {
     SQLITE3_CALL(sqlite3_bind_null(sql_stmt_add_camera_, 1));
   }
 
-  SQLITE3_CALL(sqlite3_bind_int64(sql_stmt_add_camera_, 2, camera.ModelId()));
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_add_camera_, 3, static_cast<sqlite3_int64>(camera.Width())));
+      sql_stmt_add_camera_, 2, static_cast<sqlite3_int64>(camera.model_id)));
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_add_camera_, 4, static_cast<sqlite3_int64>(camera.Height())));
+      sql_stmt_add_camera_, 3, static_cast<sqlite3_int64>(camera.width)));
+  SQLITE3_CALL(sqlite3_bind_int64(
+      sql_stmt_add_camera_, 4, static_cast<sqlite3_int64>(camera.height)));
 
-  const size_t num_params_bytes = sizeof(double) * camera.NumParams();
+  const size_t num_params_bytes = sizeof(double) * camera.params.size();
   SQLITE3_CALL(sqlite3_bind_blob(sql_stmt_add_camera_,
                                  5,
-                                 camera.ParamsData(),
+                                 camera.params.data(),
                                  static_cast<int>(num_params_bytes),
                                  SQLITE_STATIC));
 
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_add_camera_, 6, camera.HasPriorFocalLength()));
+      sql_stmt_add_camera_, 6, camera.has_prior_focal_length));
 
   SQLITE3_CALL(
-      sqlite3_bind_int64(sql_stmt_add_camera_, 7, camera.RefracModelId()));
+      sqlite3_bind_int64(sql_stmt_add_camera_,
+                         7,
+                         static_cast<sqlite3_int64>(camera.refrac_model_id)));
   const size_t num_refrac_params_bytes =
-      sizeof(double) * camera.NumRefracParams();
+      sizeof(double) * camera.refrac_params.size();
   SQLITE3_CALL(sqlite3_bind_blob(sql_stmt_add_camera_,
                                  8,
-                                 camera.RefracParamsData(),
+                                 camera.refrac_params.data(),
                                  static_cast<int>(num_refrac_params_bytes),
                                  SQLITE_STATIC));
 
@@ -838,33 +844,35 @@ void Database::WriteTwoViewGeometry(
 }
 
 void Database::UpdateCamera(const Camera& camera) const {
-  SQLITE3_CALL(
-      sqlite3_bind_int64(sql_stmt_update_camera_, 1, camera.ModelId()));
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_update_camera_, 2, static_cast<sqlite3_int64>(camera.Width())));
+      sql_stmt_update_camera_, 1, static_cast<sqlite3_int64>(camera.model_id)));
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_update_camera_, 3, static_cast<sqlite3_int64>(camera.Height())));
+      sql_stmt_update_camera_, 2, static_cast<sqlite3_int64>(camera.width)));
+  SQLITE3_CALL(sqlite3_bind_int64(
+      sql_stmt_update_camera_, 3, static_cast<sqlite3_int64>(camera.height)));
 
-  const size_t num_params_bytes = sizeof(double) * camera.NumParams();
+  const size_t num_params_bytes = sizeof(double) * camera.params.size();
   SQLITE3_CALL(sqlite3_bind_blob(sql_stmt_update_camera_,
                                  4,
-                                 camera.ParamsData(),
+                                 camera.params.data(),
                                  static_cast<int>(num_params_bytes),
                                  SQLITE_STATIC));
 
   SQLITE3_CALL(sqlite3_bind_int64(
-      sql_stmt_update_camera_, 5, camera.HasPriorFocalLength()));
+      sql_stmt_update_camera_, 5, camera.has_prior_focal_length));
   SQLITE3_CALL(
-      sqlite3_bind_int64(sql_stmt_update_camera_, 6, camera.RefracModelId()));
+      sqlite3_bind_int64(sql_stmt_update_camera_,
+                         6,
+                         static_cast<sqlite3_int64>(camera.refrac_model_id)));
   const size_t num_refrac_params_bytes =
-      sizeof(double) * camera.NumRefracParams();
+      sizeof(double) * camera.refrac_params.size();
   SQLITE3_CALL(sqlite3_bind_blob(sql_stmt_update_camera_,
                                  7,
-                                 camera.RefracParamsData(),
+                                 camera.refrac_params.data(),
                                  static_cast<int>(num_refrac_params_bytes),
                                  SQLITE_STATIC));
   SQLITE3_CALL(
-      sqlite3_bind_int64(sql_stmt_update_camera_, 8, camera.CameraId()));
+      sqlite3_bind_int64(sql_stmt_update_camera_, 8, camera.camera_id));
 
   SQLITE3_CALL(sqlite3_step(sql_stmt_update_camera_));
   SQLITE3_CALL(sqlite3_reset(sql_stmt_update_camera_));
@@ -976,13 +984,13 @@ void Database::Merge(const Database& database1,
   std::unordered_map<camera_t, camera_t> new_camera_ids1;
   for (const auto& camera : database1.ReadAllCameras()) {
     const camera_t new_camera_id = merged_database->WriteCamera(camera);
-    new_camera_ids1.emplace(camera.CameraId(), new_camera_id);
+    new_camera_ids1.emplace(camera.camera_id, new_camera_id);
   }
 
   std::unordered_map<camera_t, camera_t> new_camera_ids2;
   for (const auto& camera : database2.ReadAllCameras()) {
     const camera_t new_camera_id = merged_database->WriteCamera(camera);
-    new_camera_ids2.emplace(camera.CameraId(), new_camera_id);
+    new_camera_ids2.emplace(camera.camera_id, new_camera_id);
   }
 
   // Merge the images.
@@ -1464,7 +1472,7 @@ void Database::UpdateSchema() const {
   // Update user version number.
   std::unique_lock<std::mutex> lock(update_schema_mutex_);
   const std::string update_user_version_sql =
-      StringPrintf("PRAGMA user_version = %d;", GetVersionNumber());
+      StringPrintf("PRAGMA user_version = 3900;");
   SQLITE3_EXEC(database_, update_user_version_sql.c_str(), nullptr);
 }
 

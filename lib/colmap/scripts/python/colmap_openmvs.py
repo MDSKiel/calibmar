@@ -314,6 +314,12 @@ def parse_args():
         default=2.0,
     )
     group.add_argument(
+        "--show_pgo_result",
+        help="whether to additionally export the optimized pose graph results together with the reconstruction.",
+        action="store_true",
+        default=False,
+    )
+    group.add_argument(
         "--min_num_matches",
         help="the minimum number of matches for inlier matches to be considered.",
         type=int,
@@ -385,6 +391,18 @@ def parse_args():
     group.add_argument(
         "--ba_fix_intrin_until_num_images",
         help="fix camera intrinsics until registering a certain number of images",
+        type=int,
+        default=-1,
+    )
+    group.add_argument(
+        "--ba_refine_refrac_params",
+        help="whether to optimize refractive parameter during bundle adjustment",
+        action="store_true",
+        default=False,
+    )
+    group.add_argument(
+        "--ba_fix_refrac_params_until_num_images",
+        help="fix refractive camera parameters until registering a certain number of images",
         type=int,
         default=-1,
     )
@@ -506,6 +524,7 @@ class COLMAPOpenMVSPipeline:
         self.pgo_rel_pose_multi: float = args.pgo_rel_pose_multi
         self.pgo_abs_pose_multi: float = args.pgo_abs_pose_multi
         self.pgo_smooth_multi: float = args.pgo_smooth_multi
+        self.show_pgo_result: bool = args.show_pgo_result
 
         self.min_num_matches: int = args.min_num_matches
         self.ba_local_num_images: int = args.ba_local_num_images
@@ -524,6 +543,11 @@ class COLMAPOpenMVSPipeline:
             args.ba_refine_prior_from_cam_after_num_images
         )
         self.fix_intrin_until: int = args.ba_fix_intrin_until_num_images
+        self.ba_refine_refrac_params = args.ba_refine_refrac_params
+        self.ba_fix_refrac_params_until: int = (
+            args.ba_fix_refrac_params_until_num_images
+        )
+
         self.write_snapshot: bool = args.write_snapshot
         self.snapshot_images_freq: int = args.snapshot_images_freq
 
@@ -787,6 +811,8 @@ class COLMAPOpenMVSPipeline:
                 f"{self.pgo_abs_pose_multi}",
                 "--pgo_smooth_multi",
                 f"{self.pgo_smooth_multi}",
+                "--show_pgo_result",
+                f"{self.show_pgo_result}",
             ]
         if self.fix_intrin:
             mapper_cmds += [
@@ -819,6 +845,12 @@ class COLMAPOpenMVSPipeline:
 
         if self.enable_refraction:
             mapper_cmds += ["--Mapper.enable_refraction", "1"]
+            mapper_cmds += [
+                "--Mapper.ba_refine_refrac_params",
+                f"{self.ba_refine_refrac_params}",
+                "--Mapper.ba_fix_refrac_params_until_num_images",
+                f"{self.ba_fix_refrac_params_until}",
+            ]
 
         if self.write_snapshot and not self.hybrid_mapper:
             mapper_cmds += [

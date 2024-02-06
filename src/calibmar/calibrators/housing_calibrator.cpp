@@ -51,20 +51,20 @@ namespace calibmar {
     }
 
     colmap::Camera& camera = calibration.Camera();
-    camera.SetWidth(options_.image_size.first);
-    camera.SetHeight(options_.image_size.second);
-    camera.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
-    camera.SetRefracModelIdFromName(calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
+    camera.width = options_.image_size.first;
+    camera.height = options_.image_size.second;
+    camera.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
+    camera.refrac_model_id = colmap::CameraRefracModelNameToId(calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
 
     std::vector<std::vector<Eigen::Vector2d>> point_sets_2D;
     std::vector<std::vector<Eigen::Vector3d>> point_sets_3D;
     calibration.GetCorrespondences(point_sets_2D, point_sets_3D);
     std::vector<Image>& images = calibration.Images();
 
-    camera.SetParams(options_.camera_params);
-    camera.SetRefracParams(options_.initial_housing_params);
+    camera.params = options_.camera_params;
+    camera.refrac_params = options_.initial_housing_params;
 
-    if (options_.estimate_initial_dome_offset && camera.RefracModelId() == colmap::DomePort::kRefracModelId) {
+    if (options_.estimate_initial_dome_offset && camera.refrac_model_id == colmap::DomePort::refrac_model_id) {
       non_svp_calibration::EstimateInitialDomeOffset(
           point_sets_3D[0], point_sets_2D[0],
           {options_.pattern_cols_rows.first - 1,

@@ -77,7 +77,7 @@ namespace calibmar {
     //                                         800, 600);
     // calibration.Camera().SetRefracModelIdFromName(
     //     HousingInterface::HousingInterfaces().at(HousingInterfaceType::DoubleLayerPlanarRefractive).model_name);
-    // calibration.Camera().SetRefracParams({0, 0, 1, 0.12, 1, 1.44, 1.32});
+    // calibration.Camera().refrac_params = {0, 0, 1, 0.12, 1, 1.44, 1.32};
 
     // calibration.SetCalibrationRms(1.32313);
     // calibration.SetIntrinsicsStdDeviations({1.1, 1.2, 1.3});
@@ -97,8 +97,8 @@ namespace calibmar {
     //----------------------------------------------------------------------------------------------
 
     Calibration calibration;
-    calibration.Camera().InitializeWithName(CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name, 1000,
-                                            800, 600);
+    calibration.SetCamera(colmap::Camera::CreateFromModelName(colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name, 1000,
+                                            800, 600));
 
     std::vector<Eigen::Vector2d> points;
     for (size_t i = 0; i < 600; i += 50) {
@@ -112,9 +112,9 @@ namespace calibmar {
     ZoomableScrollArea* heatmap_area = new ZoomableScrollArea(this);
     ImageWidget* image = new ImageWidget(this);
     heatmap_area->setWidget(image);
-    heatmap_area->widget()->resize(calibration.Camera().Width(), calibration.Camera().Height());
+    heatmap_area->widget()->resize(calibration.Camera().width, calibration.Camera().height);
     std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
-    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().Width(), calibration.Camera().Height()}, *heatmap);
+    heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().width, calibration.Camera().height}, *heatmap);
     image->SetImage(std::move(heatmap));
     CollapsibleWidget* heatmap_collapse = new CollapsibleWidget("Heatmap", nullptr, this);
     heatmap_collapse->SetWidget(heatmap_area, 500);

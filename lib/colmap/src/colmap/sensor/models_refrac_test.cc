@@ -73,7 +73,7 @@ void TestModel(const std::vector<double>& cam_params,
                                             refrac_params));
 
   EXPECT_EQ(CameraRefracModelParamsInfo(CameraRefracModel::refrac_model_id),
-            CameraRefracModel::params_info);
+            CameraRefracModel::refrac_params_info);
   EXPECT_EQ(CameraRefracModelNumParams(CameraRefracModel::refrac_model_id),
             CameraRefracModel::num_params);
 
@@ -85,7 +85,7 @@ void TestModel(const std::vector<double>& cam_params,
   EXPECT_TRUE(
       ExistsCameraRefracModelWithId(CameraRefracModel::refrac_model_id));
   EXPECT_FALSE(ExistsCameraRefracModelWithId(
-      CameraRefracModel::refrac_model_id + 123456789));
+      static_cast<CameraRefracModelId>(123456789)));
 
   EXPECT_EQ(CameraRefracModelNameToId(
                 CameraRefracModelIdToName(CameraRefracModel::refrac_model_id)),

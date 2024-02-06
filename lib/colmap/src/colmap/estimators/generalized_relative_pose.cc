@@ -33,6 +33,7 @@
 #include "colmap/geometry/pose.h"
 #include "colmap/geometry/triangulation.h"
 #include "colmap/math/random.h"
+#include "colmap/util/eigen_alignment.h"
 #include "colmap/util/logging.h"
 
 #include <Eigen/Dense>
@@ -417,10 +418,14 @@ Eigen::Vector3d ComputeJacobian(const Eigen::Matrix3d& xxF,
 
 }  // namespace
 
-std::vector<GR6PEstimator::M_t> GR6PEstimator::Estimate(
-    const std::vector<X_t>& points1, const std::vector<Y_t>& points2) {
+void GR6PEstimator::Estimate(const std::vector<X_t>& points1,
+                             const std::vector<Y_t>& points2,
+                             std::vector<M_t>* models) {
   CHECK_GE(points1.size(), 6);
   CHECK_EQ(points1.size(), points2.size());
+  CHECK(models != nullptr);
+
+  models->clear();
 
   std::vector<Eigen::Vector3d> proj_centers1(points1.size());
   std::vector<Eigen::Vector3d> proj_centers2(points1.size());
@@ -705,13 +710,11 @@ std::vector<GR6PEstimator::M_t> GR6PEstimator::Estimate(
   const Eigen::Matrix4cd V = eigen_solver_G.eigenvectors();
   const Eigen::Matrix3x4d VV = V.real().colwise().hnormalized();
 
-  std::vector<M_t> models(4);
+  models->resize(4);
   for (int i = 0; i < 4; ++i) {
-    models[i].rotation = Eigen::Quaterniond(R);
-    models[i].translation = -R * VV.col(i);
+    (*models)[i].rotation = Eigen::Quaterniond(R);
+    (*models)[i].translation = -R * VV.col(i);
   }
-
-  return models;
 }
 
 void GR6PEstimator::Residuals(const std::vector<X_t>& points1,
@@ -721,8 +724,9 @@ void GR6PEstimator::Residuals(const std::vector<X_t>& points1,
   CHECK_EQ(points1.size(), points2.size());
   residuals->resize(points1.size(), 0);
   for (size_t i = 0; i < points1.size(); ++i) {
-    const Rigid3d cam2_from_cam1 = points2[i].cam_from_rig * rig2_from_rig1 *
-                                   Inverse(points1[i].cam_from_rig);
+    const Rigid3d cam2_from_cam1 =
+        points2[i].cam_from_rig *
+        (rig2_from_rig1 * Inverse(points1[i].cam_from_rig));
     const Eigen::Matrix3d E = EssentialMatrixFromPose(cam2_from_cam1);
     const Eigen::Vector3d Ex1 =
         E * points1[i].ray_in_cam.hnormalized().homogeneous();
@@ -733,6 +737,8 @@ void GR6PEstimator::Residuals(const std::vector<X_t>& points1,
     (*residuals)[i] = x2tEx1 * x2tEx1 /
                       (Ex1(0) * Ex1(0) + Ex1(1) * Ex1(1) + Etx2(0) * Etx2(0) +
                        Etx2(1) * Etx2(1));
+    // std::cout << "In the residual: " << points1[i].ray_in_cam.hnormalized().homogeneous().transpose() << " -- " << points2[i].ray_in_cam.hnormalized() << std::endl;
+    // std::cout << "cost: " << (*residuals)[i] << std::endl;
   }
 }
 

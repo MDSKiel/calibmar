@@ -29,6 +29,8 @@
 
 #include "colmap/estimators/homography_matrix.h"
 
+#include "colmap/util/eigen_alignment.h"
+
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <gtest/gtest.h>
@@ -55,7 +57,10 @@ TEST(HomographyMatrix, Estimate) {
     }
 
     HomographyMatrixEstimator est_tform;
-    const auto models = est_tform.Estimate(src, dst);
+    std::vector<Eigen::Matrix3d> models;
+    est_tform.Estimate(src, dst, &models);
+
+    ASSERT_EQ(models.size(), 1);
 
     std::vector<double> residuals;
     est_tform.Residuals(src, dst, models[0], &residuals);

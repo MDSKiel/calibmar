@@ -42,9 +42,9 @@ void GenerateRandom3D2DPoints(const Camera& camera,
   for (size_t i = 0; i < num_points; i++) {
     Eigen::Vector2d point2D_refrac;
     point2D_refrac.x() =
-        RandomUniformReal(0.5, static_cast<double>(camera.Width()) - 0.5);
+        RandomUniformReal(0.5, static_cast<double>(camera.width) - 0.5);
     point2D_refrac.y() =
-        RandomUniformReal(0.5, static_cast<double>(camera.Height()) - 0.5);
+        RandomUniformReal(0.5, static_cast<double>(camera.height) - 0.5);
 
     const double depth = RandomUniformReal(0.5, 10.0);
     const Eigen::Vector3d point3D_local =
@@ -53,7 +53,7 @@ void GenerateRandom3D2DPoints(const Camera& camera,
     const Eigen::Vector3d point3D_world =
         Inverse(cam_from_world_gt) * point3D_local;
 
-    // Now project the point in-air.
+    // Now project the point non-refractive.
     Eigen::Vector2d point2D = camera.ImgFromCam(point3D_local.hnormalized());
 
     if (cnt < num_inliers) {
@@ -182,21 +182,21 @@ size_t EstimatePose(Camera& camera,
       return 0;
     }
 
-    AbsolutePoseRefinementOptions abs_pose_refinement_options;
-    abs_pose_refinement_options.refine_focal_length = false;
-    abs_pose_refinement_options.refine_extra_params = false;
+    // AbsolutePoseRefinementOptions abs_pose_refinement_options;
+    // abs_pose_refinement_options.refine_focal_length = false;
+    // abs_pose_refinement_options.refine_extra_params = false;
 
-    std::vector<Camera> virtual_cameras_copy = points_data.virtual_cameras;
-    if (!RefineGeneralizedAbsolutePose(abs_pose_refinement_options,
-                                       inlier_mask,
-                                       points_data.points2D_refrac,
-                                       points_data.points3D,
-                                       camera_idxs,
-                                       points_data.virtual_from_reals,
-                                       &cam_from_world,
-                                       &virtual_cameras_copy)) {
-      std::cerr << "ERROR: Pose refinement failed" << std::endl;
-    }
+    // std::vector<Camera> virtual_cameras_copy = points_data.virtual_cameras;
+    // if (!RefineGeneralizedAbsolutePose(abs_pose_refinement_options,
+    //                                    inlier_mask,
+    //                                    points_data.points2D_refrac,
+    //                                    points_data.points3D,
+    //                                    camera_idxs,
+    //                                    points_data.virtual_from_reals,
+    //                                    &cam_from_world,
+    //                                    &virtual_cameras_copy)) {
+    //   std::cerr << "ERROR: Pose refinement failed" << std::endl;
+    // }
   }
   return num_inliers;
 }
@@ -207,8 +207,11 @@ void PoseError(const Rigid3d& cam1_from_world,
                double& position_error) {
   Rigid3d cam2_from_cam1 = cam2_from_world * Inverse(cam1_from_world);
   rotation_error = RadToDeg(Eigen::AngleAxisd(cam2_from_cam1.rotation).angle());
-  position_error =
-      (cam2_from_cam1.rotation.inverse() * -cam2_from_cam1.translation).norm();
+  // Position error in [mm].
+  position_error = (Inverse(cam1_from_world).translation -
+                    Inverse(cam2_from_world).translation)
+                       .norm() *
+                   1000.0;
 }
 
 void Evaluate(Camera& camera,
@@ -216,13 +219,12 @@ void Evaluate(Camera& camera,
               size_t num_exps,
               double inlier_ratio,
               const std::string& output_path) {
-  //std::vector<double> noise_levels = {0.0, 0.2, 0.5, 0.8, 1.2, 1.5, 1.8, 2.0};
-  std::vector<double> noise_levels = {0.0};
+  std::vector<double> noise_levels = {0.0, 0.2, 0.5, 0.8, 1.2, 1.5, 1.8, 2.0};
 
   std::ofstream file(output_path, std::ios::out);
-  file << "# noise_level pos_error_mean pos_error_std rot_error_mean "
-          "rot_error_std pos_error_refrac_mean pos_error_refrac_std "
-          "rot_error_refrac_mean rot_error_refrac_std time time_refrac"
+  file << "# noise_level rot_error_mean rot_error_std pos_error_mean "
+          "pos_error_std rot_error_refrac_mean rot_error_refrac_std "
+          "pos_error_refrac_mean pos_error_refrac_std time time_refrac"
        << std::endl;
 
   for (const double& noise : noise_levels) {
@@ -265,7 +267,7 @@ void Evaluate(Camera& camera,
 
     Timer timer;
 
-    // Perform in-air pose estimation
+    // Perform non-refractive pose estimation
     timer.Start();
     for (size_t i = 0; i < num_exps; i++) {
       const PointsData& points_data = datasets[i];
@@ -307,33 +309,34 @@ void Evaluate(Camera& camera,
     timer.Pause();
     time_refrac = timer.ElapsedSeconds();
 
-    const double pos_error_mean = Mean(position_errors);
-    const double pos_error_std = StdDev(position_errors);
     const double rot_error_mean = Mean(rotation_errors);
     const double rot_error_std = StdDev(rotation_errors);
+    const double pos_error_mean = Mean(position_errors);
+    const double pos_error_std = StdDev(position_errors);
 
-    const double pos_error_refrac_mean = Mean(position_errors_refrac);
-    const double pos_error_refrac_std = StdDev(position_errors_refrac);
     const double rot_error_refrac_mean = Mean(rotation_errors_refrac);
     const double rot_error_refrac_std = StdDev(rotation_errors_refrac);
+    const double pos_error_refrac_mean = Mean(position_errors_refrac);
+    const double pos_error_refrac_std = StdDev(position_errors_refrac);
 
     const double inlier_ratio_mean = Mean(inlier_ratios);
     const double inlier_ratio_refrac_mean = Mean(inlier_ratios_refrac);
 
-    file << noise << " " << pos_error_mean << " " << pos_error_std << " "
-         << rot_error_mean << " " << rot_error_std << " "
-         << pos_error_refrac_mean << " " << pos_error_refrac_std << " "
-         << rot_error_refrac_mean << " " << rot_error_refrac_std << " " << time
+    file << noise << " " << rot_error_mean << " " << rot_error_std << " "
+         << pos_error_mean << " " << pos_error_std << " "
+         << rot_error_refrac_mean << " " << rot_error_refrac_std << " "
+         << pos_error_refrac_mean << " " << pos_error_refrac_std << " " << time
          << " " << time_refrac << " " << inlier_ratio_mean << " "
          << inlier_ratio_refrac_mean << std::endl;
-    std::cout << "Pose error in-air: Rotation: " << pos_error_mean << " +/- "
-              << pos_error_std << " -- Position: " << rot_error_mean << " +/- "
-              << rot_error_std << " -- inlier ratio: " << inlier_ratio_mean
+    std::cout << "Pose error non-refrac: Rotation: " << rot_error_mean
+              << " +/- " << rot_error_std << " -- Position: " << pos_error_mean
+              << " +/- " << pos_error_std
+              << " -- inlier ratio: " << inlier_ratio_mean
               << " GT inlier ratio: " << inlier_ratio << std::endl;
-    std::cout << "Pose error refrac: Rotation: " << pos_error_refrac_mean
-              << " +/- " << pos_error_refrac_std
-              << " -- Position: " << rot_error_refrac_mean << " +/- "
-              << rot_error_refrac_std
+    std::cout << "Pose error     refrac: Rotation: " << rot_error_refrac_mean
+              << " +/- " << rot_error_refrac_std
+              << " -- Position: " << pos_error_refrac_mean << " +/- "
+              << pos_error_refrac_std
               << " -- inlier ratio: " << inlier_ratio_refrac_mean
               << " GT inlier ratio: " << inlier_ratio << std::endl;
   }
@@ -343,8 +346,6 @@ void Evaluate(Camera& camera,
 
 int main(int argc, char* argv[]) {
   SetPRNGSeed(time(NULL));
-
-  std::cout << "Setup some realistic camera model" << std::endl;
 
   // Camera parameters coming from Anton 131 map.
   //   Camera camera;
@@ -362,41 +363,38 @@ int main(int argc, char* argv[]) {
   //                                 0.00012198372904429465,
   //                                 0.00051849746014895923};
   Camera camera;
-  camera.SetWidth(2048);
-  camera.SetHeight(1536);
-  camera.SetModelIdFromName("PINHOLE");
+  camera.width = 1920;
+  camera.height = 1080;
+  camera.model_id = CameraModelId::kPinhole;
   std::vector<double> params = {
-      1300.900000, 1300.900000, 1024.000000, 768.000000};
-  camera.SetParams(params);
+      1297.3655404279762, 1297.3655404279762, 960.0, 540.0};
+  camera.params = params;
 
-  // // Flatport setup.
+  // Flatport setup.
   // camera.SetRefracModelIdFromName("FLATPORT");
   // Eigen::Vector3d int_normal;
-  // int_normal[0] = RandomUniformReal(-0.3, 0.3);
-  // int_normal[1] = RandomUniformReal(-0.3, 0.3);
-  // int_normal[2] = RandomUniformReal(0.7, 1.3);
+  // int_normal[0] = RandomUniformReal(-0.1, 0.1);
+  // int_normal[1] = RandomUniformReal(-0.1, 0.1);
+  // int_normal[2] = RandomUniformReal(0.9, 1.1);
 
   // int_normal.normalize();
-
-  // int_normal = Eigen::Vector3d::UnitZ();
-
+  // // int_normal = Eigen::Vector3d::UnitZ();
   // std::vector<double> flatport_params = {int_normal[0],
   //                                        int_normal[1],
   //                                        int_normal[2],
-  //                                        0.01,
-  //                                        0.007,
+  //                                        0.05,
+  //                                        0.02,
   //                                        1.0,
   //                                        1.52,
   //                                        1.334};
   // camera.SetRefracParams(flatport_params);
 
   // Domeport setup.
-  camera.SetRefracModelIdFromName("DOMEPORT");
+  camera.refrac_model_id = CameraRefracModelId::kDomePort;
   Eigen::Vector3d decentering;
-  decentering[0] = RandomUniformReal(-0.003, 0.003);
-  decentering[1] = RandomUniformReal(-0.003, 0.003);
-  decentering[2] = RandomUniformReal(-0.01, 0.01);
-  ;
+  decentering[0] = RandomUniformReal(-0.008, 0.008);
+  decentering[1] = RandomUniformReal(-0.008, 0.008);
+  decentering[2] = RandomUniformReal(-0.03, 0.03);
 
   std::vector<double> domeport_params = {decentering[0],
                                          decentering[1],
@@ -406,17 +404,17 @@ int main(int argc, char* argv[]) {
                                          1.0,
                                          1.52,
                                          1.334};
-  camera.SetRefracParams(domeport_params);
+  camera.refrac_params = domeport_params;
 
   // Generate simulated point data.
   const size_t num_points = 200;
   const double inlier_ratio = 0.7;
 
   std::string output_dir =
-      "/home/mshe/workspace/omv_src/colmap-project/refrac_sfm_eval/data/"
+      "/home/mshe/workspace/omv_src/colmap-project/refrac_sfm_eval/plots/"
       "abs_pose/";
   std::stringstream ss;
-  ss << output_dir << "/eval_refrac_abs_pose_domeport_num_points_" << num_points
+  ss << output_dir << "/abs_pose_dome_large_num_points_" << num_points
      << "_inlier_ratio_" << inlier_ratio << ".txt";
   std::string output_path = ss.str();
 

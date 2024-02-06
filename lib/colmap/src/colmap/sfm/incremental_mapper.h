@@ -311,6 +311,11 @@ class IncrementalMapper {
   // This image list will be non-empty, if the reconstruction is continued from
   // an existing reconstruction.
   std::unordered_set<image_t> existing_image_ids_;
+
+  // If refraction is enabled, and if the camera is also refractive. We
+  // pre-compute best approximate pinhole models for different distances and
+  // cache them.
+  std::unordered_map<camera_t, Camera> best_fit_cameras_;
 };
 
 }  // namespace colmap

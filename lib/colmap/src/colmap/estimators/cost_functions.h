@@ -31,6 +31,7 @@
 
 #include "colmap/geometry/rigid3.h"
 #include "colmap/sensor/ray3d.h"
+#include "colmap/util/eigen_alignment.h"
 
 #include <Eigen/Core>
 #include <ceres/ceres.h>
@@ -58,7 +59,7 @@ class ReprojErrorCostFunction {
                                         4,
                                         3,
                                         3,
-                                        CameraModel::kNumParams>(
+                                        CameraModel::num_params>(
             new ReprojErrorCostFunction(point2D)));
   }
 
@@ -105,7 +106,7 @@ class ReprojErrorConstantPoseCostFunction {
             ReprojErrorConstantPoseCostFunction<CameraModel>,
             2,
             3,
-            CameraModel::kNumParams>(
+            CameraModel::num_params>(
         new ReprojErrorConstantPoseCostFunction(cam_from_world, point2D)));
   }
 
@@ -153,7 +154,7 @@ class ReprojErrorConstantPoint3DCostFunction {
             2,
             4,
             3,
-            CameraModel::kNumParams>(
+            CameraModel::num_params>(
         new ReprojErrorConstantPoint3DCostFunction(point2D, point3D)));
   }
 
@@ -210,7 +211,7 @@ class RigReprojErrorCostFunction {
                                         4,
                                         3,
                                         3,
-                                        CameraModel::kNumParams>(
+                                        CameraModel::num_params>(
             new RigReprojErrorCostFunction(point2D)));
   }
 
@@ -582,8 +583,8 @@ class ReprojErrorRefracCostFunction {
             4,
             3,
             3,
-            CameraModel::kNumParams,
-            CameraRefracModel::kNumParams>(
+            CameraModel::num_params,
+            CameraRefracModel::num_params>(
         new ReprojErrorRefracCostFunction(point2D)));
   }
 
@@ -666,8 +667,8 @@ class ReprojErrorRefracConstantPoseCostFunction {
                                                       CameraModel>,
             2,
             3,
-            CameraModel::kNumParams,
-            CameraRefracModel::kNumParams>(
+            CameraModel::num_params,
+            CameraRefracModel::num_params>(
         new ReprojErrorRefracConstantPoseCostFunction(cam_from_world,
                                                       point2D)));
   }
@@ -728,6 +729,99 @@ class ReprojErrorRefracConstantPoseCostFunction {
   const Rigid3d& cam_from_world_;
   const double observed_x_;
   const double observed_y_;
+};
+
+// Cost function for refining generalized relative pose based on the
+// Sampson-Error.
+//
+// First pose is assumed to be located at the origin with 0 rotation. Second
+// pose is assumed to be on the unit sphere around the first pose, i.e. the
+// pose of the second camera is parameterized by a 3D rotation and a
+// 3D translation with unit norm. `tvec` is therefore over-parameterized as is
+// and should be down-projected using `SphereManifold`.
+class GeneralizedSampsonErrorCostFunction {
+ public:
+  GeneralizedSampsonErrorCostFunction(const Eigen::Vector2d& x1,
+                                      const Eigen::Vector2d& x2,
+                                      const Rigid3d& cam1_from_rig1,
+                                      const Rigid3d& cam2_from_rig2)
+      : x1_(x1(0)),
+        y1_(x1(1)),
+        x2_(x2(0)),
+        y2_(x2(1)),
+        cam1_from_rig1_(cam1_from_rig1),
+        cam2_from_rig2_(cam2_from_rig2) {}
+
+  static ceres::CostFunction* Create(const Eigen::Vector2d& x1,
+                                     const Eigen::Vector2d& x2,
+                                     const Rigid3d& cam1_from_rig1,
+                                     const Rigid3d& cam2_from_rig2) {
+    return (
+        new ceres::
+            AutoDiffCostFunction<GeneralizedSampsonErrorCostFunction, 1, 4, 3>(
+                new GeneralizedSampsonErrorCostFunction(
+                    x1, x2, cam1_from_rig1, cam2_from_rig2)));
+  }
+
+  template <typename T>
+  bool operator()(const T* const rig2_from_rig1_rotation,
+                  const T* const rig2_from_rig1_translation,
+                  T* residuals) const {
+    // Compute cam2_from_cam1 transformation.
+    const Eigen::Quaternion<T> rig1_from_cam1_rotation =
+        cam1_from_rig1_.rotation.cast<T>().inverse();
+    const Eigen::Matrix<T, 3, 1> rig1_from_cam1_translation =
+        rig1_from_cam1_rotation * -cam1_from_rig1_.translation.cast<T>();
+
+    const Eigen::Quaternion<T> rig2_from_cam1_rotation =
+        EigenQuaternionMap<T>(rig2_from_rig1_rotation) *
+        rig1_from_cam1_rotation;
+    const Eigen::Matrix<T, 3, 1> rig2_from_cam1_translation =
+        EigenVector3Map<T>(rig2_from_rig1_translation) +
+        EigenQuaternionMap<T>(rig2_from_rig1_rotation) *
+            rig1_from_cam1_translation;
+
+    const Eigen::Quaternion<T> cam2_from_cam1_rotation =
+        cam2_from_rig2_.rotation.cast<T>() * rig2_from_cam1_rotation;
+
+    const Eigen::Matrix<T, 3, 1> cam2_from_cam1_translation =
+        (cam2_from_rig2_.translation.cast<T>() +
+         cam2_from_rig2_.rotation.cast<T>() * rig2_from_cam1_translation)
+            .normalized();
+
+    const Eigen::Matrix<T, 3, 3> R = cam2_from_cam1_rotation.toRotationMatrix();
+
+    // Matrix representation of the cross product t x R.
+    Eigen::Matrix<T, 3, 3> t_x;
+    t_x << T(0), -cam2_from_cam1_translation[2], cam2_from_cam1_translation[1],
+        cam2_from_cam1_translation[2], T(0), -cam2_from_cam1_translation[0],
+        -cam2_from_cam1_translation[1], cam2_from_cam1_translation[0], T(0);
+
+    // Essential matrix.
+    const Eigen::Matrix<T, 3, 3> E = t_x * R;
+
+    // Homogeneous image coordinates.
+    const Eigen::Matrix<T, 3, 1> x1_h(T(x1_), T(y1_), T(1));
+    const Eigen::Matrix<T, 3, 1> x2_h(T(x2_), T(y2_), T(1));
+
+    // Squared sampson error.
+    const Eigen::Matrix<T, 3, 1> Ex1 = E * x1_h;
+    const Eigen::Matrix<T, 3, 1> Etx2 = E.transpose() * x2_h;
+    const T x2tEx1 = x2_h.transpose() * Ex1;
+    residuals[0] = x2tEx1 * x2tEx1 /
+                   (Ex1(0) * Ex1(0) + Ex1(1) * Ex1(1) + Etx2(0) * Etx2(0) +
+                    Etx2(1) * Etx2(1));
+
+    return true;
+  }
+
+ private:
+  const double x1_;
+  const double y1_;
+  const double x2_;
+  const double y2_;
+  const Rigid3d& cam1_from_rig1_;
+  const Rigid3d& cam2_from_rig2_;
 };
 
 inline void SetQuaternionManifold(ceres::Problem* problem, double* quat_xyzw) {

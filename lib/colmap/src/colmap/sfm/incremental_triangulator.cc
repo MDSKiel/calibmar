@@ -612,7 +612,7 @@ size_t IncrementalTriangulator::Continue(
     if (!options.enable_refraction) {
       // Non-refractive case.
       angle_error = CalculateAngularError(ref_corr_data.point2D->xy,
-                                          point3D.XYZ(),
+                                          point3D.xyz,
                                           ref_corr_data.image->CamFromWorld(),
                                           *ref_corr_data.camera);
     } else {
@@ -624,7 +624,7 @@ size_t IncrementalTriangulator::Continue(
       const Rigid3d virtual_from_world =
           virtual_from_real * ref_corr_data.image->CamFromWorld();
       angle_error = CalculateAngularError(ref_corr_data.point2D->xy,
-                                          point3D.XYZ(),
+                                          point3D.xyz,
                                           virtual_from_world,
                                           virtual_camera);
     }
@@ -659,7 +659,7 @@ size_t IncrementalTriangulator::Merge(const Options& options,
 
   const auto& point3D = reconstruction_->Point3D(point3D_id);
 
-  for (const auto& track_el : point3D.Track().Elements()) {
+  for (const auto& track_el : point3D.track.Elements()) {
     const auto corr_range = correspondence_graph_->FindCorrespondences(
         track_el.image_id, track_el.point2D_idx);
     for (const auto* corr = corr_range.beg; corr < corr_range.end; ++corr) {
@@ -684,13 +684,13 @@ size_t IncrementalTriangulator::Merge(const Options& options,
 
       // Weighted average of point locations, depending on track length.
       const Eigen::Vector3d merged_xyz =
-          (point3D.Track().Length() * point3D.XYZ() +
-           corr_point3D.Track().Length() * corr_point3D.XYZ()) /
-          (point3D.Track().Length() + corr_point3D.Track().Length());
+          (point3D.track.Length() * point3D.xyz +
+           corr_point3D.track.Length() * corr_point3D.xyz) /
+          (point3D.track.Length() + corr_point3D.track.Length());
 
       // Count number of inlier track elements of the merged track.
       bool merge_success = true;
-      for (const Track* track : {&point3D.Track(), &corr_point3D.Track()}) {
+      for (const Track* track : {&point3D.track, &corr_point3D.track}) {
         for (const auto test_track_el : track->Elements()) {
           const Image& test_image =
               reconstruction_->Image(test_track_el.image_id);
@@ -718,7 +718,7 @@ size_t IncrementalTriangulator::Merge(const Options& options,
       // Only accept merge if all track elements are inliers.
       if (merge_success) {
         const size_t num_merged =
-            point3D.Track().Length() + corr_point3D.Track().Length();
+            point3D.track.Length() + corr_point3D.track.Length();
 
         const point3D_t merged_point3D_id =
             reconstruction_->MergePoints3D(point3D_id, corr_point2D.point3D_id);
@@ -755,7 +755,7 @@ size_t IncrementalTriangulator::Complete(const Options& options,
 
   const Point3D& point3D = reconstruction_->Point3D(point3D_id);
 
-  std::vector<TrackElement> queue = point3D.Track().Elements();
+  std::vector<TrackElement> queue = point3D.track.Elements();
 
   const int max_transitivity = options.complete_max_transitivity;
   for (int transitivity = 0; transitivity < max_transitivity; ++transitivity) {
@@ -787,7 +787,7 @@ size_t IncrementalTriangulator::Complete(const Options& options,
 
         const double squared_reproj_error =
             CalculateSquaredReprojectionError(point2D.xy,
-                                              point3D.XYZ(),
+                                              point3D.xyz,
                                               image.CamFromWorld(),
                                               camera,
                                               options.enable_refraction);
@@ -817,13 +817,13 @@ size_t IncrementalTriangulator::Complete(const Options& options,
 
 bool IncrementalTriangulator::HasCameraBogusParams(const Options& options,
                                                    const Camera& camera) {
-  const auto it = camera_has_bogus_params_.find(camera.CameraId());
+  const auto it = camera_has_bogus_params_.find(camera.camera_id);
   if (it == camera_has_bogus_params_.end()) {
     const bool has_bogus_params =
         camera.HasBogusParams(options.min_focal_length_ratio,
                               options.max_focal_length_ratio,
                               options.max_extra_param);
-    camera_has_bogus_params_.emplace(camera.CameraId(), has_bogus_params);
+    camera_has_bogus_params_.emplace(camera.camera_id, has_bogus_params);
     return has_bogus_params;
   } else {
     return it->second;

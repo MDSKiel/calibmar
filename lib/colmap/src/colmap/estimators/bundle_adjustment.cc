@@ -88,7 +88,7 @@ size_t BundleAdjustmentConfig::NumConstantCamPoses() const {
   return constant_cam_poses_.size();
 }
 
-size_t BundleAdjustmentConfig::NumConstantCamPositionss() const {
+size_t BundleAdjustmentConfig::NumConstantCamPositions() const {
   return constant_cam_positions_.size();
 }
 
@@ -115,7 +115,7 @@ size_t BundleAdjustmentConfig::NumResiduals(
                                   &reconstruction](const point3D_t point3D_id) {
     size_t num_observations_for_point = 0;
     const auto& point3D = reconstruction.Point3D(point3D_id);
-    for (const auto& track_el : point3D.Track().Elements()) {
+    for (const auto& track_el : point3D.track.Elements()) {
       if (image_ids_.count(track_el.image_id) == 0) {
         num_observations_for_point += 1;
       }
@@ -310,10 +310,6 @@ bool BundleAdjuster::Solve(Reconstruction* reconstruction) {
 
   ceres::Solve(solver_options, problem_.get(), &summary_);
 
-  if (solver_options.minimizer_progress_to_stdout) {
-    std::cout << std::endl;
-  }
-
   if (options_.print_summary) {
     PrintHeading2("Bundle adjustment report");
     PrintSolverSummary(summary_);
@@ -362,7 +358,7 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
   double* cam_from_world_rotation =
       image.CamFromWorld().rotation.coeffs().data();
   double* cam_from_world_translation = image.CamFromWorld().translation.data();
-  double* camera_params = camera.ParamsData();
+  double* camera_params = camera.params.data();
 
   const bool constant_cam_pose =
       !options_.refine_extrinsics || config_.HasConstantCamPose(image_id);
@@ -378,16 +374,16 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
     point3D_num_observations_[point2D.point3D_id] += 1;
 
     Point3D& point3D = reconstruction->Point3D(point2D.point3D_id);
-    assert(point3D.Track().Length() > 1);
+    assert(point3D.track.Length() > 1);
 
     ceres::CostFunction* cost_function = nullptr;
 
     if (constant_cam_pose) {
       if (!options_.enable_refraction) {
         // Non-refractive case.
-        switch (camera.ModelId()) {
+        switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorConstantPoseCostFunction<CameraModel>::Create( \
         image.CamFromWorld(), point2D.xy);                                    \
     break;
@@ -398,14 +394,14 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
         }
 
         problem_->AddResidualBlock(
-            cost_function, loss_function, point3D.XYZ().data(), camera_params);
+            cost_function, loss_function, point3D.xyz.data(), camera_params);
       } else {
         // Refractive case.
-        double* refrac_params = camera.RefracParamsData();
+        double* refrac_params = camera.refrac_params.data();
 
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel) \
-  if (camera.ModelId() == CameraModel::kModelId &&                    \
-      camera.RefracModelId() == CameraRefracModel::kRefracModelId) {  \
+  if (camera.model_id == CameraModel::model_id &&                     \
+      camera.refrac_model_id == CameraRefracModel::refrac_model_id) { \
     cost_function = ReprojErrorRefracConstantPoseCostFunction<        \
         CameraRefracModel,                                            \
         CameraModel>::Create(image.CamFromWorld(), point2D.xy);       \
@@ -417,16 +413,16 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
 
         problem_->AddResidualBlock(cost_function,
                                    loss_function,
-                                   point3D.XYZ().data(),
+                                   point3D.xyz.data(),
                                    camera_params,
                                    refrac_params);
       }
     } else {
       if (!options_.enable_refraction) {
         // Non-refractive case.
-        switch (camera.ModelId()) {
+        switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorCostFunction<CameraModel>::Create(point2D.xy); \
     break;
 
@@ -439,15 +435,15 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
                                    loss_function,
                                    cam_from_world_rotation,
                                    cam_from_world_translation,
-                                   point3D.XYZ().data(),
+                                   point3D.xyz.data(),
                                    camera_params);
       } else {
         // Refractive case.
-        double* refrac_params = camera.RefracParamsData();
+        double* refrac_params = camera.refrac_params.data();
 
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel)          \
-  if (camera.ModelId() == CameraModel::kModelId &&                             \
-      camera.RefracModelId() == CameraRefracModel::kRefracModelId) {           \
+  if (camera.model_id == CameraModel::model_id &&                              \
+      camera.refrac_model_id == CameraRefracModel::refrac_model_id) {          \
     cost_function =                                                            \
         ReprojErrorRefracCostFunction<CameraRefracModel, CameraModel>::Create( \
             point2D.xy);                                                       \
@@ -461,7 +457,7 @@ void BundleAdjuster::AddImageToProblem(const image_t image_id,
                                    loss_function,
                                    cam_from_world_rotation,
                                    cam_from_world_translation,
-                                   point3D.XYZ().data(),
+                                   point3D.xyz.data(),
                                    camera_params,
                                    refrac_params);
       }
@@ -568,11 +564,11 @@ void BundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
   // Is 3D point already fully contained in the problem? I.e. its entire track
   // is contained in `variable_image_ids`, `constant_image_ids`,
   // `constant_x_image_ids`.
-  if (point3D_num_observations_[point3D_id] == point3D.Track().Length()) {
+  if (point3D_num_observations_[point3D_id] == point3D.track.Length()) {
     return;
   }
 
-  for (const auto& track_el : point3D.Track().Elements()) {
+  for (const auto& track_el : point3D.track.Elements()) {
     // Skip observations that were already added in `FillImages`.
     if (config_.HasImage(track_el.image_id)) {
       continue;
@@ -599,9 +595,9 @@ void BundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
 
     if (!options_.enable_refraction) {
       // Non-refractive case.
-      switch (camera.ModelId()) {
+      switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorConstantPoseCostFunction<CameraModel>::Create( \
         image.CamFromWorld(), point2D.xy);                                    \
     break;
@@ -612,15 +608,13 @@ void BundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
       }
       problem_->AddResidualBlock(cost_function,
                                  loss_function,
-                                 point3D.XYZ().data(),
-                                 camera.ParamsData());
+                                 point3D.xyz.data(),
+                                 camera.params.data());
     } else {
       // Refractive case.
-      double* refrac_params = camera.RefracParamsData();
-
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel) \
-  if (camera.ModelId() == CameraModel::kModelId &&                    \
-      camera.RefracModelId() == CameraRefracModel::kRefracModelId) {  \
+  if (camera.model_id == CameraModel::model_id &&                     \
+      camera.refrac_model_id == CameraRefracModel::refrac_model_id) { \
     cost_function = ReprojErrorRefracConstantPoseCostFunction<        \
         CameraRefracModel,                                            \
         CameraModel>::Create(image.CamFromWorld(), point2D.xy);       \
@@ -632,9 +626,9 @@ void BundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
 
       problem_->AddResidualBlock(cost_function,
                                  loss_function,
-                                 point3D.XYZ().data(),
-                                 camera.ParamsData(),
-                                 refrac_params);
+                                 point3D.xyz.data(),
+                                 camera.params.data(),
+                                 camera.refrac_params.data());
     }
   }
 }
@@ -647,32 +641,32 @@ void BundleAdjuster::ParameterizeCameras(Reconstruction* reconstruction) {
     Camera& camera = reconstruction->Camera(camera_id);
 
     if (constant_camera || config_.HasConstantCamIntrinsics(camera_id)) {
-      problem_->SetParameterBlockConstant(camera.ParamsData());
+      problem_->SetParameterBlockConstant(camera.params.data());
       continue;
     } else {
       std::vector<int> const_camera_params;
 
       if (!options_.refine_focal_length) {
-        const std::vector<size_t>& params_idxs = camera.FocalLengthIdxs();
+        const span<const size_t> params_idxs = camera.FocalLengthIdxs();
         const_camera_params.insert(
             const_camera_params.end(), params_idxs.begin(), params_idxs.end());
       }
       if (!options_.refine_principal_point) {
-        const std::vector<size_t>& params_idxs = camera.PrincipalPointIdxs();
+        const span<const size_t> params_idxs = camera.PrincipalPointIdxs();
         const_camera_params.insert(
             const_camera_params.end(), params_idxs.begin(), params_idxs.end());
       }
       if (!options_.refine_extra_params) {
-        const std::vector<size_t>& params_idxs = camera.ExtraParamsIdxs();
+        const span<const size_t> params_idxs = camera.ExtraParamsIdxs();
         const_camera_params.insert(
             const_camera_params.end(), params_idxs.begin(), params_idxs.end());
       }
 
       if (const_camera_params.size() > 0) {
-        SetSubsetManifold(static_cast<int>(camera.NumParams()),
+        SetSubsetManifold(static_cast<int>(camera.params.size()),
                           const_camera_params,
                           problem_.get(),
-                          camera.ParamsData());
+                          camera.params.data());
       }
     }
   }
@@ -681,10 +675,10 @@ void BundleAdjuster::ParameterizeCameras(Reconstruction* reconstruction) {
     for (const camera_t camera_id : camera_ids_) {
       Camera& camera = reconstruction->Camera(camera_id);
       if (!options_.refine_refrac_params) {
-        problem_->SetParameterBlockConstant(camera.RefracParamsData());
+        problem_->SetParameterBlockConstant(camera.refrac_params.data());
         continue;
       } else {
-        std::vector<int> refrac_params_idxs(camera.NumRefracParams());
+        std::vector<int> refrac_params_idxs(camera.refrac_params.size());
         std::iota(refrac_params_idxs.begin(), refrac_params_idxs.end(), 0);
 
         const std::vector<size_t>& optimizable_refrac_params_idxs =
@@ -704,33 +698,33 @@ void BundleAdjuster::ParameterizeCameras(Reconstruction* reconstruction) {
     (CERES_VERSION_MAJOR == 2 && CERES_VERSION_MINOR >= 1)
           ceres::SphereManifold<3> sphere_manifold = ceres::SphereManifold<3>();
           ceres::SubsetManifold subset_manifold = ceres::SubsetManifold(
-              camera.NumRefracParams() - 3, const_params_idxs);
+              camera.refrac_params.size() - 3, const_params_idxs);
           ceres::ProductManifold<ceres::SphereManifold<3>,
                                  ceres::SubsetManifold>* product_manifold =
               new ceres::ProductManifold<ceres::SphereManifold<3>,
                                          ceres::SubsetManifold>(
                   sphere_manifold, subset_manifold);
-          problem_->SetManifold(camera.RefracParamsData(), product_manifold);
+          problem_->SetManifold(camera.refrac_params.data(), product_manifold);
 #else
           ceres::HomogeneousVectorParameterization* sphere_manifold =
               new ceres::HomogeneousVectorParameterization(3);
           ceres::SubsetParameterization* subset_manifold =
-              new ceres::SubsetParameterization(camera.NumRefracParams() - 3,
+              new ceres::SubsetParameterization(camera.refrac_params.size() - 3,
                                                 const_params_idxs);
 
           ceres::ProductParameterization* product_manifold =
               new ceres::ProductParameterization(sphere_manifold,
                                                  subset_manifold);
 
-          problem_->SetParameterization(camera.RefracParamsData(),
+          problem_->SetParameterization(camera.refrac_params.data(),
                                         product_manifold);
 #endif
         } else {
           if (const_params_idxs.size() > 0) {
-            SetSubsetManifold(static_cast<int>(camera.NumRefracParams()),
+            SetSubsetManifold(static_cast<int>(camera.refrac_params.size()),
                               const_params_idxs,
                               problem_.get(),
-                              camera.RefracParamsData());
+                              camera.refrac_params.data());
           }
         }
       }
@@ -741,14 +735,14 @@ void BundleAdjuster::ParameterizeCameras(Reconstruction* reconstruction) {
 void BundleAdjuster::ParameterizePoints(Reconstruction* reconstruction) {
   for (const auto elem : point3D_num_observations_) {
     Point3D& point3D = reconstruction->Point3D(elem.first);
-    if (point3D.Track().Length() > elem.second) {
-      problem_->SetParameterBlockConstant(point3D.XYZ().data());
+    if (point3D.track.Length() > elem.second) {
+      problem_->SetParameterBlockConstant(point3D.xyz.data());
     }
   }
 
   for (const point3D_t point3D_id : config_.ConstantPoints()) {
     Point3D& point3D = reconstruction->Point3D(point3D_id);
-    problem_->SetParameterBlockConstant(point3D.XYZ().data());
+    problem_->SetParameterBlockConstant(point3D.xyz.data());
   }
 }
 
@@ -829,10 +823,6 @@ bool RigBundleAdjuster::Solve(Reconstruction* reconstruction,
 
   ceres::Solve(solver_options, problem_.get(), &summary_);
 
-  if (solver_options.minimizer_progress_to_stdout) {
-    std::cout << std::endl;
-  }
-
   if (options_.print_summary) {
     PrintHeading2("Rig Bundle adjustment report");
     PrintSolverSummary(summary_);
@@ -887,7 +877,7 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
   const bool constant_cam_pose = config_.HasConstantCamPose(image_id);
   const bool constant_cam_position = config_.HasConstantCamPositions(image_id);
 
-  double* camera_params = camera.ParamsData();
+  double* camera_params = camera.params.data();
   double* cam_from_rig_rotation = nullptr;
   double* cam_from_rig_translation = nullptr;
   double* rig_from_world_rotation = nullptr;
@@ -929,11 +919,11 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
     }
 
     Point3D& point3D = reconstruction->Point3D(point2D.point3D_id);
-    assert(point3D.Track().Length() > 1);
+    assert(point3D.track.Length() > 1);
 
     if (camera_rig != nullptr &&
         CalculateSquaredReprojectionError(
-            point2D.xy, point3D.XYZ(), cam_from_world_mat, camera) >
+            point2D.xy, point3D.xyz, cam_from_world_mat, camera) >
             max_squared_reproj_error) {
       continue;
     }
@@ -945,9 +935,9 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
 
     if (camera_rig == nullptr) {
       if (constant_cam_pose) {
-        switch (camera.ModelId()) {
+        switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorConstantPoseCostFunction<CameraModel>::Create( \
         image.CamFromWorld(), point2D.xy);                                    \
     break;
@@ -958,11 +948,11 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
         }
 
         problem_->AddResidualBlock(
-            cost_function, loss_function, point3D.XYZ().data(), camera_params);
+            cost_function, loss_function, point3D.xyz.data(), camera_params);
       } else {
-        switch (camera.ModelId()) {
+        switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorCostFunction<CameraModel>::Create(point2D.xy); \
     break;
 
@@ -975,13 +965,13 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
                                    loss_function,
                                    cam_from_rig_rotation,     // rig == world
                                    cam_from_rig_translation,  // rig == world
-                                   point3D.XYZ().data(),
+                                   point3D.xyz.data(),
                                    camera_params);
       }
     } else {
-      switch (camera.ModelId()) {
+      switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                               \
-  case CameraModel::kModelId:                                        \
+  case CameraModel::model_id:                                        \
     cost_function =                                                  \
         RigReprojErrorCostFunction<CameraModel>::Create(point2D.xy); \
                                                                      \
@@ -997,7 +987,7 @@ void RigBundleAdjuster::AddImageToProblem(const image_t image_id,
                                  cam_from_rig_translation,
                                  rig_from_world_rotation,
                                  rig_from_world_translation,
-                                 point3D.XYZ().data(),
+                                 point3D.xyz.data(),
                                  camera_params);
     }
   }
@@ -1036,11 +1026,11 @@ void RigBundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
   // Is 3D point already fully contained in the problem? I.e. its entire track
   // is contained in `variable_image_ids`, `constant_image_ids`,
   // `constant_x_image_ids`.
-  if (point3D_num_observations_[point3D_id] == point3D.Track().Length()) {
+  if (point3D_num_observations_[point3D_id] == point3D.track.Length()) {
     return;
   }
 
-  for (const auto& track_el : point3D.Track().Elements()) {
+  for (const auto& track_el : point3D.track.Elements()) {
     // Skip observations that were already added in `AddImageToProblem`.
     if (config_.HasImage(track_el.image_id)) {
       continue;
@@ -1062,15 +1052,15 @@ void RigBundleAdjuster::AddPointToProblem(const point3D_t point3D_id,
 
     ceres::CostFunction* cost_function = nullptr;
 
-    switch (camera.ModelId()) {
+    switch (camera.model_id) {
 #define CAMERA_MODEL_CASE(CameraModel)                                        \
-  case CameraModel::kModelId:                                                 \
+  case CameraModel::model_id:                                                 \
     cost_function = ReprojErrorConstantPoseCostFunction<CameraModel>::Create( \
         image.CamFromWorld(), point2D.xy);                                    \
     problem_->AddResidualBlock(cost_function,                                 \
                                loss_function,                                 \
-                               point3D.XYZ().data(),                          \
-                               camera.ParamsData());                          \
+                               point3D.xyz.data(),                            \
+                               camera.params.data());                         \
     break;
 
       CAMERA_MODEL_SWITCH_CASES
@@ -1108,33 +1098,32 @@ void RigBundleAdjuster::ParameterizeCameraRigs(Reconstruction* reconstruction) {
 }
 
 void PrintSolverSummary(const ceres::Solver::Summary& summary) {
-  std::cout << std::right << std::setw(16) << "Residuals : ";
-  std::cout << std::left << summary.num_residuals_reduced << std::endl;
+  std::ostringstream log;
+  log << "\n";
+  log << std::right << std::setw(16) << "Residuals : ";
+  log << std::left << summary.num_residuals_reduced << "\n";
 
-  std::cout << std::right << std::setw(16) << "Parameters : ";
-  std::cout << std::left << summary.num_effective_parameters_reduced
-            << std::endl;
+  log << std::right << std::setw(16) << "Parameters : ";
+  log << std::left << summary.num_effective_parameters_reduced << "\n";
 
-  std::cout << std::right << std::setw(16) << "Iterations : ";
-  std::cout << std::left
-            << summary.num_successful_steps + summary.num_unsuccessful_steps
-            << std::endl;
+  log << std::right << std::setw(16) << "Iterations : ";
+  log << std::left
+      << summary.num_successful_steps + summary.num_unsuccessful_steps << "\n";
 
-  std::cout << std::right << std::setw(16) << "Time : ";
-  std::cout << std::left << summary.total_time_in_seconds << " [s]"
-            << std::endl;
+  log << std::right << std::setw(16) << "Time : ";
+  log << std::left << summary.total_time_in_seconds << " [s]\n";
 
-  std::cout << std::right << std::setw(16) << "Initial cost : ";
-  std::cout << std::right << std::setprecision(6)
-            << std::sqrt(summary.initial_cost / summary.num_residuals_reduced)
-            << " [px]" << std::endl;
+  log << std::right << std::setw(16) << "Initial cost : ";
+  log << std::right << std::setprecision(6)
+      << std::sqrt(summary.initial_cost / summary.num_residuals_reduced)
+      << " [px]\n";
 
-  std::cout << std::right << std::setw(16) << "Final cost : ";
-  std::cout << std::right << std::setprecision(6)
-            << std::sqrt(summary.final_cost / summary.num_residuals_reduced)
-            << " [px]" << std::endl;
+  log << std::right << std::setw(16) << "Final cost : ";
+  log << std::right << std::setprecision(6)
+      << std::sqrt(summary.final_cost / summary.num_residuals_reduced)
+      << " [px]\n";
 
-  std::cout << std::right << std::setw(16) << "Termination : ";
+  log << std::right << std::setw(16) << "Termination : ";
 
   std::string termination = "";
 
@@ -1159,8 +1148,8 @@ void PrintSolverSummary(const ceres::Solver::Summary& summary) {
       break;
   }
 
-  std::cout << std::right << termination << std::endl;
-  std::cout << std::endl;
+  log << std::right << termination << "\n\n";
+  LOG(INFO) << log.str();
 }
 
 }  // namespace colmap

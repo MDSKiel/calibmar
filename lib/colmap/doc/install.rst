@@ -114,7 +114,7 @@ specify `CMAKE_CUDA_ARCHITECTURES` as "native", if you want to run COLMAP on you
 current machine only, "all"/"all-major" to be able to distribute to other machines,
 or a specific CUDA architecture like "75", etc.
 
-Under **Ubuntu 16.04/18.04**, the CMake configuration scripts of CGAL are broken and
+Under **Ubuntu 18.04**, the CMake configuration scripts of CGAL are broken and
 you must also install the CGAL Qt5 package::
 
     sudo apt-get install libcgal-qt5-dev
@@ -134,16 +134,15 @@ Mac
 Dependencies from `Homebrew <http://brew.sh/>`_::
 
     brew install \
-        git \
         cmake \
+        ninja \
         boost \
         eigen \
-        freeimage \
         flann \
+        freeimage \
+        metis \
         glog \
         googletest \
-        metis \
-        suite-sparse \
         ceres-solver \
         qt5 \
         glew \
@@ -154,12 +153,12 @@ Configure and compile COLMAP::
 
     git clone https://github.com/colmap/colmap.git
     cd colmap
-    git checkout dev
+    export PATH="/usr/local/opt/qt@5/bin:$PATH"
     mkdir build
     cd build
-    cmake .. -DQt5_DIR=/opt/homebrew/opt/qt@5/lib/cmake/Qt5
-    make
-    sudo make install
+    cmake ..  -GNinja -DQt5_DIR=/usr/local/opt/qt/lib/cmake/Qt5
+    ninja
+    sudo ninja install
 
 If you have Qt 6 installed on your system as well, you might have to temporarily
 link your Qt 5 installation while configuring CMake::
@@ -221,13 +220,14 @@ the latest commit in the dev branch, you can use the following options::
 
 To modify the source code, you can further add ``--editable --no-downloads``.
 Or, if you want to build from another folder and use the dependencies from
-vcpkg, first run `./vcpkg integrate install` and then configure COLMAP as::
+vcpkg, first run `./vcpkg integrate install` (under Windows use pwsh and
+`./scripts/shell/enter_vs_dev_shell.ps1`) and then configure COLMAP as::
 
     cd path/to/colmap
     mkdir build
     cd build
-    cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
-    cmake --build . --config release --target colmap_main --parallel 24
+    cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_BUILD_TYPE=Release
+    cmake --build . --config release --target colmap --parallel 24
 
 
 .. _installation-library:

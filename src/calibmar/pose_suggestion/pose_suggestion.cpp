@@ -131,8 +131,8 @@ namespace calibmar {
       int num_views = images.size();
       int height = 2 * num_points * num_views;
 
-      if (jacobian_intrinsics.rows() < height || jacobian_intrinsics.cols() < camera.NumParams()) {
-        jacobian_intrinsics.resize(height, camera.NumParams());
+      if (jacobian_intrinsics.rows() < height || jacobian_intrinsics.cols() < camera.params.size()) {
+        jacobian_intrinsics.resize(height, camera.params.size());
       }
       if (jacobian_extrinsics.rows() < height || jacobian_extrinsics.cols() < 6 * num_views) {
         jacobian_extrinsics.resize(height, 6 * num_views);
@@ -158,7 +158,7 @@ namespace calibmar {
       // cv::projectPoints only accepts distortion coefficients in cv typical lengths (4,5,8,...,14)
       std::vector<double> distortion_params;
       for (size_t idx : camera.ExtraParamsIdxs()) {
-        distortion_params.push_back(camera.Params()[idx]);
+        distortion_params.push_back(camera.params[idx]);
       }
       distortion_params.resize(14, 0);
 
@@ -177,7 +177,7 @@ namespace calibmar {
       bool fixed_aspect = camera.FocalLengthIdxs().size() == 1;
 
       cv::Mat jac_extrinsics, jac_intrinsics;
-      if (CameraModel::IsFisheyeModel(camera.ModelId())) {
+      if (CameraModel::IsFisheyeModel(camera.model_id)) {
         // fisheye enforces rodrigues and 4 params
         cv::Mat rodrigues(1, 3, CV_64F);
         cv::Rodrigues(rotation, rodrigues);
@@ -186,8 +186,8 @@ namespace calibmar {
                                    jacobian_mat);
 
         // extract the jacobian parts (ignore the skew component in last column)
-        jac_intrinsics = jacobian_mat.colRange(0, camera.NumParams());
-        jac_extrinsics = jacobian_mat.colRange(camera.NumParams(), camera.NumParams() + 6);
+        jac_intrinsics = jacobian_mat.colRange(0, camera.params.size());
+        jac_extrinsics = jacobian_mat.colRange(camera.params.size(), camera.params.size() + 6);
       }
       else {
         cv::projectPoints(points3D_cv, rotation, translation, camera_mat, distortion_params, image_points, jacobian_mat,
@@ -195,7 +195,7 @@ namespace calibmar {
 
         // extract the jacobian parts (extrinsics come before intrinsics, and one f is 0 if aspect ratio fixed)
         jac_extrinsics = jacobian_mat.colRange(0, 6);
-        jac_intrinsics = jacobian_mat.colRange(6 + fixed_aspect, 6 + fixed_aspect + camera.NumParams());
+        jac_intrinsics = jacobian_mat.colRange(6 + fixed_aspect, 6 + fixed_aspect + camera.params.size());
       }
       Eigen::MatrixXd j;
       cv::cv2eigen(jacobian_mat, j);
@@ -266,8 +266,8 @@ namespace calibmar {
       for (const auto& [id, point] : calibration.Points3D()) {
         Eigen::Vector2d point_image = camera.ImgFromCam((trans * point).hnormalized());
         // all points must lay inside image with border_tolerance
-        if ((point_image.x() < border_tolerance || point_image.x() > camera.Width() - border_tolerance) ||
-            ((point_image.y() < border_tolerance || point_image.y() > camera.Height() - border_tolerance))) {
+        if ((point_image.x() < border_tolerance || point_image.x() > camera.width - border_tolerance) ||
+            ((point_image.y() < border_tolerance || point_image.y() > camera.height - border_tolerance))) {
           // additional constraint encoded as high cost
           // TODO: is there a better way to do this?
           return std::numeric_limits<double>::max();
@@ -327,7 +327,7 @@ namespace calibmar {
                               Eigen::Vector4d& next_rotation, Eigen::Vector3d& next_translation) {
       // origin is the first inner corner. Board size is actual pattern size -2 cols/ rows.
       std::pair<double, double> board_size((columns_points - 1) * square_size, (rows_points - 1) * square_size);
-      std::pair<int, int> image_size(calibration.Camera().Width(), calibration.Camera().Height());
+      std::pair<int, int> image_size(calibration.Camera().width, calibration.Camera().height);
 
       if (calibration.Images().size() == 0) {
         // initial pose rotated centered
@@ -353,7 +353,7 @@ namespace calibmar {
 
       size_t jac_extendable_views = (calibration.Images().size() + 1);
       size_t jac_extendable_rows = 2 * points3D.size() * jac_extendable_views;
-      Eigen::MatrixXd A = Eigen::MatrixXd::Zero(jac_extendable_rows, calibration.Camera().NumParams());
+      Eigen::MatrixXd A = Eigen::MatrixXd::Zero(jac_extendable_rows, calibration.Camera().params.size());
       Eigen::MatrixXd B = Eigen::MatrixXd::Zero(jac_extendable_rows, jac_extendable_views * 6);
       pose_suggestion::ComputeJacobian(calibration.Images(), points3D, calibration.Camera(), A, B);
       Eigen::MatrixXd jacobian_extendable(jac_extendable_rows, A.cols() + B.cols());

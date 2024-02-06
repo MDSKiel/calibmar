@@ -23,7 +23,7 @@ namespace calibmar {
     // due to limiting the actual scale might be smaller
     scale = static_cast<double>(new_size.width()) / widget()->width();
     QPointF scrollbar_pos = QPointF(horizontalScrollBar()->value(), verticalScrollBar()->value());
-    QPointF delta_to_pos = event->posF() - widget()->pos();
+    QPointF delta_to_pos = event->position() - widget()->pos();
     QPointF delta = delta_to_pos * scale - delta_to_pos;
 
     widget()->resize(new_size);

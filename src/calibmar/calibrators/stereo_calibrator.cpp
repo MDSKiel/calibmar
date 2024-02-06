@@ -31,17 +31,17 @@ namespace calibmar {
     colmap::Camera& camera1 = calibration1.Camera();
     colmap::Camera& camera2 = calibration2.Camera();
     if (options_.use_intrinsics_guess &&
-        (camera1.ModelId() == colmap::kInvalidCameraModelId || camera2.ModelId() == colmap::kInvalidCameraId)) {
+        (camera1.model_id == colmap::CameraModelId::kInvalid || camera2.model_id == colmap::CameraModelId::kInvalid)) {
       throw std::runtime_error("Intrinsics guess specified, but camera not initialized.");
     }
 
     if (!options_.use_intrinsics_guess) {
-      camera1.SetWidth(options_.image_size.first);
-      camera1.SetHeight(options_.image_size.second);
-      camera1.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
-      camera2.SetWidth(options_.image_size.first);
-      camera2.SetHeight(options_.image_size.second);
-      camera2.SetModelIdFromName(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
+      camera1.width = options_.image_size.first;
+      camera1.height = options_.image_size.second;
+      camera1.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
+      camera2.width = options_.image_size.first;
+      camera2.height = options_.image_size.second;
+      camera2.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
     }
 
     std::vector<std::vector<Eigen::Vector2d>> pointSets2D_1, pointSets2D_2;
