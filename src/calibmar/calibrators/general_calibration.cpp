@@ -270,32 +270,37 @@ namespace calibmar::general_calibration {
                              const std::vector<std::vector<Eigen::Vector2d>>& image_points,
                              const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
                              std::vector<double>& per_view_rms) {
-    CalculateperViewRMS(object_points, image_points, poses, camera, per_view_rms);
+    CalculateperViewSquaredError(object_points, image_points, poses, camera, per_view_rms);
 
     double sum = 0;
-    for (double error : per_view_rms) {
-      sum += error;
+    for (size_t i = 0; i < per_view_rms.size(); i++) {
+      // first take the view squared error
+      sum += per_view_rms[i];
+      // and then replace it by the rms for the view
+      per_view_rms[i] = std::sqrt(per_view_rms[i]);
     }
-    return sum / per_view_rms.size();
+
+    return std::sqrt(sum / per_view_rms.size());
   }
 
-  void CalculateperViewRMS(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
-                           const std::vector<std::vector<Eigen::Vector2d>>& image_points,
-                           const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
-                           std::vector<double>& per_view_rms) {
-    per_view_rms.clear();
-    per_view_rms.reserve(object_points.size());
+  void CalculateperViewSquaredError(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
+                                    const std::vector<std::vector<Eigen::Vector2d>>& image_points,
+                                    const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
+                                    std::vector<double>& per_view_se) {
+    per_view_se.clear();
+    per_view_se.reserve(object_points.size());
     for (size_t i = 0; i < object_points.size(); i++) {
-      per_view_rms.push_back(0);
+      per_view_se.push_back(0);
       const colmap::Rigid3d& pose = poses[i];
       for (size_t j = 0; j < object_points[i].size(); j++) {
         const Eigen::Vector3d& point3D = object_points[i][j];
         const Eigen::Vector2d& image_point = image_points[i][j];
 
-        per_view_rms[i] += std::sqrt(colmap::CalculateSquaredReprojectionError(image_point, point3D, pose, camera, false));
+        per_view_se[i] +=
+            colmap::CalculateSquaredReprojectionError(image_point, point3D, pose, camera, camera.IsCameraRefractive());
       }
 
-      per_view_rms[i] /= object_points[i].size();
+      per_view_se[i] = per_view_se[i] / object_points[i].size();
     }
   }
 }

@@ -11,7 +11,8 @@ namespace {
                                                     std::map<colmap::image_t, size_t>& colmap_img_to_calib_img) {
     std::unique_ptr<colmap::Database> database = std::make_unique<colmap::Database>(database_path);
     // this is neccessary because Windows will keep the DB around for the complete process (and potentially longer?)
-    // To avoid key constraint exceptions (i.e. inserting the same object ids multiple times) ensure the DB is clean from the start...
+    // To avoid key constraint exceptions (i.e. inserting the same object ids multiple times) ensure the DB is clean from the
+    // start...
     database->ClearAllTables();
 
     colmap::DatabaseTransaction database_transaction(database.get());

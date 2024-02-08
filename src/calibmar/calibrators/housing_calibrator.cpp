@@ -1,24 +1,6 @@
 #include "housing_calibrator.h"
+#include "general_calibration.h"
 #include "non_svp_calibration.h"
-#include "opencv_calibration.h"
-
-namespace {
-  void CalibrateCamera(std::vector<calibmar::Image>& images, colmap::Camera& camera, bool use_intrinsic_guess,
-                       const std::vector<std::vector<Eigen::Vector2d>>& point_sets_2D,
-                       const std::vector<std::vector<Eigen::Vector3d>>& point_sets_3D) {
-    std::vector<Eigen::Quaterniond*> rotation_vecs;
-    std::vector<Eigen::Vector3d*> translation_vecs;
-    for (auto& image : images) {
-      rotation_vecs.push_back(&image.Rotation());
-      translation_vecs.push_back(&image.Translation());
-    }
-
-    std::vector<double> std_deviations_intrinsics, std_deviations_extrinsics, per_view_rms;
-    double rms = calibmar::opencv_calibration::CalibrateCamera(point_sets_3D, point_sets_2D, camera, false, false, rotation_vecs,
-                                                               translation_vecs, std_deviations_intrinsics,
-                                                               std_deviations_extrinsics, per_view_rms);
-  }
-}
 
 namespace calibmar {
   void HousingCalibrator::Options::Check() {
@@ -54,7 +36,8 @@ namespace calibmar {
     camera.width = options_.image_size.first;
     camera.height = options_.image_size.second;
     camera.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
-    camera.refrac_model_id = colmap::CameraRefracModelNameToId(calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
+    camera.refrac_model_id = colmap::CameraRefracModelNameToId(
+        calibmar::HousingInterface::HousingInterfaces().at(options_.housing_interface).model_name);
 
     std::vector<std::vector<Eigen::Vector2d>> point_sets_2D;
     std::vector<std::vector<Eigen::Vector3d>> point_sets_3D;
@@ -64,6 +47,16 @@ namespace calibmar {
     camera.params = options_.camera_params;
     camera.refrac_params = options_.initial_housing_params;
 
+    if (camera.refrac_model_id == colmap::FlatPort::refrac_model_id) {
+      Eigen::Map<Eigen::Vector3d> normal(camera.refrac_params.data());
+      if (abs(normal.norm() - 1.0) > 1e-6) {
+        throw std::runtime_error("Interface normal must be normalized to unit length!");
+      }
+
+      // normalize explicitly again
+      normal.normalize();
+    }
+
     if (options_.estimate_initial_dome_offset && camera.refrac_model_id == colmap::DomePort::refrac_model_id) {
       non_svp_calibration::EstimateInitialDomeOffset(
           point_sets_3D[0], point_sets_2D[0],
@@ -71,7 +64,7 @@ namespace calibmar {
            options_.pattern_cols_rows.second - 1},  // the expected pattern size here matches opencv conventions
           camera);
     }
-
+    
     for (size_t i = 0; i < images.size(); i++) {
       Image& image = images[i];
       std::vector<Eigen::Vector2d>& points2D = point_sets_2D[i];
@@ -84,6 +77,17 @@ namespace calibmar {
     std::vector<double>& housing_params_std = calibration.HousingParamsStdDeviations();
     non_svp_calibration::OptimizeRefractiveCamera(calibration, housing_params_std);
 
-    calibration.SetCalibrationRms(sqrt(non_svp_calibration::CalculateOverallMSE(calibration)));
+    std::vector<colmap::Rigid3d> poses;
+    for (const auto& image : calibration.Images()) {
+      poses.reserve(images.size());
+      poses.push_back(colmap::Rigid3d(image.Rotation(), image.Translation()));
+    }
+
+    std::vector<double> per_view_rms;
+    double rms =
+        general_calibration::CalculateOverallRMS(point_sets_3D, point_sets_2D, poses, calibration.Camera(), per_view_rms);
+
+    calibration.SetCalibrationRms(rms);
+    calibration.SetPerViewRms(per_view_rms);
   }
 }

@@ -35,6 +35,11 @@ namespace calibmar {
         QMessageBox::information(this, "Validation Error", "Housing parameters dont match housing type.");
         return false;
       }
+      else if (housing->first == HousingInterfaceType::DoubleLayerPlanarRefractive &&
+               abs(Eigen::Map<Eigen::Vector3d>(params.data()).norm() - 1) > 1e-6) {
+        QMessageBox::information(this, "Validation Error", "Interface normal must be normalized to unit length!");
+        return false;
+      }
       else {
         // validated, take parameters
         housing_calibration_ = {housing.value().first, params};
@@ -74,13 +79,14 @@ namespace calibmar {
   void CommonCalibrationOptionsWidget::SetOptions(Options options) {
     camera_model_selector_->SetCameraModel(options.camera_model);
     camera_model_selector_->SetInitialCameraParameters(options.initial_camera_parameters);
-    if(options.housing_options.has_value()){
-      housing_type_selector_->SetHousingOptions(std::make_pair(options.housing_options->first, colmap::VectorToCSV(options.housing_options->second)));
+    if (options.housing_options.has_value()) {
+      housing_type_selector_->SetHousingOptions(
+          std::make_pair(options.housing_options->first, colmap::VectorToCSV(options.housing_options->second)));
     }
-    else{
+    else {
       housing_type_selector_->SetHousingOptions({});
     }
-    calibration_target_options_->SetCalibrationTargetOptions(options.calibration_target_options);    
+    calibration_target_options_->SetCalibrationTargetOptions(options.calibration_target_options);
   }
 
   void CommonCalibrationOptionsWidget::ForceArucoFor3DTarget(bool force) {

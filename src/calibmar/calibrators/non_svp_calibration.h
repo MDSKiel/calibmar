@@ -34,9 +34,9 @@ namespace calibmar {
     //
     // @return                        Whether pose is estimated successfully.
     bool EstimateAbsolutePoseRefractiveCamera(const std::vector<Eigen::Vector3d>& points_3D,
-                                          const std::vector<Eigen::Vector2d>& points_2D, Eigen::Quaterniond* rotation_quaternion,
-                                          Eigen::Vector3d* translation, colmap::Camera* camera,
-                                          bool use_initial_pose_guess = false);
+                                              const std::vector<Eigen::Vector2d>& points_2D,
+                                              Eigen::Quaterniond* rotation_quaternion, Eigen::Vector3d* translation,
+                                              colmap::Camera* camera, bool use_initial_pose_guess = false);
 
     // Optimize the refractive (that is: the housing related) parameters of the camera.
     // Expects the calibration to have a camera with a valid first estimation of parameters (housing and intrinsics),
@@ -46,19 +46,5 @@ namespace calibmar {
     //                            Is edited in place.
     // @param housing_params_std  Estimated standard deviations of the housing parameters.
     void OptimizeRefractiveCamera(calibmar::Calibration& calibration, std::vector<double>& housing_params_std);
-
-    // Calculate the mean squared reprojection error for each image in the calibration using the
-    // calibration camera.
-    //
-    // @param calibration   Calibration containing images with estimated poses and a parameterized camera.
-    // @param per_view_mse  Output of mean squared error per image.
-    void CalculatePerImageMSE(const Calibration& calibration, std::vector<double>& per_image_mse);
-
-    // Calculate the mean squared reprojection error for each image in the calibration using the
-    // calibration camera.
-    //
-    // @param calibration   Calibration containing images with estimated poses and a parameterized camera.
-    // @return              Overall mean squared reprojection error.
-    double CalculateOverallMSE(const Calibration& calibration);
   }
 }

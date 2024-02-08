@@ -397,38 +397,11 @@ namespace calibmar {
         }
       }
 
-      // normalize flat port normal
+      // ensure the flat port normal is normalized
       if (camera.RefracModelName() == "FLATPORT") {
         Eigen::Map<Eigen::Vector3d> plane_normal(camera.refrac_params.data());
         plane_normal.normalize();
       }
-    }
-
-    void CalculatePerImageMSE(const Calibration& calibration, std::vector<double>& per_image_mse) {
-      for (const Image& image : calibration.Images()) {
-        double squared_error = 0.0;
-
-        for (const auto& corresponcence : image.Correspondences()) {
-          squared_error += colmap::CalculateSquaredReprojectionError(
-              image.Point2D(corresponcence.first), calibration.Point3D(corresponcence.second),
-              colmap::Rigid3d(image.Rotation(), image.Translation()), calibration.Camera(),
-              calibration.Camera().IsCameraRefractive());
-        }
-
-        per_image_mse.push_back(squared_error / image.Correspondences().size());
-      }
-    }
-
-    double CalculateOverallMSE(const Calibration& calibration) {
-      std::vector<double> per_image_mse;
-      CalculatePerImageMSE(calibration, per_image_mse);
-
-      double sum = 0;
-      for (double mse : per_image_mse) {
-        sum += mse;
-      }
-
-      return sum / per_image_mse.size();
     }
   }
 }

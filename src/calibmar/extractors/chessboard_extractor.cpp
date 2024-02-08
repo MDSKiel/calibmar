@@ -58,7 +58,9 @@ namespace calibmar {
 
     std::vector<Eigen::Vector2d> points2D;
     for (const cv::Point2f& corner : corners) {
-      points2D.push_back({corner.x, corner.y});
+      // findChessboardCorners sets the image origin at center of the first pixel,
+      // while for colmap camera models the center of the first pixel is at 0.5, 0.5.
+      points2D.push_back({corner.x + 0.5, corner.y + 0.5});
     }
 
     image.SetPoints2D(points2D);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "calibmar/core/camera_models.h"
+#include "calibmar/core/calibration.h"
 
 #include <Eigen/Core>
 #include <colmap/geometry/rigid3.h>
@@ -63,14 +64,14 @@ namespace calibmar::general_calibration {
                              const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
                              std::vector<double>& per_view_rms);
 
-  // Calculate the per view RMS given a set of 2D-3D correspondences, poses and a calibrated camera.
+  // Calculate the per view squared error given a set of 2D-3D correspondences, poses and a calibrated camera.
   // @param object_points 3D object points
   // @param image_points 2D image observations
   // @param poses Corresponding camera poses
   // @param camera Calibrated camera
-  // @param per_view_rms The per view errors
-  void CalculateperViewRMS(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
+  // @param per_view_se The per view errors
+  void CalculateperViewSquaredError(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
                            const std::vector<std::vector<Eigen::Vector2d>>& image_points,
                            const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
-                           std::vector<double>& per_view_rms);
+                           std::vector<double>& per_view_se);
 }
