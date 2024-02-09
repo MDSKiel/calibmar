@@ -37,14 +37,4 @@ namespace calibmar {
                                               const std::vector<Eigen::Vector2d>& points_2D,
                                               Eigen::Quaterniond* rotation_quaternion, Eigen::Vector3d* translation,
                                               colmap::Camera* camera, bool use_initial_pose_guess = false);
-
-    // Optimize the refractive (that is: the housing related) parameters of the camera.
-    // Expects the calibration to have a camera with a valid first estimation of parameters (housing and intrinsics),
-    // as well as a set of images with estimated poses.
-    //
-    // @param calibration         Calibration that is already parametrized with a initialized camera and pose estimated images.
-    //                            Is edited in place.
-    // @param housing_params_std  Estimated standard deviations of the housing parameters.
-    void OptimizeRefractiveCamera(calibmar::Calibration& calibration, std::vector<double>& housing_params_std);
-  }
 }

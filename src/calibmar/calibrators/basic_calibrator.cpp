@@ -41,13 +41,6 @@ namespace calibmar {
     std::vector<std::vector<Eigen::Vector3d>> pointSets3D;
     calibration.GetCorrespondences(pointSets2D, pointSets3D);
 
-    std::vector<Eigen::Quaterniond*> rotation_vecs;
-    std::vector<Eigen::Vector3d*> translation_vecs;
-    for (auto& image : calibration.Images()) {
-      rotation_vecs.push_back(&image.Rotation());
-      translation_vecs.push_back(&image.Translation());
-    }
-
     std::vector<colmap::Rigid3d> poses;
     std::vector<double> std_deviations_intrinsics, per_view_rms;
     general_calibration::CalibrateCamera(pointSets3D, pointSets2D, camera, options_.use_intrinsics_guess, poses,

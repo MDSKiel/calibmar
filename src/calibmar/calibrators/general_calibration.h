@@ -1,7 +1,7 @@
 #pragma once
 
-#include "calibmar/core/camera_models.h"
 #include "calibmar/core/calibration.h"
+#include "calibmar/core/camera_models.h"
 
 #include <Eigen/Core>
 #include <colmap/geometry/rigid3.h>
@@ -71,7 +71,23 @@ namespace calibmar::general_calibration {
   // @param camera Calibrated camera
   // @param per_view_se The per view errors
   void CalculateperViewSquaredError(const std::vector<std::vector<Eigen::Vector3d>>& object_points,
-                           const std::vector<std::vector<Eigen::Vector2d>>& image_points,
-                           const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
-                           std::vector<double>& per_view_se);
+                                    const std::vector<std::vector<Eigen::Vector2d>>& image_points,
+                                    const std::vector<colmap::Rigid3d>& poses, const colmap::Camera& camera,
+                                    std::vector<double>& per_view_se);
+
+  // Optimize camera parameters given a set of 2D - 3D correspondences and poses
+  // Will optimize camera intrinsics if camera is non refractive and the housing parameters (keeping intrinsics constant) if
+  // camera is refractive.
+  // @param object_points 3D point sets
+  // @param image_points Corresponding 2D image observations
+  // @param camera Camera to be optimized
+  // @param poses Corresponding poses per views
+  // @param std_deviations_intrinsics Optionally giving the estimated standard deviations on either camera or housing parameters
+  // depending on camera type
+  void OptimizeCamera(std::vector<std::vector<Eigen::Vector3d>>& object_points,
+                      const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
+                      std::vector<colmap::Rigid3d>& poses, std::vector<double>* std_deviations_intrinsics);
+  
+  // Overload extracting the required information from a prepared Calibration
+  void OptimizeCamera(Calibration& calibration);
 }

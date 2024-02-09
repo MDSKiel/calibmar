@@ -74,8 +74,10 @@ namespace calibmar {
                                                                 &camera, false);
     }
 
-    std::vector<double>& housing_params_std = calibration.HousingParamsStdDeviations();
-    non_svp_calibration::OptimizeRefractiveCamera(calibration, housing_params_std);
+    // std::vector<double>& housing_params_std = calibration.HousingParamsStdDeviations();
+    // non_svp_calibration::OptimizeRefractiveCamera(calibration, housing_params_std);
+
+    general_calibration::OptimizeCamera(calibration);
 
     std::vector<colmap::Rigid3d> poses;
     for (const auto& image : calibration.Images()) {

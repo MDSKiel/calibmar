@@ -54,7 +54,7 @@ BOOST_DATA_TEST_CASE(CalibrationModels, boost::unit_test::data::make(models), mo
   Eigen::Map<Eigen::VectorXd> actual(params.data(), params.size());
   Eigen::Map<Eigen::VectorXd> expected(expected_params.data(), expected_params.size());
 
-  BOOST_TEST(ElementWiseClose(actual, expected, epsilon));
+  ASSERT_WITH_MSG(ElementWiseClose(actual, expected, epsilon), "Calibration parameters not close to expected for model " + std::to_string((int)model));
 }
 
 std::vector<CameraModelType> std_dev_models = {CameraModelType::SimplePinholeCameraModel, CameraModelType::PinholeCameraModel,
