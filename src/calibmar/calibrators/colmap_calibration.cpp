@@ -6,6 +6,8 @@
 #include "colmap/geometry/triangulation.h"
 #include "colmap/scene/projection.h"
 
+#include "calibmar/calibrators/general_calibration.h"
+
 namespace {
   std::unique_ptr<colmap::Database> PrepareColmapDB(calibmar::Calibration& calibration, const std::string& database_path,
                                                     std::map<colmap::image_t, size_t>& colmap_img_to_calib_img) {
@@ -65,7 +67,7 @@ namespace {
   }
 }
 
-namespace colmap_calibration {
+namespace calibmar::colmap_calibration {
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
                        bool enable_refraction) {
     colmap::SiftMatchingOptions sift_options;
@@ -150,8 +152,7 @@ namespace colmap_calibration {
     for (auto id : reconstruction->RegImageIds()) {
       const colmap::Rigid3d& pose = reconstruction->Image(id).CamFromWorld();
       calibmar::Image& img = calibration.Image(colmap_img_to_calib_img[id]);
-      img.SetTranslation(pose.translation);
-      img.SetRotation(pose.rotation);
+      img.SetPose(pose);
       // remove all registered images from the map to see if all images were registered
       colmap_img_to_calib_img.erase(id);
     }

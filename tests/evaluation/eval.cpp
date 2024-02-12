@@ -130,12 +130,11 @@ namespace {
   }
 
   void CreateDistortMaps(cv::Mat* map_x, cv::Mat* map_y, const colmap::Camera& camera) {
-    colmap::Camera undistorted_camera;
-    undistorted_camera.model_id = colmap::PinholeCameraModel::model_id;
-    undistorted_camera.width = camera.width;
-    undistorted_camera.height = camera.height;
+    colmap::Camera undistorted_camera = colmap::Camera::CreateFromModelId(
+        colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, camera.width, camera.height);
+        
     // Copy focal length parameters.
-    const std::vector<size_t>& focal_length_idxs = camera.FocalLengthIdxs();
+    const auto& focal_length_idxs = camera.FocalLengthIdxs();
     if (focal_length_idxs.size() == 1) {
       undistorted_camera.SetFocalLengthX(camera.FocalLength());
       undistorted_camera.SetFocalLengthY(camera.FocalLength());
@@ -463,9 +462,11 @@ int main(int argc, char* argv[]) {
   else if (argv[1] == std::string("3")) {
     std::cout << "Distort images" << std::endl;
 
+    // 1920, 1080, 1297.3655404279762, 1297.3655404279762, 960.0, 540.0
     // opencv refrac params 0.0150194    -0.0661002   0.00418932   0.00345423
-    auto camera = CameraModel::InitCamera(CameraModelType::OpenCVCameraModel, {1920, 1080},
-                                          {1279.4, 1279.4, 1920 / 2.0, 1080 / 2.0, -0.1, 0.01, 0.005, -0.005});
+    auto camera =
+        CameraModel::InitCamera(CameraModelType::OpenCVCameraModel, {1920, 1080},
+                                {1297.3655404279762, 1297.3655404279762, 1920 / 2.0, 1080 / 2.0, -0.1, -0.02, 0.005, -0.005});
     cv::Mat map_x, map_y;
     CreateDistortMaps(&map_x, &map_y, camera);
 

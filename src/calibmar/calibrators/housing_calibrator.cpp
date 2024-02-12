@@ -64,25 +64,22 @@ namespace calibmar {
            options_.pattern_cols_rows.second - 1},  // the expected pattern size here matches opencv conventions
           camera);
     }
-    
+
     for (size_t i = 0; i < images.size(); i++) {
       Image& image = images[i];
       std::vector<Eigen::Vector2d>& points2D = point_sets_2D[i];
       std::vector<Eigen::Vector3d>& points3D = point_sets_3D[i];
 
-      non_svp_calibration::EstimateAbsolutePoseRefractiveCamera(points3D, points2D, &image.Rotation(), &image.Translation(),
-                                                                &camera, false);
+      non_svp_calibration::EstimateAbsolutePoseRefractiveCamera(points3D, points2D, &image.Pose().rotation,
+                                                                &image.Pose().translation, &camera, false);
     }
-
-    // std::vector<double>& housing_params_std = calibration.HousingParamsStdDeviations();
-    // non_svp_calibration::OptimizeRefractiveCamera(calibration, housing_params_std);
 
     general_calibration::OptimizeCamera(calibration);
 
     std::vector<colmap::Rigid3d> poses;
     for (const auto& image : calibration.Images()) {
       poses.reserve(images.size());
-      poses.push_back(colmap::Rigid3d(image.Rotation(), image.Translation()));
+      poses.push_back(image.Pose());
     }
 
     std::vector<double> per_view_rms;

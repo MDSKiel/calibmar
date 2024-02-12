@@ -1,6 +1,6 @@
 #include "calibrator3D.h"
 
-#include "calibmar/calibrators/opencv_calibration.h"
+#include "calibmar/calibrators/general_calibration.h"
 #include "calibmar/core/camera_models.h"
 
 #include "colmap/controllers/automatic_reconstruction.h"
@@ -64,8 +64,6 @@ namespace calibmar {
         std::vector<std::vector<Eigen::Vector3d>> object_points;
         std::vector<std::vector<Eigen::Vector2d>> image_points;
         SetupArucoCornerData(calibration, object_points, image_points);
-        std::vector<Eigen::Quaterniond*> rotation_vecs;
-        std::vector<Eigen::Vector3d*> translation_vecs;
 
         // do a first calibration using aruco marker edges to get a good first estimate
         // estimate always on pinhole. The assumption is, that the aruco marker corners are always relatively close together in
@@ -74,8 +72,8 @@ namespace calibmar {
         colmap::Camera init_camera = colmap::Camera::CreateFromModelName(
             colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::SimplePinholeCameraModel).model_name,
             focal_length, options_.image_size.first, options_.image_size.second);
-        opencv_calibration::CalibrateCamera(object_points, image_points, init_camera, true, false, rotation_vecs,
-                                            translation_vecs);
+        std::vector<colmap::Rigid3d> poses;
+        general_calibration::CalibrateCamera(object_points, image_points, init_camera, false, poses);
 
         std::cout << "Initial camera estimate from arucos:" << std::endl << init_camera.CalibrationMatrix() << std::endl;
 

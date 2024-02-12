@@ -110,7 +110,17 @@ namespace calibmar {
     FilesystemImageReader::Options reader_options;
     reader_options.image_directory = options_.images_directory;
     FilesystemImageReader reader(reader_options);
-    std::pair<int, int> image_size{reader.ImagesWidth(), reader.ImagesHeight()};
+
+    std::pair<int, int> image_size;
+    try {
+      image_size = {reader.ImagesWidth(), reader.ImagesHeight()};
+    }
+    catch (std::exception& ex) {
+      QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_]() {
+        calibration_widget->EndCalibration(new CalibrationResultWidget("No readable images in provided directory!"));
+      });
+      return false;
+    }
 
     std::unique_ptr<FeatureExtractor> extractor;
     std::unique_ptr<TargetVisualizer> target_visualizer;

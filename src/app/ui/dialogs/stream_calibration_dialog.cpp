@@ -81,7 +81,6 @@ namespace calibmar {
 
     // common options
     calibration_options_widget_ = new CommonCalibrationOptionsWidget(this);
-    calibration_options_widget_->ForceArucoFor3DTarget(true);
 
     // import button
     QHBoxLayout* horizontalLayout_run = new QHBoxLayout();
@@ -128,7 +127,6 @@ namespace calibmar {
     calibration_options.housing_options = options.housing_calibration;
     calibration_options.initial_camera_parameters = options.initial_camera_parameters;
     calibration_options_widget_->SetOptions(calibration_options);
-    calibration_options_widget_->ForceArucoFor3DTarget(true);
   }
 
   StreamCalibrationDialog::Options StreamCalibrationDialog::GetOptions() {
@@ -231,6 +229,18 @@ namespace calibmar {
         acquisition_modes_.at(mode_combobox_->currentIndex()).first == AcquisitionMode::OnSuggestedPose) {
       QMessageBox::information(this, "Validation Error",
                                "Acquisition mode Pose Suggestion does not support housing calibration.");
+      return false;
+    }
+
+    if (mode_combobox_->currentIndex() == 0 && std::holds_alternative<SiftFeatureExtractor::Options>(
+                                                   calibration_options_widget_->GetOptions().calibration_target_options)) {
+      QMessageBox::information(this, "Validation Error", "Hands free acquisition requires aruco markers on 3D target!");
+      return false;
+    }
+
+    if (mode_combobox_->currentIndex() == 2 && !std::holds_alternative<ChessboardFeatureExtractor::Options>(
+                                                   calibration_options_widget_->GetOptions().calibration_target_options)) {
+      QMessageBox::information(this, "Validation Error", "Pose suggestion only supported with chessboard target!");
       return false;
     }
 

@@ -19,19 +19,10 @@ namespace calibmar {
     // Correspondences of image 2D point indices to calibration 3D point ids
     inline const std::unordered_map<size_t, uint32_t>& Correspondences() const;
 
-    // Access quaternion specifying the rotation of the
-    // pose which is defined as the transformation from world to image space.
-    inline const Eigen::Quaterniond& Rotation() const;
-    inline Eigen::Quaterniond& Rotation();
-    // Set quaternion specifying the rotation of the
-    // pose which is defined as the transformation from world to image space.
-    inline void SetRotation(const Eigen::Quaterniond& quat);
-
-    // Access vector as (tx, ty, tz) specifying the translation of the
-    // pose which is defined as the transformation from world to image space.
-    inline const Eigen::Vector3d& Translation() const;
-    inline Eigen::Vector3d& Translation();
-    inline void SetTranslation(const Eigen::Vector3d& tvec);
+    // Pose which is defined as the transformation from world to camera space.
+    inline const colmap::Rigid3d& Pose() const;
+    inline colmap::Rigid3d& Pose();
+    inline void SetPose(const colmap::Rigid3d& pose);
 
     inline void SetDescriptors(const colmap::FeatureDescriptors& descriptors);
     inline void SetKeypoints(const colmap::FeatureKeypoints& keypoints);
@@ -54,8 +45,7 @@ namespace calibmar {
     std::string name_;
     std::vector<Eigen::Vector2d> points2D_;
     std::unordered_map<size_t, uint32_t> correspondences_;
-    Eigen::Quaterniond rotation_;
-    Eigen::Vector3d translation_;
+    colmap::Rigid3d pose_;
   };
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -90,28 +80,16 @@ namespace calibmar {
     name_ = name;
   }
 
-  inline const Eigen::Quaterniond& Image::Rotation() const {
-    return rotation_;
+  inline const colmap::Rigid3d& Image::Pose() const {
+    return pose_;
   }
 
-  inline Eigen::Quaterniond& Image::Rotation() {
-    return rotation_;
+  inline colmap::Rigid3d& Image::Pose() {
+    return pose_;
   }
 
-  inline void Image::SetRotation(const Eigen::Quaterniond& rotation) {
-    rotation_ = rotation;
-  }
-
-  inline const Eigen::Vector3d& Image::Translation() const {
-    return translation_;
-  }
-
-  inline Eigen::Vector3d& Image::Translation() {
-    return translation_;
-  }
-
-  inline void Image::SetTranslation(const Eigen::Vector3d& translation) {
-    translation_ = translation;
+  inline void Image::SetPose(const colmap::Rigid3d& pose) {
+    pose_ = pose;
   }
 
   inline void Image::SetDescriptors(const colmap::FeatureDescriptors& descriptors) {

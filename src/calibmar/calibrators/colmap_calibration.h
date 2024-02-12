@@ -7,7 +7,7 @@
 #include <colmap/feature/sift.h>
 #include <colmap/scene/reconstruction.h>
 
-namespace colmap_calibration {
+namespace calibmar::colmap_calibration {
 
   void CalibrateCamera(calibmar::Calibration& calibration, std::shared_ptr<colmap::Reconstruction>& reconstruction,
                        bool enable_refraction);

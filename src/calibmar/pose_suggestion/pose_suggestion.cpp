@@ -141,8 +141,8 @@ namespace calibmar {
 
       Eigen::MatrixXd A, B;
       for (size_t i = 0; i < images.size(); i++) {
-        const Eigen::Quaterniond& rot = images[i].Rotation();
-        const Eigen::Vector3d& trans = images[i].Translation();
+        const Eigen::Quaterniond& rot = images[i].Pose().rotation;
+        const Eigen::Vector3d& trans = images[i].Pose().translation;
         Eigen::Matrix3d rot_mat = rot.toRotationMatrix();
         ComputeJacobian(rot_mat, trans, points3D, camera, A, B);
 
@@ -203,7 +203,7 @@ namespace calibmar {
       cv::cv2eigen(jac_intrinsics, jacobian_intrinsics);
       cv::cv2eigen(jac_extrinsics, jacobian_extrinsics);
     }
-  
+
     void ComputeCornerUncertaintyAutoCorrMat(const std::vector<Eigen::Vector2d>& points2D, int views,
                                              const std::pair<int, int>& pattern_cols_rows, Eigen::SparseMatrix<double>& mat) {
       int width = pattern_cols_rows.first;
@@ -363,7 +363,7 @@ namespace calibmar {
       const colmap::Camera& camera = calibration.Camera();
       std::vector<Eigen::Vector2d> points2D;
       for (const calibmar::Image& image : calibration.Images()) {
-        Eigen::Affine3d trans = image.Rotation().normalized() * Eigen::Translation3d(image.Translation());
+        Eigen::Affine3d trans = image.Pose().rotation.normalized() * Eigen::Translation3d(image.Pose().translation);
         for (const auto& [idx, id] : image.Correspondences()) {
           const Eigen::Vector3d& point = calibration.Point3D(id);
           // TODO: Points are projected inside compute jacobian already, projecting here could be avoided.

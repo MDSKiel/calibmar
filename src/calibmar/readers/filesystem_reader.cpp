@@ -23,10 +23,6 @@ namespace calibmar {
 
         image_paths_.push_back(dir_entry.path().string());
       }
-    }    
-
-    if (options_.init_image_size && !image_size_is_init) {
-      throw std::runtime_error("Could not init image size!");
     }
 
     std::sort(image_paths_.begin(), image_paths_.end(), natural_sort::compare<std::string>);
@@ -61,10 +57,18 @@ namespace calibmar {
   }
 
   int FilesystemImageReader::ImagesWidth() {
+    if (options_.init_image_size && image_width_ == -1) {
+      throw std::runtime_error("Could not init image size!");
+    }
+
     return image_width_;
   }
 
   int FilesystemImageReader::ImagesHeight() {
+    if (options_.init_image_size && image_height_ == -1) {
+      throw std::runtime_error("Could not init image size!");
+    }
+
     return image_height_;
   }
 }

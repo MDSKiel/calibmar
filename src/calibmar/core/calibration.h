@@ -3,6 +3,7 @@
 #include "calibmar/core/image.h"
 
 #include <colmap/scene/camera.h>
+#include <colmap/scene/reconstruction.h>
 #include <map>
 #include <optional>
 
@@ -60,6 +61,8 @@ namespace calibmar {
 
     void GetCorrespondences(std::vector<std::vector<Eigen::Vector2d>>& points2D,
                             std::vector<std::vector<Eigen::Vector3d>>& points3D);
+
+    void InitializeFromReconstruction(const colmap::Reconstruction& reconstruction);                            
 
    private:
     colmap::Camera camera_;
