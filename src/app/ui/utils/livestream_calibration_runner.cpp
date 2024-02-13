@@ -132,7 +132,7 @@ namespace {
 
     calibrator = std::make_unique<Calibrator3D>(calibrator_options);
     target_visualizer = std::make_unique<Target3DTargetVisualizer>(use_aruco, aruco_mask_factor);
-    target_tracker = std::make_unique<Aruco3DTargetTracker>(image_size);
+    target_tracker = std::make_unique<Aruco3DTargetTracker>(image_size, 0.05);
   }
 }
 

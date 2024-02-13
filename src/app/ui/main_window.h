@@ -42,6 +42,7 @@ namespace calibmar {
     std::unique_ptr<Calibration> calibration_;
     // second calibration that only exists for a stereo calibration
     std::unique_ptr<Calibration> calibration_stereo_;
+    std::atomic_bool calibration_success_;
     bool scrolled_to_bottom_;
     // to persist dialog options between runs
     FileCalibrationDialog::Options file_calibration_options_;

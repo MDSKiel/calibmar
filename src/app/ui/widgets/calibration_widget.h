@@ -27,5 +27,6 @@ namespace calibmar {
     QLayout* main_layout_;
     QWidget* calibration_widget_;
     ExtractionImagesWidget* extraction_images_;
+    std::atomic_bool calibration_ended_;
   };
 }

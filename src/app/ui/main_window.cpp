@@ -41,7 +41,8 @@
 
 namespace calibmar {
 
-  MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), scroll_area_(new QScrollArea(this)) {
+  MainWindow::MainWindow(QWidget* parent)
+      : QMainWindow(parent), scroll_area_(new QScrollArea(this)), calibration_success_(false) {
     CreateActions();
 
     resize(QGuiApplication::primaryScreen()->availableSize() * 3 / 5);
@@ -95,11 +96,7 @@ namespace calibmar {
     std::unique_ptr<LivestreamCalibrationRunner> runner =
         std::make_unique<LivestreamCalibrationRunner>(calibration_widget, extraction_widget, stream_calibration_options_);
     worker_thread_.reset(new std::thread([this, runner = std::move(runner), calibration = calibration_.get()]() {
-      bool success = runner->Run(*calibration);
-
-      if (!success) {
-        calibration_.reset();
-      }
+      calibration_success_ = runner->Run(*calibration);
 
       QMetaObject::invokeMethod(this, [this]() { EndNewCalibration(); });
     }));
@@ -129,11 +126,7 @@ namespace calibmar {
     std::unique_ptr<FilesCalibrationRunner> runner =
         std::make_unique<FilesCalibrationRunner>(calibration_widget, file_calibration_options_);
     worker_thread_.reset(new std::thread([this, runner = std::move(runner), calibration = calibration_.get()]() {
-      bool success = runner->Run(*calibration);
-
-      if (!success) {
-        calibration_.reset();
-      }
+      calibration_success_ = runner->Run(*calibration);
 
       QMetaObject::invokeMethod(this, [this]() { EndNewCalibration(); });
     }));
@@ -165,11 +158,7 @@ namespace calibmar {
         std::make_unique<StereoFilesCalibrationRunner>(calibration_widget, stereo_calibration_options_);
     worker_thread_.reset(new std::thread(
         [this, runner = std::move(runner), calibration1 = calibration_.get(), calibration2 = calibration_stereo_.get()]() {
-      bool success = runner->Run(*calibration1, *calibration2);
-
-      if (!success) {
-        calibration_.reset();
-      }
+      calibration_success_ = runner->Run(*calibration1, *calibration2);
 
       QMetaObject::invokeMethod(this, [this]() { EndNewCalibration(); });
     }));
@@ -304,7 +293,7 @@ namespace calibmar {
     calibration_files_action_->setEnabled(true);
     calibration_stereo_files_action_->setEnabled(true);
     calibration_stream_action_->setEnabled(true);
-    calibration_save_action_->setEnabled(static_cast<bool>(calibration_));
+    calibration_save_action_->setEnabled(calibration_success_);
   }
 
   // Callback. Used to display an extracted image in a separate dialog

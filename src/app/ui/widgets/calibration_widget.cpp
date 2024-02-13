@@ -4,7 +4,7 @@
 namespace calibmar {
   CalibrationWidget::CalibrationWidget(
       QWidget* parent, const std::function<void(const std::string&, const class TargetVisualizer&)> double_click_callback)
-      : QWidget(parent) {
+      : QWidget(parent), calibration_ended_(false) {
     main_layout_ = new QVBoxLayout(this);
     extraction_images_ = new ExtractionImagesWidget(this, double_click_callback);
 
@@ -22,7 +22,7 @@ namespace calibmar {
 
   void CalibrationWidget::AddExtractionItem(QWidget* widget) {
     // if EndCalibration is called this might be null (can happen with unfortunate ordering in deferred qt calls)
-    if (extraction_images_) {
+    if (!calibration_ended_) {
       extraction_images_->AddImage(widget);
     }
   }
@@ -39,6 +39,8 @@ namespace calibmar {
   }
 
   void CalibrationWidget::EndCalibration(QWidget* calibration_result) {
+    calibration_ended_ = true;
+
     if (calibration_widget_) {
       delete calibration_widget_;
     }

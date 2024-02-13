@@ -133,7 +133,7 @@ namespace calibmar {
     else {
       initial_parameters_1_->SetInitialParameters({});
       initial_parameters_2_->SetInitialParameters({});
-      use_initial_parameters_checkbox_->setChecked(true);
+      use_initial_parameters_checkbox_->setChecked(false);
     }
 
     calibration_target_options_->SetChessBoardTargetOptions(options.calibration_target_options);

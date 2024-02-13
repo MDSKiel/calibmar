@@ -349,6 +349,10 @@ namespace calibmar::general_calibration {
       colmap::Rigid3d pose;
       EstimatePoseFromHomography(H, camera.CalibrationMatrix(), pose);
 
+      if(pose.translation.hasNaN() || pose.rotation.coeffs().hasNaN()){
+        throw std::runtime_error(colmap::StringPrintf("Can not estimate pose of image %d", i));
+      }
+
       poses.push_back(pose);
     }
 

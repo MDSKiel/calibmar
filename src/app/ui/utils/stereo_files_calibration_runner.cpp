@@ -103,19 +103,19 @@ namespace calibmar {
           continue;
         }
 
-        QMetaObject::invokeMethod(calibration_widget_, [this, data1 = std::move(data1), data2 = std::move(data2)]() mutable {
+        QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, data1 = std::move(data1), data2 = std::move(data2)]() mutable {
           QFrame* frame = new QFrame();
           frame->setFrameStyle(QFrame::StyledPanel);
           QGridLayout* grid = new QGridLayout(frame);
           ExtractionImageWidget* image_widget1 =
-              new ExtractionImageWidget(std::move(data1), calibration_widget_->TargetVisualizer());
+              new ExtractionImageWidget(std::move(data1), calibration_widget->TargetVisualizer());
           ExtractionImageWidget* image_widget2 =
-              new ExtractionImageWidget(std::move(data2), calibration_widget_->TargetVisualizer());
+              new ExtractionImageWidget(std::move(data2), calibration_widget->TargetVisualizer());
           grid->addWidget(image_widget1, 0, 0);
           grid->addWidget(image_widget2, 0, 1);
           frame->setLayout(grid);
 
-          calibration_widget_->AddExtractionItem(frame);
+          calibration_widget->AddExtractionItem(frame);
         });
       }
 
