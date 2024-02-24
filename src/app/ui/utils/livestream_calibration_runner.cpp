@@ -464,10 +464,11 @@ namespace calibmar {
         // during init phase calibrate on one image only to get valid focal length for pinhole camera
         // copy camera and only replace if the calibration rms is better than current camera
         colmap::Camera camera = calibration.Camera();
-        Eigen::Quaterniond rot = currently_extracted_image_.Pose().rotation;
-        Eigen::Vector3d trans = currently_extracted_image_.Pose().translation;
+        Eigen::Quaterniond& rot = currently_extracted_image_.Pose().rotation;
+        Eigen::Vector3d& trans = currently_extracted_image_.Pose().translation;
         std::vector<Eigen::Quaterniond*> rotations{&rot};
         std::vector<Eigen::Vector3d*> translations{&trans};
+        // Care, image pose must be updated here!
         double rms = opencv_calibration::CalibrateCamera(points3D, {currently_extracted_image_.Points2D()}, camera, true, true,
                                                          rotations, translations);
         // ignore calibrated principle point to prevent "jumping" of the target pose

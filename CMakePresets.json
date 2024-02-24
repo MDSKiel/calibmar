@@ -49,6 +49,7 @@
             "description": "Linux default base preset, inherited by concrete ones.",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
+            "generator": "Ninja",
             "hidden": true,
             "cacheVariables": {
                 "CMAKE_CUDA_ARCHITECTURES": "native"

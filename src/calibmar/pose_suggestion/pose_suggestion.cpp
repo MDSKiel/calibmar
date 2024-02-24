@@ -363,11 +363,10 @@ namespace calibmar {
       const colmap::Camera& camera = calibration.Camera();
       std::vector<Eigen::Vector2d> points2D;
       for (const calibmar::Image& image : calibration.Images()) {
-        Eigen::Affine3d trans = image.Pose().rotation.normalized() * Eigen::Translation3d(image.Pose().translation);
         for (const auto& [idx, id] : image.Correspondences()) {
           const Eigen::Vector3d& point = calibration.Point3D(id);
           // TODO: Points are projected inside compute jacobian already, projecting here could be avoided.
-          points2D.push_back(camera.ImgFromCam((trans * point).hnormalized()));
+          points2D.push_back(camera.ImgFromCam((image.Pose() * point).hnormalized()));
         }
       }
 
