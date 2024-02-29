@@ -10,6 +10,8 @@ namespace calibmar {
     LicenseDialog(QWidget* parent = nullptr);
 
    private:
+    QString CalibmarLicense();
+
     QString CeresLicense();
     QString OpenCVLicense();
     QString QtLicense();

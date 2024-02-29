@@ -62,8 +62,9 @@ namespace {
     }
     calibmar::Pixmap pixmap;
     pixmap.Assign(cornerMat);
-    target_visualizer.DrawTargetOnImage(pixmap, *data.image_data);
-
+    if (data.image_data) {
+      target_visualizer.DrawTargetOnImage(pixmap, *data.image_data);
+    }
     std::unique_ptr<calibmar::Pixmap> scaled = std::make_unique<calibmar::Pixmap>();
     double f = (double)widget_width / pixmap.Width();
     cv::resize(pixmap.Data(), scaled->Data(), cv::Size(), f, f);

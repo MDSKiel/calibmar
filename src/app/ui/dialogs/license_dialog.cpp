@@ -6,6 +6,8 @@ calibmar::LicenseDialog::LicenseDialog(QWidget* parent) {
   QTextEdit* text_edit = new QTextEdit(this);
 
   QString licenses;
+  licenses += "<h2>Calibmar</h2>";
+  licenses += CalibmarLicense();
   licenses += "<h2>External</h2>";
   licenses += "<h3>Ceres Solver</h3>";
   licenses += CeresLicense();
@@ -36,6 +38,54 @@ calibmar::LicenseDialog::LicenseDialog(QWidget* parent) {
   text_edit->setHtml(licenses);
 
   layout->addWidget(text_edit);
+}
+
+QString calibmar::LicenseDialog::CalibmarLicense() {
+    const QString license =
+      "Copyright (c) 2024, Kiel University.<br>"
+      "All rights reserved.<br>"
+      "<br>"
+      "Redistribution and use in source and binary forms, with or without<br>"
+      "modification, are permitted provided that the following conditions are "
+      "met:<br>"
+      "<br>"
+      "    * Redistributions of source code must retain the above copyright<br>"
+      "      notice, this list of conditions and the following disclaimer.<br>"
+      "<br>"
+      "    * Redistributions in binary form must reproduce the above "
+      "copyright<br>"
+      "      notice, this list of conditions and the following disclaimer in "
+      "the<br>"
+      "      documentation and/or other materials provided with the "
+      "distribution.<br>"
+      "<br>"
+      "    * Neither the name of the copyright holder nor the names "
+      "of<br>"
+      "      its contributors may be used to endorse or promote products "
+      "derived<br>"
+      "      from this software without specific prior written permission.<br>"
+      "<br>"
+      "THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "
+      "\"AS IS\"<br>"
+      "AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, "
+      "THE<br>"
+      "IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR "
+      "PURPOSE<br>"
+      "ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS "
+      "BE<br>"
+      "LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR<br>"
+      "CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF<br>"
+      "SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR "
+      "BUSINESS<br>"
+      "INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER "
+      "IN<br>"
+      "CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR "
+      "OTHERWISE)<br>"
+      "ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF "
+      "THE<br>"
+      "POSSIBILITY OF SUCH DAMAGE.<br>"
+      "<br>";
+  return license;
 }
 
 QString calibmar::LicenseDialog::COLMAPLicense() {
