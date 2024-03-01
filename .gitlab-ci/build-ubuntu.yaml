@@ -1,3 +1,10 @@
+workflow:
+  rules: # only run for merge requests, tags, manually from web and the default branch
+    - if: $CI_PIPELINE_SOURCE == 'merge_request_event'
+    - if: $CI_PIPELINE_SOURCE == 'web'
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 stages:
   - pre-build
   - build
@@ -12,15 +19,15 @@ default:
 check-formatting: # check clang-format on the *.cpp and *.h files in src/ and tests/ modified in the latest commit.
   stage: pre-build
   script:
-    - 'git diff-tree --no-commit-id --name-only HEAD -r 'src/**/*.cpp' 'src/**/*.h' 'tests/**/*.cpp' 'tests/**/*.h'  | xargs clang-format --style=file:.clang-format --dry-run --Werror -i'
+    - 'git diff-tree --no-commit-id --name-only HEAD -r ''src/**/*.cpp'' ''src/**/*.h'' ''tests/**/*.cpp'' ''tests/**/*.h''  | xargs clang-format --style=file:.clang-format --dry-run --Werror -i'
 
 build:
   stage: build
   script:
     - mkdir build
     - cd build
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF
-    - cmake --build . -j 8
+    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF
+    - ninja -j 1 # build server is not the strongest
   artifacts:
     paths:
       - "build/"
@@ -30,8 +37,8 @@ build-CUDA:
   script:
     - mkdir build_CUDA
     - cd build_CUDA
-    - cmake .. -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major
-    - cmake --build . - j 8
+    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES=all-major
+    - ninja -j 1
   artifacts:
     paths:
       - "build_CUDA/"
