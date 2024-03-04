@@ -20,7 +20,7 @@ namespace calibmar {
   }
 
   std::unique_ptr<Pixmap> ImageWidget::TakeImage() {
-    qimage_ = QImage(); // invalidate the qimage referencing the pixmap data
+    qimage_ = QImage();  // invalidate the qimage referencing the pixmap data
     size_hint_ = QSize();
     return std::move(image_);
   }

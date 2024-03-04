@@ -349,7 +349,7 @@ namespace calibmar::general_calibration {
       colmap::Rigid3d pose;
       EstimatePoseFromHomography(H, camera.CalibrationMatrix(), pose);
 
-      if(pose.translation.hasNaN() || pose.rotation.coeffs().hasNaN()){
+      if (pose.translation.hasNaN() || pose.rotation.coeffs().hasNaN()) {
         throw std::runtime_error(colmap::StringPrintf("Can not estimate pose of image %d", i));
       }
 
@@ -432,7 +432,8 @@ namespace calibmar::general_calibration {
       problem.SetParameterBlockConstant(calibration.Images()[0].Pose().translation.data());
 
       // currently disable covariance estimation for bundle adjustment (SFM) because ceres has not yet implemented the
-      // required algorithms for large sparse jacobian pseudo inverse https://ceres-solver-review.googlesource.com/c/ceres-solver/+/9581)
+      // required algorithms for large sparse jacobian pseudo inverse
+      // https://ceres-solver-review.googlesource.com/c/ceres-solver/+/9581)
       std_devs = nullptr;
     }
 

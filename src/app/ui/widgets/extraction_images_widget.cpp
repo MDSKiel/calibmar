@@ -9,12 +9,12 @@ namespace calibmar {
     setContentsMargins(0, 0, 0, 0);
   }
 
-  void ExtractionImagesWidget::AddImage(QWidget* widget) {    
+  void ExtractionImagesWidget::AddImage(QWidget* widget) {
     main_layout_->addWidget(widget);
     update();
   }
 
-  void ExtractionImagesWidget::mouseDoubleClickEvent(QMouseEvent* event) {    
+  void ExtractionImagesWidget::mouseDoubleClickEvent(QMouseEvent* event) {
     ExtractionImageWidget* widget = dynamic_cast<ExtractionImageWidget*>(childAt(event->pos())->parent());
 
     if (widget && double_click_callback_) {

@@ -9,8 +9,7 @@ namespace calibmar {
 
   class SiftFeatureExtractor : public FeatureExtractor {
    public:
-    struct Options {
-    };
+    struct Options {};
 
     SiftFeatureExtractor(const Options& options);
 

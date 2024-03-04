@@ -2,7 +2,8 @@
 
 namespace calibmar {
   ChessboardTargetTracker::ChessboardTargetTracker(const std::pair<int, int>& columns_rows, const std::pair<int, int>& image_size,
-                                                   double limit_percentage) : TargetTracker(image_size, limit_percentage) {
+                                                   double limit_percentage)
+      : TargetTracker(image_size, limit_percentage) {
     // opencv convention
     size_t columns_inner = columns_rows.first - 1;
     size_t rows_inner = columns_rows.second - 1;

@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(CostFunction_Reference) {
   Eigen::SparseMatrix<double> ac_mat(540, 540);
   pose_suggestion::ComputeCornerUncertaintyAutoCorrMat(points2D, 2, {10, 9}, ac_mat);
 
-  std::pair<int,int> size = std::make_pair(10, 9);
+  std::pair<int, int> size = std::make_pair(10, 9);
 
   pose_suggestion::CostFunctionData data{
       calibration,
@@ -130,8 +130,10 @@ BOOST_AUTO_TEST_CASE(CostFunction_Reference) {
 
   // This trace value for this data point of the cost function was extracted from the Calibration Wizard matlab reference source.
   // The matlab reference code had to be adapted to generate jacoby matrices that match opencv rotations.
-  //BOOST_TEST(std::abs(trace - 53.854) < 0.005);
-  BOOST_TEST(std::abs(trace - 53.854) < 0.1); // Seems to potentially deviate quite strongly depending on machine and lib versions? Currently not investigated.
+  // BOOST_TEST(std::abs(trace - 53.854) < 0.005);
+  BOOST_TEST(
+      std::abs(trace - 53.854) <
+      0.1);  // Seems to potentially deviate quite strongly depending on machine and lib versions? Currently not investigated.
 }
 
 BOOST_AUTO_TEST_CASE(SuggestPose_DoesNotCrash) {
@@ -147,14 +149,16 @@ namespace {
 
   void PrepareCalibration(calibmar::Calibration& calibration) {
     Image image1;
-    image1.SetPose(colmap::Rigid3d(Eigen::Quaterniond(0.8517305, -0.2892326, 0.2560357, 0.3540414), Eigen::Vector3d(0.0042559, -0.091696, 0.53233)));
+    image1.SetPose(colmap::Rigid3d(Eigen::Quaterniond(0.8517305, -0.2892326, 0.2560357, 0.3540414),
+                                   Eigen::Vector3d(0.0042559, -0.091696, 0.53233)));
     image1.SetPoints2D(point2DSets[0]);
     for (size_t i = 0; i < points3D.size(); i++) {
       image1.SetPoint3DforPoint2D(i, i);
     }
 
     Image image2;
-    image2.SetPose(colmap::Rigid3d(Eigen::Quaterniond(0.9980833, -0.0085063, 0.0612573, 0.002201), Eigen::Vector3d(-0.089439, -0.072811, 0.28565)));
+    image2.SetPose(colmap::Rigid3d(Eigen::Quaterniond(0.9980833, -0.0085063, 0.0612573, 0.002201),
+                                   Eigen::Vector3d(-0.089439, -0.072811, 0.28565)));
     image2.SetPoints2D(point2DSets[0]);
     for (size_t i = 0; i < points3D.size(); i++) {
       image2.SetPoint3DforPoint2D(i, i);

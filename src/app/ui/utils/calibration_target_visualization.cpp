@@ -24,10 +24,14 @@ namespace {
   }
 
   void DrawMarker(calibmar::Pixmap& image, const std::vector<Eigen::Vector2d>& corners) {
-    cv::line(image.Data(), cv::Point(corners[0].x(), corners[0].y()), cv::Point(corners[1].x(), corners[1].y()), cv::Scalar(0, 0, 255));
-    cv::line(image.Data(), cv::Point(corners[1].x(), corners[1].y()), cv::Point(corners[2].x(), corners[2].y()), cv::Scalar(0, 0, 255));
-    cv::line(image.Data(), cv::Point(corners[2].x(), corners[2].y()), cv::Point(corners[3].x(), corners[3].y()), cv::Scalar(0, 0, 255));
-    cv::line(image.Data(), cv::Point(corners[3].x(), corners[3].y()), cv::Point(corners[0].x(), corners[0].y()), cv::Scalar(0, 0, 255));
+    cv::line(image.Data(), cv::Point(corners[0].x(), corners[0].y()), cv::Point(corners[1].x(), corners[1].y()),
+             cv::Scalar(0, 0, 255));
+    cv::line(image.Data(), cv::Point(corners[1].x(), corners[1].y()), cv::Point(corners[2].x(), corners[2].y()),
+             cv::Scalar(0, 0, 255));
+    cv::line(image.Data(), cv::Point(corners[2].x(), corners[2].y()), cv::Point(corners[3].x(), corners[3].y()),
+             cv::Scalar(0, 0, 255));
+    cv::line(image.Data(), cv::Point(corners[3].x(), corners[3].y()), cv::Point(corners[0].x(), corners[0].y()),
+             cv::Scalar(0, 0, 255));
   }
 }
 
@@ -62,7 +66,8 @@ namespace calibmar {
     }
   }
 
-  void ChessboardTargetVisualizer::DrawTargetPoseOnImage(Pixmap& image, const std::vector<Eigen::Vector2d>& target_pose_points) const {
+  void ChessboardTargetVisualizer::DrawTargetPoseOnImage(Pixmap& image,
+                                                         const std::vector<Eigen::Vector2d>& target_pose_points) const {
     if (target_pose_points.empty()) {
       return;
     }

@@ -1,8 +1,8 @@
 #include "target_tracker.h"
 
 namespace calibmar {
-  TargetTracker::TargetTracker(const std::pair<int, int>& image_size, double limit_percentage) : stable_(false), limits_xy_(image_size.first * limit_percentage, image_size.second * limit_percentage) {
-  }
+  TargetTracker::TargetTracker(const std::pair<int, int>& image_size, double limit_percentage)
+      : stable_(false), limits_xy_(image_size.first * limit_percentage, image_size.second * limit_percentage) {}
 
   void TargetTracker::Update(const std::vector<Eigen::Vector2d>& current_points) {
     if (!current_points.empty()) {
@@ -32,7 +32,7 @@ namespace calibmar {
   }
 
   bool TargetTracker::CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,
-                                                 const std::vector<Eigen::Vector2d>& points_b) {
+                                       const std::vector<Eigen::Vector2d>& points_b) {
     if (points_a.empty() || points_b.empty()) {
       return false;
     }
@@ -45,5 +45,5 @@ namespace calibmar {
     }
 
     return true;
-  }  
+  }
 }

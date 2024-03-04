@@ -87,8 +87,9 @@ namespace calibmar::general_calibration {
   void OptimizeCamera(std::vector<std::vector<Eigen::Vector3d>>& object_points,
                       const std::vector<std::vector<Eigen::Vector2d>>& image_points, colmap::Camera& camera,
                       std::vector<colmap::Rigid3d>& poses, std::vector<double>* std_deviations_intrinsics);
-  
+
   // Overload extracting the required information from a prepared Calibration
-  // @param fix_3D_points If 3D points should be considered constant (defaults to true), otherwise a complete bundle adjustment will be performed (keeping the first pose constant)
+  // @param fix_3D_points If 3D points should be considered constant (defaults to true), otherwise a complete bundle adjustment
+  // will be performed (keeping the first pose constant)
   void OptimizeCamera(Calibration& calibration, bool fix_3D_points = true);
 }

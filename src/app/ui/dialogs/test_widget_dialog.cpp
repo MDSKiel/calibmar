@@ -97,8 +97,8 @@ namespace calibmar {
     //----------------------------------------------------------------------------------------------
 
     Calibration calibration;
-    calibration.SetCamera(colmap::Camera::CreateFromModelName(colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name, 1000,
-                                            800, 600));
+    calibration.SetCamera(colmap::Camera::CreateFromModelName(
+        colmap::kInvalidCameraId, CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name, 1000, 800, 600));
 
     std::vector<Eigen::Vector2d> points;
     for (size_t i = 0; i < 600; i += 50) {

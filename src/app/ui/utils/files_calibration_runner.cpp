@@ -178,7 +178,8 @@ namespace calibmar {
         if (data->status == ExtractionImageWidget::Status::SUCCESS ||
             data->status == ExtractionImageWidget::Status::DETECTION_ERROR ||
             data->status == ExtractionImageWidget::Status::IMAGE_DIMENSION_MISSMATCH) {
-          QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, data = std::move(data)]() mutable {
+          QMetaObject::invokeMethod(calibration_widget_,
+                                    [calibration_widget = calibration_widget_, data = std::move(data)]() mutable {
             calibration_widget->AddExtractionItem(
                 new ExtractionImageWidget(std::move(data), calibration_widget->TargetVisualizer()));
           });

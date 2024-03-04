@@ -41,7 +41,7 @@ calibmar::LicenseDialog::LicenseDialog(QWidget* parent) {
 }
 
 QString calibmar::LicenseDialog::CalibmarLicense() {
-    const QString license =
+  const QString license =
       "Copyright (c) 2024, Kiel University.<br>"
       "All rights reserved.<br>"
       "<br>"

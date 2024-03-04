@@ -153,9 +153,9 @@ namespace {
         Iterator last_nondigit1 = std::find_if(current1, lhsEnd, is_not_digit<ElementType>);
         Iterator last_nondigit2 = std::find_if(current2, rhsEnd, is_not_digit<ElementType>);
 
-        int result = compare_number<ElementType, Iterator>()(
-            current1, last_nondigit1, (current1 > lhsBegin && *(current1 - 1) == '.'), current2, last_nondigit2,
-            (current2 > rhsBegin && *(current2 - 1) == '.'));
+        int result =
+            compare_number<ElementType, Iterator>()(current1, last_nondigit1, (current1 > lhsBegin && *(current1 - 1) == '.'),
+                                                    current2, last_nondigit2, (current2 > rhsBegin && *(current2 - 1) == '.'));
         if (result < 0) return true;
         if (result > 0) return false;
         current1 = last_nondigit1;

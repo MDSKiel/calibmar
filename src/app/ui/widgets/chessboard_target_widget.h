@@ -1,8 +1,8 @@
 #pragma once
 
+#include "calibmar/extractors/chessboard_extractor.h"
 #include <QtCore>
 #include <QtWidgets>
-#include "calibmar/extractors/chessboard_extractor.h"
 
 namespace calibmar {
 
@@ -12,6 +12,7 @@ namespace calibmar {
 
     void SetChessBoardTargetOptions(const ChessboardFeatureExtractor::Options& options);
     ChessboardFeatureExtractor::Options ChessboardTargetOptions();
+
    private:
     QSpinBox* chess_board_rows_edit_;
     QSpinBox* chess_board_columns_edit_;

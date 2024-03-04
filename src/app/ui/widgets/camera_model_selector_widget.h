@@ -2,8 +2,8 @@
 
 #include "calibmar/calibrators/basic_calibrator.h"
 #include "calibmar/core/report.h"
-#include "ui/widgets/initial_parameters_widget.h"
 #include "ui/widgets/camera_model_widget.h"
+#include "ui/widgets/initial_parameters_widget.h"
 
 #include <QtCore>
 #include <QtWidgets>

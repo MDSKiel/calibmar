@@ -59,7 +59,8 @@ namespace {
     std::vector<int> marker_ids;
     std::vector<std::vector<cv::Point2f>> rejected_candidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = std::make_shared<cv::aruco::DetectorParameters>();
-    cv::Ptr<cv::aruco::Dictionary> dictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(static_cast<int>(aruco_type)));
+    cv::Ptr<cv::aruco::Dictionary> dictionary =
+        cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(static_cast<int>(aruco_type)));
     cv::aruco::detectMarkers(image_data, dictionary, marker_corners, marker_ids, parameters, rejected_candidates);
 
     // store aruco keypoints in the image

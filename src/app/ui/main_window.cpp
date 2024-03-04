@@ -231,10 +231,10 @@ namespace calibmar {
   }
 
   void MainWindow::About() {
-    QMessageBox::about(
-        this, "About Calibmar",
-        QString::fromStdString("<h2>Calibmar " + CALIBMAR_VERSION + "</h2>\n<p>Commit ID: " + CALIBMAR_COMMIT_ID +
-                               ", Commit date: " + CALIBMAR_COMMIT_DATE + ", " + CALIBMAR_CUDA_ENABLED + "</p>\n<p><strong>Author:</strong> Felix Seegräber</p>"));
+    QMessageBox::about(this, "About Calibmar",
+                       QString::fromStdString("<h2>Calibmar " + CALIBMAR_VERSION + "</h2>\n<p>Commit ID: " + CALIBMAR_COMMIT_ID +
+                                              ", Commit date: " + CALIBMAR_COMMIT_DATE + ", " + CALIBMAR_CUDA_ENABLED +
+                                              "</p>\n<p><strong>Author:</strong> Felix Seegräber</p>"));
   }
 
   void MainWindow::CreateActions() {

@@ -57,7 +57,7 @@
 
 namespace calibmar {
   class ImageFlowLayout : public QLayout {
-  public:
+   public:
     explicit ImageFlowLayout(QWidget* parent, int margin = -1, int hSpacing = -1, int vSpacing = -1);
     explicit ImageFlowLayout(int margin = -1, int hSpacing = -1, int vSpacing = -1);
     ~ImageFlowLayout();
@@ -75,7 +75,7 @@ namespace calibmar {
     QSize sizeHint() const override;
     QLayoutItem* takeAt(int index) override;
 
-  private:
+   private:
     int doLayout(const QRect& rect, bool testOnly) const;
     int smartSpacing(QStyle::PixelMetric pm) const;
 
@@ -85,4 +85,4 @@ namespace calibmar {
   };
 }
 
-#endif // FLOWLAYOUT_H
+#endif  // FLOWLAYOUT_H

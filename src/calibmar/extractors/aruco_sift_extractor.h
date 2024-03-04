@@ -1,8 +1,8 @@
 #pragma once
 
+#include "calibmar/core/calibration_targets.h"
 #include "extractor.h"
 #include "sift_extractor.h"
-#include "calibmar/core/calibration_targets.h"
 
 namespace calibmar {
   class ArucoSiftFeatureExtractor : public FeatureExtractor {

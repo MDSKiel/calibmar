@@ -2,8 +2,8 @@
 
 #include "calibmar/core/report.h"
 #include "ui/widgets/calibration_target_widget.h"
-#include "ui/widgets/housing_selector_widget.h"
 #include "ui/widgets/camera_model_selector_widget.h"
+#include "ui/widgets/housing_selector_widget.h"
 
 #include <QtCore>
 #include <QtWidgets>
@@ -28,6 +28,7 @@ namespace calibmar {
     void SetOptions(Options options);
 
     void ForceArucoFor3DTarget(bool force);
+
    private:
     CameraModelSelectorWidget* camera_model_selector_;
     HousingSelectorWidget* housing_type_selector_;

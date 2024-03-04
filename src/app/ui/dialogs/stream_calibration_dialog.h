@@ -12,7 +12,7 @@ namespace calibmar {
     enum class AcquisitionMode { OnButton, OnTimedDetection, OnSuggestedPose };
 
     struct Options {
-      CalibrationTargetOptionsWidget::Options calibration_target_options = ChessboardFeatureExtractor::Options{4,4,1.0};
+      CalibrationTargetOptionsWidget::Options calibration_target_options = ChessboardFeatureExtractor::Options{4, 4, 1.0};
       CameraModelType camera_model = CameraModelType::SimplePinholeCameraModel;
       std::optional<std::pair<HousingInterfaceType, std::vector<double>>> housing_calibration = {};
       std::optional<std::vector<double>> initial_camera_parameters = {};

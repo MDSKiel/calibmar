@@ -3,10 +3,8 @@
 #include "calibmar/readers/image_reader.h"
 
 class MemoryImageReader : public calibmar::ImageReader {
-public:
-  enum class Images {
-    BasicChessboard
-  };
+ public:
+  enum class Images { BasicChessboard };
 
   MemoryImageReader(const std::vector<Images>& images);
 
@@ -14,7 +12,8 @@ public:
   calibmar::ImageReader::Status Next(calibmar::Image& image, calibmar::Pixmap& pixmap);
   int ImagesWidth();
   int ImagesHeight();
-private:
+
+ private:
   size_t file_index_;
   std::vector<calibmar::Pixmap> images_;
   int image_width_;

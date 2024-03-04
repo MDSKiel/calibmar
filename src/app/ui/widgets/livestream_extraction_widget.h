@@ -31,7 +31,7 @@ namespace calibmar {
     QScrollArea* extraction_images_scroll_area_;
     QVBoxLayout* extraction_images_layout_;
     QVBoxLayout* live_layout_;
-        
+
     ImageWidget* heatmap_widget_;
     std::unique_ptr<Pixmap> heatmap_;
   };

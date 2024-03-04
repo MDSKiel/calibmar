@@ -59,7 +59,8 @@ namespace calibmar {
     setContentsMargins(margin, margin, margin, margin);
   }
 
-  ImageFlowLayout::ImageFlowLayout(int margin, int hSpacing, int vSpacing) : ImageFlowLayout(nullptr, margin, hSpacing, vSpacing) {}
+  ImageFlowLayout::ImageFlowLayout(int margin, int hSpacing, int vSpacing)
+      : ImageFlowLayout(nullptr, margin, hSpacing, vSpacing) {}
 
   ImageFlowLayout::~ImageFlowLayout() {
     QLayoutItem* item;
@@ -157,8 +158,7 @@ namespace calibmar {
 
       int item_width = item->sizeHint().width();
       // calculate a target item width which will fill the layout but is maximally size hint wide
-      int target_width =
-          (int)(effectiveRect.width() / std::ceil((double)effectiveRect.width() / (item_width + spaceX))) - spaceX;
+      int target_width = (int)(effectiveRect.width() / std::ceil((double)effectiveRect.width() / (item_width + spaceX))) - spaceX;
       // keep aspect ratio
       int target_height = item->sizeHint().height() * ((double)target_width / item_width);
 

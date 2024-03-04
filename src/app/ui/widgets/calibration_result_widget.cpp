@@ -195,9 +195,8 @@ namespace calibmar {
     heatmap_area->setFrameShape(QFrame::Shape::NoFrame);
     ImageWidget* image = new ImageWidget(this);
     heatmap_area->setWidget(image);
-    heatmap_area->widget()->resize(
-        QSize(calibration.Camera().width, calibration.Camera().height)
-            .scaled(calibration.Camera().width, target_height, Qt::AspectRatioMode::KeepAspectRatio));
+    heatmap_area->widget()->resize(QSize(calibration.Camera().width, calibration.Camera().height)
+                                       .scaled(calibration.Camera().width, target_height, Qt::AspectRatioMode::KeepAspectRatio));
     std::unique_ptr<Pixmap> heatmap = std::make_unique<Pixmap>();
     heatmap::GenerateHeatmap(calibration.Images(), {calibration.Camera().width, calibration.Camera().height}, *heatmap);
     image->SetImage(std::move(heatmap));
@@ -233,7 +232,7 @@ namespace calibmar {
         if (visible) {
           model_viewer_widget->ReloadReconstruction();
         }
-      },
+          },
           this);
       reconstruction_collapse->SetWidget(model_viewer_widget, 800);
       layout->addWidget(reconstruction_collapse);

@@ -11,7 +11,8 @@ namespace calibmar {
 
   class CalibrationTargetOptionsWidget : public QGroupBox {
    public:
-    typedef std::variant<ChessboardFeatureExtractor::Options, ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options> Options;
+    typedef std::variant<ChessboardFeatureExtractor::Options, ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options>
+        Options;
 
     CalibrationTargetOptionsWidget(QWidget* parent = nullptr);
 

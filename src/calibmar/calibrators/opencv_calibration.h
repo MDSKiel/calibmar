@@ -3,8 +3,8 @@
 #include "calibmar/core/camera_models.h"
 
 #include <Eigen/Core>
-#include <colmap/scene/camera.h>
 #include <colmap/geometry/rigid3.h>
+#include <colmap/scene/camera.h>
 
 namespace calibmar {
   namespace opencv_calibration {
@@ -35,7 +35,7 @@ namespace calibmar {
                            std::vector<Eigen::Vector3d*>& translation_vecs);
 
     // Calibrate stereo cameras. 2D point sets are provided per camera and must correspond to the same 3D object points
-    //    
+    //
     // @param object_points Sets of 3D points.
     // @param image_points1 Sets of corresponding 2D image points of camera 1
     // @param image_points2 Sets of corresponding 2D image points of camera 2

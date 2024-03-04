@@ -132,7 +132,7 @@ namespace {
   void CreateDistortMaps(cv::Mat* map_x, cv::Mat* map_y, const colmap::Camera& camera) {
     colmap::Camera undistorted_camera = colmap::Camera::CreateFromModelId(
         colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, camera.width, camera.height);
-        
+
     // Copy focal length parameters.
     const auto& focal_length_idxs = camera.FocalLengthIdxs();
     if (focal_length_idxs.size() == 1) {

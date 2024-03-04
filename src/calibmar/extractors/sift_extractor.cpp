@@ -26,7 +26,7 @@ namespace calibmar {
 
     FIBITMAP* bitmap = FreeImage_ConvertFromRawBitsEx(false, image_data.data, FREE_IMAGE_TYPE::FIT_BITMAP, pixmap.Width(),
                                                       pixmap.Height(), image_data.step, 8, 0, 0, 0, true);
-                                                      
+
     colmap::Bitmap bmp(bitmap);
     colmap::FeatureKeypoints keypoints;
     colmap::FeatureDescriptors descriptors;

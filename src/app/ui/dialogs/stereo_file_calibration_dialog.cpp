@@ -179,7 +179,7 @@ namespace calibmar {
       return false;
     }
 
-    if(only_estimate_pose_checkbox_->isChecked() && !use_initial_parameters_checkbox_->isChecked()){
+    if (only_estimate_pose_checkbox_->isChecked() && !use_initial_parameters_checkbox_->isChecked()) {
       QMessageBox::information(this, "Validation Error", "To estimate the relative pose only, intrinsics must be provided!");
       return false;
     }

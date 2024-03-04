@@ -103,7 +103,8 @@ namespace calibmar {
           continue;
         }
 
-        QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, data1 = std::move(data1), data2 = std::move(data2)]() mutable {
+        QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, data1 = std::move(data1),
+                                                        data2 = std::move(data2)]() mutable {
           QFrame* frame = new QFrame();
           frame->setFrameStyle(QFrame::StyledPanel);
           QGridLayout* grid = new QGridLayout(frame);

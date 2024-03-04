@@ -18,10 +18,11 @@ namespace calibmar {
       Status status;
       std::unique_ptr<Pixmap> image;
       Image* image_data;
-      std::string image_name; // image name is kept separately in case extraction fails
+      std::string image_name;  // image name is kept separately in case extraction fails
     };
 
-    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr, std::optional<int> target_width = {});    
+    ExtractionImageWidget(std::unique_ptr<Data> data, const class TargetVisualizer& target_visualizer, QWidget* parent = nullptr,
+                          std::optional<int> target_width = {});
 
     const class TargetVisualizer& TargetVisualizer();
     const std::string& ImageName();

@@ -9,7 +9,7 @@
 
 namespace calibmar {
   // Calibrator class calibrates the camera using contained 2D-3D correspondences.
-  class BasicCalibrator : public Calibrator{
+  class BasicCalibrator : public Calibrator {
    public:
     struct Options {
       CameraModelType camera_model = CameraModelType::OpenCVCameraModel;

@@ -1,14 +1,11 @@
 #include "camera_model_selector_widget.h"
 #include "ui/utils/parse_params.h"
 
-
 #include <colmap/sensor/models.h>
-
 
 namespace calibmar {
 
   CameraModelSelectorWidget::CameraModelSelectorWidget(QWidget* parent) : QGroupBox(parent) {
-
     setTitle("Camera model");
 
     camera_model_ = new CameraModelWidget(this);

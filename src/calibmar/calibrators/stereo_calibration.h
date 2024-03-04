@@ -18,12 +18,16 @@ namespace calibmar::stereo_calibration {
   // camera by itself and then joint optimization of absolute and relative pose aswell as intrinsics.
   // @param object_points Collection of planar object points (Will typically be the same set of point coordinates multiple times)
   // in world (calibration target) coordinates
-  // @param image_points1 2D image observations of the first camera. Must correspond to and exactly match the object points shape aswell as to image_points2
-  // @param image_points2 2D image observations of the second camera. Must correspond to and exactly match the object points shape aswell as to image_points1
+  // @param image_points1 2D image observations of the first camera. Must correspond to and exactly match the object points shape
+  // aswell as to image_points2
+  // @param image_points2 2D image observations of the second camera. Must correspond to and exactly match the object points shape
+  // aswell as to image_points1
   // @param camera1 First camera, considered to be the main camera, i.e. origin of the stereo system
-  // @param camera2 Second camera, considered to be the secondary camera for which the pose is estimated relative to the main camera
+  // @param camera2 Second camera, considered to be the secondary camera for which the pose is estimated relative to the main
+  // camera
   // @param use_intrinsic_guess If the camera intrinsics should be used as an initialization for optimization
-  // @param fix_intrinsics If the camera intrinsics should be considered known and subsequently kept fixed during optimization. This will result in only estimating the absolute and relative poses.
+  // @param fix_intrinsics If the camera intrinsics should be considered known and subsequently kept fixed during optimization.
+  // This will result in only estimating the absolute and relative poses.
   // @param relative_pose The transformation which transforms a point from the coordinate system of camera 1 to camera 2.
   // @param poses The absolute poses corresponding to each view (i.e. the poses of the first camera)
   // @param std_deviations If requested, contains the estimated standard deviations of each estimated parameter

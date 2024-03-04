@@ -199,7 +199,8 @@ namespace calibmar {
     divider->setFrameShadow(QFrame::Sunken);
     housing_sliders_side_layout_->addWidget(divider, housing_sliders_side_layout_->rowCount(), 0, 1, 3);
 
-    camera_.refrac_model_id = colmap::CameraRefracModelNameToId(HousingInterface::HousingInterfaces().at(*housing_type).model_name);
+    camera_.refrac_model_id =
+        colmap::CameraRefracModelNameToId(HousingInterface::HousingInterfaces().at(*housing_type).model_name);
     if (*housing_type == HousingInterfaceType::DoubleLayerPlanarRefractive) {
       // Nx, Ny, Nz, int_dist, int_thick, na, ng, nw
       camera_.refrac_params = {0, 0, 1, 0.015, 0.005, 1.003, 1.473, 1.333};

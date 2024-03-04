@@ -1,8 +1,8 @@
 #pragma once
 
+#include "calibmar/core/image.h"
 #include "calibmar/pose_suggestion/target_tracker.h"
 #include "calibmar/readers/livestream_reader.h"
-#include "calibmar/core/image.h"
 
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/utils/auto_reset_signal.h"
@@ -27,7 +27,7 @@ namespace calibmar {
     QPushButton* capture_button_;
     StreamCalibrationDialog::Options dialog_options_;
     Image current_draw_image_;
-    std::vector<Eigen::Vector2d>  current_draw_target_points_;
+    std::vector<Eigen::Vector2d> current_draw_target_points_;
     Image currently_extracted_image_;
     std::vector<Eigen::Vector2d> current_target_points_;
     // Current pixmap that is worked on, e.g. extracted and saved.

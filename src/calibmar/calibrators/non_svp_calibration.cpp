@@ -254,8 +254,8 @@ namespace calibmar {
 
         ceres::CostFunction* cost_function = nullptr;
 #define CAMERA_COMBINATION_MODEL_CASE(CameraRefracModel, CameraModel)                                                            \
-  if (camera->model_id == colmap::CameraModel::model_id &&                                                                      \
-      camera->refrac_model_id == colmap::CameraRefracModel::refrac_model_id) {                                                    \
+  if (camera->model_id == colmap::CameraModel::model_id &&                                                                       \
+      camera->refrac_model_id == colmap::CameraRefracModel::refrac_model_id) {                                                   \
     cost_function = colmap::ReprojErrorRefracCostFunction<colmap::CameraRefracModel, colmap::CameraModel>::Create(points_2D[i]); \
   }                                                                                                                              \
   else
