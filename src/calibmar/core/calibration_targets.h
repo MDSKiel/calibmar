@@ -4,7 +4,7 @@
 
 namespace calibmar {
 
-  enum class CalibrationTargetType { Chessboard, Target3D, Target3DAruco };
+  enum class CalibrationTargetType { Chessboard, ArucoGridBoard, Target3D, Target3DAruco };
 
   enum class ArucoMarkerTypes {
     DICT_4X4_50 = cv::aruco::DICT_4X4_50,
@@ -30,9 +30,13 @@ namespace calibmar {
     DICT_APRILTAG_36h11 = cv::aruco::DICT_APRILTAG_36h11
   };
 
-  namespace calibration_targets {
+  enum class ArucoGridOrigin { TopLeft, TopRight, BottomLeft, BottomRight };
 
+  enum class ArucoGridDirection { Horizontal, Vertical };
+
+  namespace calibration_targets {
     inline std::vector<std::pair<std::string, ArucoMarkerTypes>> ArucoTypes() {
+      // These names are used in serialization, and can not be changed without breaking compatibility with old reports
       return {{"4X4_50", ArucoMarkerTypes::DICT_4X4_50},
               {"4X4_100", ArucoMarkerTypes::DICT_4X4_100},
               {"4X4_250", ArucoMarkerTypes::DICT_4X4_250},
@@ -54,6 +58,26 @@ namespace calibmar {
               {"APRILTAG_25h9", ArucoMarkerTypes::DICT_APRILTAG_25h9},
               {"APRILTAG_36h10", ArucoMarkerTypes::DICT_APRILTAG_36h10},
               {"APRILTAG_36h11", ArucoMarkerTypes::DICT_APRILTAG_36h11}};
+    }
+
+    inline std::string NameFromArucoType(ArucoMarkerTypes type) {
+      for (const auto& name_type : ArucoTypes()) {
+        if (name_type.second == type) {
+          return name_type.first;
+        }
+      }
+
+      throw std::runtime_error("Unkown marker type!");
+    }
+
+    inline ArucoMarkerTypes ArucoTypeFromName(const std::string& name) {
+      for (const auto& name_type : ArucoTypes()) {
+        if (name_type.first == name) {
+          return name_type.second;
+        }
+      }
+
+      throw std::runtime_error("Unkown marker name!");
     }
   }
 }

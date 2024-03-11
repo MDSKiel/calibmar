@@ -197,8 +197,8 @@ namespace calibmar {
     ImportedParameters parameters = ImportedParameters::ImportFromYaml(path);
     Options options;
 
-    options.calibration_target_options.chessboard_columns = parameters.chessboard_columns;
-    options.calibration_target_options.chessboard_rows = parameters.chessboard_rows;
+    options.calibration_target_options.chessboard_columns = parameters.columns;
+    options.calibration_target_options.chessboard_rows = parameters.rows;
     options.calibration_target_options.square_size = parameters.square_size;
 
     options.images_directory1 = parameters.directory;

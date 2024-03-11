@@ -11,6 +11,7 @@ namespace calibmar {
     inline const std::string& Name() const;
     inline void SetName(const std::string& name);
 
+    inline size_t AddPoint2D(const Eigen::Vector2d& point);
     inline void SetPoints2D(const std::vector<Eigen::Vector2d>& points);
     inline const std::vector<Eigen::Vector2d>& Points2D() const;
     inline Eigen::Vector2d Point2D(size_t idx) const;
@@ -18,6 +19,7 @@ namespace calibmar {
     inline void SetPoint3DforPoint2D(const uint32_t point3D_id, const size_t point2D_idx);
     // Correspondences of image 2D point indices to calibration 3D point ids
     inline const std::unordered_map<size_t, uint32_t>& Correspondences() const;
+    inline void ClearCorrespondences();
 
     // Pose which is defined as the transformation from world to camera space.
     inline const colmap::Rigid3d& Pose() const;
@@ -40,7 +42,7 @@ namespace calibmar {
    private:
     colmap::FeatureDescriptors feature_descriptors_;
     colmap::FeatureKeypoints feature_keypoints_;
-    // this is a ordered map so the position of detected corners is stable regarding their position in the overall map<d
+    // this is a ordered map so the position of detected corners is stable regarding their position in the overall map
     std::map<int, std::vector<Eigen::Vector2d>> aruco_keypoints_;
     std::string name_;
     std::vector<Eigen::Vector2d> points2D_;
@@ -51,6 +53,11 @@ namespace calibmar {
   ////////////////////////////////////////////////////////////////////////////////
   // Implementation
   ////////////////////////////////////////////////////////////////////////////////
+
+  inline size_t Image::AddPoint2D(const Eigen::Vector2d& point) {
+    points2D_.push_back(point);
+    return points2D_.size() - 1;
+  }
 
   inline void Image::SetPoints2D(const std::vector<Eigen::Vector2d>& points) {
     points2D_ = points;
@@ -70,6 +77,10 @@ namespace calibmar {
 
   inline const std::unordered_map<size_t, uint32_t>& Image::Correspondences() const {
     return correspondences_;
+  }
+
+  inline void Image::ClearCorrespondences() {
+    correspondences_.clear();
   }
 
   inline const std::string& Image::Name() const {

@@ -38,11 +38,11 @@ namespace calibmar {
     ~ChessboardTargetTracker() = default;
   };
 
-  class Aruco3DTargetTracker : public TargetTracker {
+  class ArucoTargetTracker : public TargetTracker {
    public:
-    Aruco3DTargetTracker(const std::pair<int, int>& image_size, double limit_percentage = 0.03);
+    ArucoTargetTracker(const std::pair<int, int>& image_size, double limit_percentage = 0.05);
 
-    ~Aruco3DTargetTracker() = default;
+    ~ArucoTargetTracker() = default;
 
    protected:
     virtual bool CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,

@@ -39,7 +39,6 @@ namespace calibmar {
 
   void Target3DTargetOptionsWidget::SetTarget3DTargetOptions(const Options& options) {
     bool use_aruco = std::holds_alternative<ArucoSiftFeatureExtractor::Options>(options);
-
     enable_aruco_checkbox_->setChecked(use_aruco);
 
     if (use_aruco) {
@@ -62,12 +61,8 @@ namespace calibmar {
     if (enable_aruco_checkbox_->isChecked()) {
       ArucoSiftFeatureExtractor::Options options;
 
-      for (const auto& name_type : calibration_targets::ArucoTypes()) {
-        if (aruco_type_edit_->currentText().toStdString() == name_type.first) {
-          options.aruco_type = name_type.second;
-          break;
-        }
-      }
+      options.aruco_type = calibration_targets::ArucoTypeFromName(aruco_type_edit_->currentText().toStdString());
+
       options.masking_scale_factor = aruco_mask_factor_edit_->value();
       return options;
     }

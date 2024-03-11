@@ -153,8 +153,6 @@ namespace {
       }
     }
 
-    // TODO: Check. This is like the original implementation, perhaps if no consensus is reached another
-    // line should be checked?
     if (voteForward > voteBackward && ((double)voteForward / (double)voteBackward) >= 0.8) {
       return true;
     }

@@ -1,4 +1,6 @@
 target_sources(calibmar_app PRIVATE
+	aruco_board_target_widget.cpp
+	aruco_board_target_widget.h
 	calibration_result_widget.cpp
 	calibration_result_widget.h
 	calibration_target_widget.cpp

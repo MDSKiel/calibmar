@@ -15,7 +15,7 @@ namespace {
 }
 
 // regression test, actual values not known
-BOOST_AUTO_TEST_CASE(BasicExtraction) {
+BOOST_AUTO_TEST_CASE(BasicChessBoardExtraction) {
   ChessboardFeatureExtractor::Options options;
   options.chessboard_columns = 10;
   options.chessboard_rows = 7;

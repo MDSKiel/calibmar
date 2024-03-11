@@ -7,6 +7,10 @@ namespace {
     switch (image) {
       case MemoryImageReader::Images::BasicChessboard:
         return test_images::chessboard_image;
+      case MemoryImageReader::Images::ArucoGridBoard:
+        return test_images::aruco_grid_board_image;
+      case MemoryImageReader::Images::AprilGridBoard:
+        return test_images::aprilgrid_board_image;
       default:
         throw std::runtime_error("bad image");
     }

@@ -4,7 +4,7 @@
 
 class MemoryImageReader : public calibmar::ImageReader {
  public:
-  enum class Images { BasicChessboard };
+  enum class Images { BasicChessboard, ArucoGridBoard, AprilGridBoard };
 
   MemoryImageReader(const std::vector<Images>& images);
 

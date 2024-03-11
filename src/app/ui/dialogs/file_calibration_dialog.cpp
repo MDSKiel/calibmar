@@ -94,14 +94,23 @@ namespace calibmar {
     Options options;
     switch (p.calibration_target) {
       case CalibrationTargetType::Chessboard:
-        options.calibration_target_options =
-            ChessboardFeatureExtractor::Options{p.chessboard_rows, p.chessboard_columns, p.square_size};
+        options.calibration_target_options = ChessboardFeatureExtractor::Options{p.rows, p.columns, p.square_size};
         break;
       case CalibrationTargetType::Target3D:
         options.calibration_target_options = SiftFeatureExtractor::Options{};
         break;
       case CalibrationTargetType::Target3DAruco:
         options.calibration_target_options = ArucoSiftFeatureExtractor::Options{p.aruco_type, p.aruco_scale_factor, false};
+        break;
+      case CalibrationTargetType::ArucoGridBoard:
+        options.calibration_target_options = ArucoBoardFeatureExtractor::Options{p.aruco_type,
+                                                                                 ArucoGridOrigin::TopLeft,
+                                                                                 ArucoGridDirection::Horizontal,
+                                                                                 p.columns,
+                                                                                 p.rows,
+                                                                                 p.square_size,
+                                                                                 p.spacing,
+                                                                                 1};
         break;
     }
 

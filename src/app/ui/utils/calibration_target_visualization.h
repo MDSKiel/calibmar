@@ -27,6 +27,11 @@ namespace calibmar {
     int rows_;
   };
 
+  class ArucoBoardTargetVisualizer : public TargetVisualizer {
+   public:
+    void DrawTargetOnImage(Pixmap& image, const Image& image_data) const override;
+  };
+
   class Target3DTargetVisualizer : public TargetVisualizer {
    public:
     Target3DTargetVisualizer(bool contains_aruco, double scale_factor);

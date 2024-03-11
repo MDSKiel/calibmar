@@ -19,7 +19,7 @@ default:
 check-formatting: # check clang-format on the *.cpp and *.h files in src/ and tests/ modified in the latest commit.
   stage: pre-build
   script:
-    - 'git diff-tree --no-commit-id --name-only HEAD -r ''src/**/*.cpp'' ''src/**/*.h'' ''tests/**/*.cpp'' ''tests/**/*.h''  | xargs clang-format --style=file:.clang-format --dry-run --Werror -i'
+    - 'git diff-tree --no-commit-id --name-only HEAD -r --diff-filter=d ''src/**/*.cpp'' ''src/**/*.h'' ''tests/**/*.cpp'' ''tests/**/*.h''  | xargs clang-format --style=file:.clang-format --dry-run --Werror -i'
 
 build:
   stage: build

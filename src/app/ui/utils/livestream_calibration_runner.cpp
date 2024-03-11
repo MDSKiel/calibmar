@@ -35,51 +35,68 @@ namespace {
     ProjectPoints(calibration.Camera(), points3D, rotation, translation, current_target_points);
   }
 
-  void SetupChessboardCalibration(calibmar::ChessboardFeatureExtractor::Options& chessboard_options,
-                                  const calibmar::StreamCalibrationDialog::Options& options, calibmar::Calibration& calibration,
-                                  std::pair<int, int> image_size, std::unique_ptr<calibmar::FeatureExtractor>& extractor,
-                                  std::unique_ptr<calibmar::TargetVisualizer>& target_visualizer,
-                                  std::unique_ptr<calibmar::Calibrator>& calibrator,
-                                  std::unique_ptr<calibmar::TargetTracker>& target_tracker) {
+  void SetupPlanarCalibration(
+      std::variant<calibmar::ChessboardFeatureExtractor::Options, calibmar::ArucoBoardFeatureExtractor::Options>& target_options,
+      const calibmar::StreamCalibrationDialog::Options& dialog_options, calibmar::Calibration& calibration,
+      std::pair<int, int> image_size, std::unique_ptr<calibmar::FeatureExtractor>& extractor,
+      std::unique_ptr<calibmar::TargetVisualizer>& target_visualizer, std::unique_ptr<calibmar::Calibrator>& calibrator,
+      std::unique_ptr<calibmar::TargetTracker>& target_tracker) {
     using namespace calibmar;
-    chessboard_options.fast = true;
-    std::unique_ptr<ChessboardFeatureExtractor> chessboard_extractor =
-        std::make_unique<ChessboardFeatureExtractor>(chessboard_options);
-    calibration.SetPoints3D(chessboard_extractor->Points3D());
-    calibration.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(chessboard_options));
 
-    if (options.housing_calibration.has_value()) {
+    auto* chessboard_options = std::get_if<ChessboardFeatureExtractor::Options>(&target_options);
+
+    if (chessboard_options) {
+      chessboard_options->fast = true;
+      std::unique_ptr<ChessboardFeatureExtractor> chessboard_extractor =
+          std::make_unique<ChessboardFeatureExtractor>(*chessboard_options);
+      calibration.SetPoints3D(chessboard_extractor->Points3D());
+      extractor = std::move(chessboard_extractor);
+      calibration.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(*chessboard_options));
+      target_visualizer = std::make_unique<ChessboardTargetVisualizer>(chessboard_options->chessboard_columns,
+                                                                       chessboard_options->chessboard_rows);
+      target_tracker = std::make_unique<ChessboardTargetTracker>(
+          std::pair<int, int>{chessboard_options->chessboard_columns, chessboard_options->chessboard_rows}, image_size);
+    }
+    else {
+      ArucoBoardFeatureExtractor::Options& aruco_options = std::get<ArucoBoardFeatureExtractor::Options>(target_options);
+      std::unique_ptr<ArucoBoardFeatureExtractor> aurco_extractor = std::make_unique<ArucoBoardFeatureExtractor>(aruco_options);
+      calibration.SetPoints3D(aurco_extractor->Points3D());
+      extractor = std::move(aurco_extractor);
+      calibration.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(aruco_options));
+      target_visualizer = std::make_unique<ArucoBoardTargetVisualizer>();
+      target_tracker = std::make_unique<ArucoTargetTracker>(image_size);
+    }
+
+    if (dialog_options.housing_calibration.has_value()) {
       // housing calibration
       HousingCalibrator::Options calibrator_options;
-      calibrator_options.camera_model = options.camera_model;
+      calibrator_options.camera_model = dialog_options.camera_model;
       calibrator_options.image_size = image_size;
       calibrator_options.estimate_initial_dome_offset =
-          options.housing_calibration.value().first == HousingInterfaceType::DoubleLayerSphericalRefractive;
-      calibrator_options.housing_interface = options.housing_calibration.value().first;
-      calibrator_options.camera_params = options.initial_camera_parameters.value();
-      calibrator_options.initial_housing_params = options.housing_calibration.value().second;
-      calibrator_options.pattern_cols_rows = {chessboard_options.chessboard_columns, chessboard_options.chessboard_rows};
+          chessboard_options &&
+          dialog_options.housing_calibration.value().first == HousingInterfaceType::DoubleLayerSphericalRefractive;
+      calibrator_options.housing_interface = dialog_options.housing_calibration.value().first;
+      calibrator_options.camera_params = dialog_options.initial_camera_parameters.value();
+      calibrator_options.initial_housing_params = dialog_options.housing_calibration.value().second;
+      if (chessboard_options) {
+        calibrator_options.pattern_cols_rows = {chessboard_options->chessboard_columns, chessboard_options->chessboard_rows};
+      }
       calibrator = std::make_unique<HousingCalibrator>(calibrator_options);
     }
     else {
       // camera clibration
       BasicCalibrator::Options calibrator_options;
-      if (options.initial_camera_parameters.has_value()) {
+      if (dialog_options.initial_camera_parameters.has_value()) {
         calibration.SetCamera(
-            CameraModel::InitCamera(options.camera_model, image_size, options.initial_camera_parameters.value()));
+            CameraModel::InitCamera(dialog_options.camera_model, image_size, dialog_options.initial_camera_parameters.value()));
         calibrator_options.use_intrinsics_guess = true;
       }
       else {
-        calibrator_options.camera_model = options.camera_model;
+        calibrator_options.camera_model = dialog_options.camera_model;
         calibrator_options.image_size = image_size;
       }
       calibrator = std::make_unique<BasicCalibrator>(calibrator_options);
     }
-    extractor = std::move(chessboard_extractor);
-    target_visualizer =
-        std::make_unique<ChessboardTargetVisualizer>(chessboard_options.chessboard_columns, chessboard_options.chessboard_rows);
-    target_tracker = std::make_unique<ChessboardTargetTracker>(
-        std::pair<int, int>{chessboard_options.chessboard_columns, chessboard_options.chessboard_rows}, image_size);
   }
 
   void Setup3DTargetCalibration(calibmar::Target3DTargetOptionsWidget::Options target3d_options,
@@ -125,14 +142,13 @@ namespace {
       extractor = std::make_unique<ArucoSiftFeatureExtractor>(options);
     }
     else {
-      // this is disabled
       SiftFeatureExtractor::Options options = std::get<SiftFeatureExtractor::Options>(target3d_options);
       extractor = std::make_unique<SiftFeatureExtractor>(options);
     }
 
     calibrator = std::make_unique<Calibrator3D>(calibrator_options);
     target_visualizer = std::make_unique<Target3DTargetVisualizer>(use_aruco, aruco_mask_factor);
-    target_tracker = std::make_unique<Aruco3DTargetTracker>(image_size, 0.05);
+    target_tracker = std::make_unique<ArucoTargetTracker>(image_size);
   }
 }
 
@@ -166,6 +182,7 @@ namespace calibmar {
   bool LivestreamCalibrationRunner::Run(Calibration& calibration) {
     bool is_chessboard_calibration =
         std::holds_alternative<ChessboardFeatureExtractor::Options>(dialog_options_.calibration_target_options);
+    bool is_3D_calibration = false;
 
     if (dialog_options_.acquisition_mode == StreamCalibrationDialog::AcquisitionMode::OnSuggestedPose &&
         dialog_options_.housing_calibration.has_value()) {
@@ -189,13 +206,20 @@ namespace calibmar {
     std::unique_ptr<Calibrator> calibrator;
     std::unique_ptr<TargetTracker> target_tracker;
 
-    if (is_chessboard_calibration) {
-      ChessboardFeatureExtractor::Options& chessboard_options =
-          std::get<ChessboardFeatureExtractor::Options>(dialog_options_.calibration_target_options);
-      SetupChessboardCalibration(chessboard_options, dialog_options_, calibration, image_size, extractor_, target_visualizer_,
-                                 calibrator, target_tracker);
+    if (is_chessboard_calibration ||
+        std::holds_alternative<ArucoBoardFeatureExtractor::Options>(dialog_options_.calibration_target_options)) {
+      std::variant<calibmar::ChessboardFeatureExtractor::Options, calibmar::ArucoBoardFeatureExtractor::Options> target_options;
+      if (std::holds_alternative<ChessboardFeatureExtractor::Options>(dialog_options_.calibration_target_options)) {
+        target_options = std::get<ChessboardFeatureExtractor::Options>(dialog_options_.calibration_target_options);
+      }
+      else {
+        target_options = std::get<ArucoBoardFeatureExtractor::Options>(dialog_options_.calibration_target_options);
+      }
+      SetupPlanarCalibration(target_options, dialog_options_, calibration, image_size, extractor_, target_visualizer_, calibrator,
+                             target_tracker);
     }
     else {
+      is_3D_calibration = true;
       Target3DTargetOptionsWidget::Options target3d_options;
       if (std::holds_alternative<ArucoSiftFeatureExtractor::Options>(dialog_options_.calibration_target_options)) {
         target3d_options = std::get<ArucoSiftFeatureExtractor::Options>(dialog_options_.calibration_target_options);
@@ -300,7 +324,7 @@ namespace calibmar {
       calibrator->Calibrate(calibration);
 
       std::shared_ptr<colmap::Reconstruction> reconstruction;
-      if (!is_chessboard_calibration) {
+      if (is_3D_calibration) {
         reconstruction = static_cast<Calibrator3D*>(calibrator.get())->Reconstruction();
       }
 
@@ -556,7 +580,7 @@ namespace calibmar {
     }
 
     data->image = std::move(pixmap);
-    data->image_data = &calibration.Image(id);
+    data->image_data = calibration.Image(id);
     data->status = ExtractionImageWidget::Status::SUCCESS;
     QMetaObject::invokeMethod(extraction_widget_, [extraction_widget = extraction_widget_, data = std::move(data),
                                                    target_visualizer = target_visualizer_.get()]() mutable {

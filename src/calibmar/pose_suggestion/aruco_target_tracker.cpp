@@ -1,10 +1,10 @@
 #include "target_tracker.h"
 
 namespace calibmar {
-  Aruco3DTargetTracker::Aruco3DTargetTracker(const std::pair<int, int>& image_size, double limit_percentage)
+  ArucoTargetTracker::ArucoTargetTracker(const std::pair<int, int>& image_size, double limit_percentage)
       : TargetTracker(image_size, limit_percentage) {}
-  bool Aruco3DTargetTracker::CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,
-                                              const std::vector<Eigen::Vector2d>& points_b) {
+  bool ArucoTargetTracker::CheckPointsMatch(const std::vector<Eigen::Vector2d>& points_a,
+                                            const std::vector<Eigen::Vector2d>& points_b) {
     if (points_a.empty() || points_b.empty() || points_a.size() != points_b.size()) {
       return false;
     }

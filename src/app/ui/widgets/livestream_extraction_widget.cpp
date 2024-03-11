@@ -79,7 +79,7 @@ namespace calibmar {
       heatmap_->Data() = cv::Mat::zeros(height, width, CV_8UC1);
     }
 
-    heatmap::AddPointsToRawHeatmap(data->image_data->Points2D(), *heatmap_);
+    heatmap::AddPointsToRawHeatmap(data->image_data.Points2D(), *heatmap_);
     std::unique_ptr<Pixmap> display_heatmap = image_widget_->TakeImage();
     heatmap::ApplyColorMapToRawHeatmap(*heatmap_, *display_heatmap);
     heatmap_widget_->SetImage(std::move(display_heatmap));

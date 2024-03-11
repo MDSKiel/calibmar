@@ -2,6 +2,8 @@
 
 #include "calibmar/core/calibration_targets.h"
 
+#include "colmap/util/misc.h"
+
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -14,6 +16,60 @@ namespace {
     std::regex re(regex);
     std::sregex_token_iterator first{input.begin(), input.end(), re, -1}, last;
     return {first, last};
+  }
+
+  std::string OriginToString(calibmar::ArucoGridOrigin origin) {
+    switch (origin) {
+      case calibmar::ArucoGridOrigin::TopLeft:
+        return "tl";
+      case calibmar::ArucoGridOrigin::TopRight:
+        return "tr";
+      case calibmar::ArucoGridOrigin::BottomLeft:
+        return "bl";
+      case calibmar::ArucoGridOrigin::BottomRight:
+        return "br";
+      default:
+        return "unkown";
+    }
+  }
+
+  std::string DirectionToString(calibmar::ArucoGridDirection direction) {
+    switch (direction) {
+      case calibmar::ArucoGridDirection::Horizontal:
+        return "hor";
+      case calibmar::ArucoGridDirection::Vertical:
+        return "ver";
+      default:
+        return "unkown";
+    }
+  }
+
+  calibmar::ArucoGridOrigin StringToOrigin(const std::string& origin) {
+    calibmar::ArucoGridOrigin res;
+    if (origin == "tl") {
+      res = calibmar::ArucoGridOrigin::TopLeft;
+    }
+    else if (origin == "tr") {
+      res = calibmar::ArucoGridOrigin::TopRight;
+    }
+    else if (origin == "bl") {
+      res = calibmar::ArucoGridOrigin::BottomLeft;
+    }
+    else if (origin == "br") {
+      res = calibmar::ArucoGridOrigin::BottomRight;
+    }
+    return res;
+  }
+
+  calibmar::ArucoGridDirection StringToDirection(const std::string& direction) {
+    calibmar::ArucoGridDirection dir;
+    if (direction == "hor") {
+      dir = calibmar::ArucoGridDirection::Horizontal;
+    }
+    else if (direction == "ver") {
+      dir == calibmar::ArucoGridDirection::Vertical;
+    }
+    return dir;
   }
 }
 
@@ -183,19 +239,20 @@ namespace calibmar {
              std::to_string(options.square_size);
     }
 
+    std::string GenerateCalibrationTargetInfo(const ArucoBoardFeatureExtractor::Options& options) {
+      return "aruco grid board, " + calibration_targets::NameFromArucoType(options.aruco_type) + ", " +
+             std::to_string(options.marker_cols) + ", " + std::to_string(options.marker_rows) + ", " +
+             std::to_string(options.marker_size) + ", " + std::to_string(options.marker_spacing) + ", " +
+             std::to_string(options.border_bits) + ", " + OriginToString(options.grid_origin) + ", " +
+             DirectionToString(options.grid_direction);
+    }
+
     std::string GenerateCalibrationTargetInfo(
         const std::variant<ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options>& options) {
       const ArucoSiftFeatureExtractor::Options* aruco_options = std::get_if<ArucoSiftFeatureExtractor::Options>(&options);
       if (aruco_options) {
-        std::string name;
-        for (const auto& name_type : calibration_targets::ArucoTypes()) {
-          if (name_type.second == aruco_options->aruco_type) {
-            name = name_type.first;
-            break;
-          }
-        }
-
-        return "3D target, aruco: " + name + ", " + std::to_string(aruco_options->masking_scale_factor);
+        return "3D target, aruco: " + calibration_targets::NameFromArucoType(aruco_options->aruco_type) + ", " +
+               std::to_string(aruco_options->masking_scale_factor);
       }
       else {
         return "3D target";
@@ -204,6 +261,22 @@ namespace calibmar {
   }
 
   namespace {
+    bool StartsWith(const std::string& string, const std::string& target) {
+      return string.find(target) == 0;
+    }
+
+    inline void TrimEnd(std::string& s) {
+      s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
+    }
+
+    inline void TrimStart(std::string& s) {
+      s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    }
+
+    inline void ToLower(std::string& s) {
+      std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+    }
+
     bool TryParse(double* d, const std::string& string, size_t* chars_used) {
       try {
         *d = std::stod(string, chars_used);
@@ -224,20 +297,64 @@ namespace calibmar {
       }
     }
 
-    bool StartsWith(const std::string& string, const std::string& target) {
-      return string.find(target) == 0;
+    template <typename T>
+    bool TryParse(T* i, const std::string& string) {
+      static_assert(sizeof(T) != sizeof(T), "TryParse must be specialized for this type!");
+      return false;
     }
 
-    inline void TrimEnd(std::string& s) {
-      s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base(), s.end());
+    template <>
+    bool TryParse<int>(int* i, const std::string& string) {
+      try {
+        *i = std::stoi(string);
+        return true;
+      }
+      catch (std::exception& e) {
+        return false;
+      }
     }
 
-    inline void TrimStart(std::string& s) {
-      s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) { return !std::isspace(ch); }));
+    template <>
+    bool TryParse<double>(double* d, const std::string& string) {
+      try {
+        *d = std::stod(string);
+        return true;
+      }
+      catch (std::exception& e) {
+        return false;
+      }
     }
 
-    inline void ToLower(std::string& s) {
-      std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+    template <>
+    bool TryParse<calibmar::ArucoMarkerTypes>(calibmar::ArucoMarkerTypes* type, const std::string& string) {
+      for (const auto& name_type : calibration_targets::ArucoTypes()) {
+        std::string aruco_name = name_type.first;
+        std::string value_copy = string;
+        ToLower(aruco_name);
+        ToLower(value_copy);
+        if (StartsWith(value_copy, aruco_name)) {
+          *type = name_type.second;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    template <>
+    bool TryParse<calibmar::ArucoGridOrigin>(calibmar::ArucoGridOrigin* origin, const std::string& string) {
+      *origin = StringToOrigin(string);
+      return true;
+    }
+
+    template <>
+    bool TryParse<calibmar::ArucoGridDirection>(calibmar::ArucoGridDirection* direction, const std::string& string) {
+      *direction = StringToDirection(string);
+      return true;
+    }
+
+    template <typename T>
+    bool Parse(const std::vector<std::string>& values, size_t index, T* parameter) {
+      return index < values.size() && TryParse(parameter, values[index]);
     }
   }
 
@@ -303,47 +420,36 @@ namespace calibmar {
       else if (StartsWith(line, "# target: chessboard,")) {
         parameters.calibration_target = CalibrationTargetType::Chessboard;
         line.erase(0, sizeof("# target: chessboard,") - 1);
-        int i;
-        size_t chars_used;
-        if (TryParse(&i, line, &chars_used)) {
-          parameters.chessboard_columns = i;
-          line.erase(0, chars_used + 1);
-          if (TryParse(&i, line, &chars_used)) {
-            parameters.chessboard_rows = i;
-            line.erase(0, chars_used + 1);
-            double d;
-            if (TryParse(&d, line, &chars_used)) {
-              parameters.square_size = d;
-            }
-          }
-        }
+
+        std::vector<std::string> values = colmap::CSVToVector<std::string>(line);
+        Parse(values, 0, &parameters.columns);
+        Parse(values, 1, &parameters.rows);
+        Parse(values, 2, &parameters.square_size);
       }
       else if (StartsWith(line, "# target: 3D target, aruco:")) {
         parameters.calibration_target = CalibrationTargetType::Target3DAruco;
         line.erase(0, sizeof("# target: 3D target, aruco:") - 1);
-        TrimStart(line);
-        ToLower(line);
-        std::string name = "";
-        for (const auto& name_type : calibration_targets::ArucoTypes()) {
-          std::string aruco_name = name_type.first;
-          ToLower(aruco_name);
-          if (StartsWith(line, aruco_name)) {
-            parameters.aruco_type = name_type.second;
-            name = name_type.first;
-            break;
-          }
-        }
-        if (!name.empty()) {
-          line.erase(0, name.size() + 1);
-          double d;
-          size_t chars_used;
-          if (TryParse(&d, line, &chars_used)) {
-            parameters.aruco_scale_factor = d;
-          }
-        }
+
+        std::vector<std::string> values = colmap::CSVToVector<std::string>(line);
+        Parse(values, 0, &parameters.aruco_type);
+        Parse(values, 1, &parameters.aruco_scale_factor);
       }
       else if (StartsWith(line, "# target: 3D target")) {
         parameters.calibration_target = CalibrationTargetType::Target3D;
+      }
+      else if (StartsWith(line, "# target: aruco grid board,")) {
+        parameters.calibration_target = CalibrationTargetType::ArucoGridBoard;
+        line.erase(0, sizeof("# target: aruco grid board,") - 1);
+
+        std::vector<std::string> values = colmap::CSVToVector<std::string>(line);
+        Parse(values, 0, &parameters.aruco_type);
+        Parse(values, 1, &parameters.columns);
+        Parse(values, 2, &parameters.rows);
+        Parse(values, 3, &parameters.square_size);
+        Parse(values, 4, &parameters.spacing);
+        Parse(values, 5, &parameters.border_bits);
+        Parse(values, 6, &parameters.grid_origin);
+        Parse(values, 7, &parameters.grid_direction);
       }
     }
 

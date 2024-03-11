@@ -50,6 +50,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   camera.params = {1.1, -2, 3, 4, 5, 6, 7, 8};
   camera.refrac_params = {1, 2, 3, 4, 5, 6, 7, 8};
   calibration.SetCamera(camera);
+  // intentionally a constant string
   calibration.SetCalibrationTargetInfo("chessboard, 10, 7, 0.04");
 
   std::stringstream string;
@@ -63,8 +64,8 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Can_Import_Export) {
   for (size_t i = 0; i < parameters.camera_parameters.size(); i++) {
     BOOST_TEST(parameters.camera_parameters[i] == camera.params[i]);
   }
-  BOOST_TEST(parameters.chessboard_columns == 10);
-  BOOST_TEST(parameters.chessboard_rows == 7);
+  BOOST_TEST(parameters.columns == 10);
+  BOOST_TEST(parameters.rows == 7);
   BOOST_TEST(parameters.housing_model.value() == HousingInterfaceType::DoubleLayerSphericalRefractive);
   BOOST_TEST(parameters.housing_parameters.size() == camera.refrac_params.size());
   for (size_t i = 0; i < parameters.housing_parameters.size(); i++) {
@@ -80,6 +81,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetAruco) {
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
   camera.model_id = colmap::CameraModelNameToId(model_name);
   calibration.SetCamera(camera);
+  // intentionally a constant string
   calibration.SetCalibrationTargetInfo("3D target, aruco: 4x4_50, 3.2");
 
   std::stringstream string;
@@ -99,6 +101,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTarget) {
   std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
   camera.model_id = colmap::CameraModelNameToId(model_name);
   calibration.SetCamera(camera);
+  // intentionally a constant string
   calibration.SetCalibrationTargetInfo("3D target");
 
   std::stringstream string;
@@ -108,4 +111,32 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTarget) {
 
   // the exported yaml should be importable
   BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Target3D);
+}
+
+BOOST_TEST_DONT_PRINT_LOG_VALUE(ArucoGridOrigin)
+BOOST_TEST_DONT_PRINT_LOG_VALUE(ArucoGridDirection)
+BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetArucoGridBoard) {
+  Calibration calibration;
+  colmap::Camera camera;
+  std::string model_name = CameraModel::CameraModels().at(CameraModelType::OpenCVCameraModel).model_name;
+  camera.model_id = colmap::CameraModelNameToId(model_name);
+  calibration.SetCamera(camera);
+  // intentionally a constant string
+  calibration.SetCalibrationTargetInfo("aruco grid board, 6X6_100, 5, 7, 0.026, 0.003, 2, bl, hor");
+
+  std::stringstream string;
+  report::GenerateCalibrationYaml(string, calibration);
+  string.seekg(0);
+  ImportedParameters parameters = ImportedParameters::ImportFromYaml(string);
+
+  // the exported yaml should be importable
+  BOOST_TEST(parameters.calibration_target == CalibrationTargetType::ArucoGridBoard);
+  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_6X6_100);
+  BOOST_TEST(parameters.columns == 5);
+  BOOST_TEST(parameters.rows == 7);
+  BOOST_TEST(parameters.square_size == 0.026);
+  BOOST_TEST(parameters.spacing == 0.003);
+  BOOST_TEST(parameters.grid_origin == ArucoGridOrigin::BottomLeft);
+  BOOST_TEST(parameters.grid_direction == ArucoGridDirection::Horizontal);
+  BOOST_TEST(parameters.border_bits == 2);
 }

@@ -65,6 +65,7 @@ namespace calibmar {
 
     image.SetPoints2D(points2D);
 
+    image.ClearCorrespondences();
     // the corner sequence matches the 3D point sequence.
     for (size_t i = 0; i < corners.size(); i++) {
       image.SetPoint3DforPoint2D(i, i);

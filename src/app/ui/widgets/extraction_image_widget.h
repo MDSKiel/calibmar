@@ -17,7 +17,7 @@ namespace calibmar {
     struct Data {
       Status status;
       std::unique_ptr<Pixmap> image;
-      Image* image_data;
+      Image image_data;
       std::string image_name;  // image name is kept separately in case extraction fails
     };
 

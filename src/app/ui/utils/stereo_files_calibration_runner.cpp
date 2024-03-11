@@ -92,9 +92,9 @@ namespace calibmar {
 
         if (data1->status == ExtractionImageWidget::Status::SUCCESS && data2->status == ExtractionImageWidget::Status::SUCCESS) {
           size_t id = calibration1.AddImage(image1);
-          data1->image_data = &calibration1.Image(id);
+          data1->image_data = calibration1.Image(id);
           id = calibration2.AddImage(image2);
-          data2->image_data = &calibration2.Image(id);
+          data2->image_data = calibration2.Image(id);
         }
 
         // currently ignore read errors for visu. Check visualization, when reenabling.
