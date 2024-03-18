@@ -8,6 +8,11 @@ project(calibmar
         VERSION 0.8
         LANGUAGES CXX)
 
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "Setting build type to Release, for debug builds use '-DCMAKE_BUILD_TYPE=Debug'.")
+  set(CMAKE_BUILD_TYPE "Release")
+endif()        
+
 add_subdirectory(lib)
 add_subdirectory(src/app)
 add_subdirectory(src/calibmar)

@@ -5,8 +5,8 @@ Calibmar is a camera and underwater housing calibration tool.
 Features include:
 - Camera housing calibration based on '[Refractive Geometry for Underwater Domes](https://doi.org/10.1016/j.isprsjprs.2021.11.006)'
 	- with a Flat Port model from '[Refractive Calibration of Underwater Cameras](https://doi.org/10.1007/978-3-642-33715-4_61)'
+- Camera and stereo camera calibration 
 - Calibration guidance implementation of '[Calibration Wizard](https://doi.org/10.1109/iccv.2019.00158)'
-- [OpenCV](https://docs.opencv.org/4.5.5/d9/d0c/group__calib3d.html#details) based camera and stereo camera calibration 
 - [COLMAP](https://colmap.github.io/) compliant camera models
 -----------------
 ## Build from Source
@@ -52,11 +52,11 @@ Configure and compile Calibmar:
 	cd path/to/calibmar
     mkdir build
     cd build
-    cmake .. 
-    cmake --build . 
+    cmake .. -GNinja
+    ninja
 
 ### Windows
-For Windows it is recommended to use [vcpkg](https://github.com/microsoft/vcpkg). You will also need Visual Studio Build Tools ().
+For Windows it is recommended to use [vcpkg](https://github.com/microsoft/vcpkg). You will also need Visual Studio Build Tools.
 
     git clone https://github.com/microsoft/vcpkg
     cd vcpkg
@@ -74,4 +74,4 @@ Configure and compile Calibmar:
     cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
     cmake --build . --config Release
 
-For VCPKG-Windows, CMake Presets are available which are supported by several IDEs. They expect the environment variable `VCPKG_ROOT` to point to the vcpkg root directory.
+CMake Presets are available which are supported by several IDEs. Presets for windows expect the environment variable `VCPKG_ROOT` to point to the vcpkg root directory.
