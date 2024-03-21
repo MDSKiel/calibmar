@@ -3,6 +3,7 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/unit_test.hpp>
 
+#include <colmap/math/math.h>
 #include <colmap/math/random.h>
 
 #include "utils/test_helpers.h"

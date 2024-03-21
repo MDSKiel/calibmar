@@ -7,14 +7,13 @@
             "description": "Windows build using the default generator and vcpkg toolchain. Expects %VCPKG_ROOT% environment variable. Use the corresponding build presets to set the config.",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
-            "generator": "Ninja",
             "architecture": {
                 "value": "x64",
                 "strategy": "external"
             },
             "cacheVariables": {
-                "X_VCPKG_APPLOCAL_DEPS_INSTALL" : "ON",
-                "CUDA_ENABLED" : "OFF",
+                "X_VCPKG_APPLOCAL_DEPS_INSTALL": "ON",
+                "CUDA_ENABLED": "OFF",
                 "CMAKE_CUDA_ARCHITECTURES": "native",
                 "CMAKE_TOOLCHAIN_FILE": {
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
