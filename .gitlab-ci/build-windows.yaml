@@ -3,55 +3,46 @@ stages:
   - test
   - deploy
 
-default:
+windows:build-test:
   tags:
-    - windows # all jobs must be run on windows
-
-build:
-  stage: build
+  - windows
+  stage: build  
   script:
     - mkdir build
     - cd build
-    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - ninja
+    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON
+    - ninja -j 1 # build server is not the strongest
+    - ctest -C Release -j 8 # because the combined build artifacts created are way over the size limit, test and pack here and only upload the zip
+    - cpack -G ZIP -B package
   artifacts:
     paths:
-      - "build/"
+      - "build/package/*.zip"
 
-build-CUDA:
+windows:build-CUDA:
+  tags:
+  - windows
   stage: build
   script:
     - mkdir build_CUDA
     - cd build_CUDA
-    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURE=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-    - ninja
+    - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON
+    - ninja -j 1 
+    - cpack -G ZIP -B package
   artifacts:
     paths:
-      - "build_CUDA/"
+      - "build_CUDA/package/*.zip"
 
-test:
-  stage: test
-  dependencies:
-    - build
-  script:
-    - cd build
-    - ctest -C Release -j 8
-
-test-CUDA:
-  stage: test
-  dependencies:
-    - build-CUDA
-  script:
-    - cd build_CUDA
-    - ctest -C Release -j 8
-
-release:
+windows:deploy:
+  tags:
+  - windows
   stage: deploy
-  dependencies: [build, build_CUDA]
+  dependencies: [windows:build-test, windows:build-CUDA]
   rules:
-  - if: $CI_COMMIT_TAG && $CI_COMMIT_TAG ~= \A(\.?[\w\+-]+\.?)+\z # Run this job when a git tag is created and the tag conforms to the generic package version regex
+  - if: $CI_COMMIT_TAG && $CI_COMMIT_TAG =~ /\A(\.?[\w\+-]+\.?)+\z/ # Run this job when a git tag is created and the tag conforms to the generic package version regex
   script:
-    - Compress-Archive -Path .\build\src\app\Release\* -DestinationPath .\build\calibmar-windows-no-cuda_$CI_COMMIT_TAG.zip
-    - Compress-Archive -Path .\build_CUDA\src\app\Release\* -DestinationPath .\build_CUDA\calibmar-windows-cuda$CI_COMMIT_TAG.zip
-    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build\Calibmar_$CI_COMMIT_TAG_windows_no_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/calibmar-windows-no-cuda_$CI_COMMIT_TAG.zip" -Method put
-    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile .\build_CUDA\Calibmar_$CI_COMMIT_TAG_windows_cuda.zip -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/calibmar-windows-cuda$CI_COMMIT_TAG.zip" -Method put
+    - ls .\build\package\ *.zip | Rename-Item -NewName {$_.name -replace "calibmar", "calibmar-no-cuda"} # cpack ZIP does not seem to support dynamic package names
+    - $file_name = ls .\build\package\ *.zip | Select-Object -ExpandProperty name
+    - ls .\build_CUDA\package\ *.zip | Rename-Item -NewName {$_.name -replace "calibmar", "calibmar-cuda"}
+    - $file_name_cuda = ls .\build_CUDA\package\ *.zip | Select-Object -ExpandProperty name
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile ".\build\package\$file_name" -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/$file_name" -Method put
+    - Invoke-RestMethod -Headers @{ "JOB-TOKEN"="$CI_JOB_TOKEN" } -InFile ".\build_CUDA\package\$file_name_cuda" -uri "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/generic/calibmar-windows/$CI_COMMIT_TAG/$file_name_cuda" -Method put

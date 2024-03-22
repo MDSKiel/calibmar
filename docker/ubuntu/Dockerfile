@@ -1,3 +1,5 @@
+# this is the Dockerfile version only
+LABEL image-version="1.0" 
 ARG UBUNTU_VERSION=22.04
 ARG NVIDIA_CUDA_VERSION=12.3.1
 

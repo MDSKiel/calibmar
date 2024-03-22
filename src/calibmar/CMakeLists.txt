@@ -15,7 +15,8 @@ if(MSVC)
     target_compile_options(calibmar PUBLIC "/bigobj")
 endif()
 
-if(CUDA_ENABLED AND DEFINED CMAKE_CUDA_COMPILER) # also use the colmap cuda enabled option
+find_package(CUDAToolkit QUIET)
+if(CUDA_ENABLED AND CUDAToolkit_FOUND) # also use the colmap cuda enabled option
     target_compile_definitions(calibmar PUBLIC COLMAP_CUDA_ENABLED)
     message(STATUS "Colmap CUDA is enabled")
 else()

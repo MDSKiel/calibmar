@@ -13,7 +13,6 @@
             },
             "cacheVariables": {
                 "X_VCPKG_APPLOCAL_DEPS_INSTALL": "ON",
-                "CUDA_ENABLED": "OFF",
                 "CMAKE_CUDA_ARCHITECTURES": "native",
                 "CMAKE_TOOLCHAIN_FILE": {
                     "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",

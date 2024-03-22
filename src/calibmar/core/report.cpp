@@ -67,7 +67,7 @@ namespace {
       dir = calibmar::ArucoGridDirection::Horizontal;
     }
     else if (direction == "ver") {
-      dir == calibmar::ArucoGridDirection::Vertical;
+      dir = calibmar::ArucoGridDirection::Vertical;
     }
     return dir;
   }
