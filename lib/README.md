@@ -1,7 +1,9 @@
-# COLMAP geomar fork
-_(internal fork repo commit id from dev-refrac-sfm branch: bf5c9281dd2555680cde2fe126fa72e5c36f5755)_
+# COLMAP underwater fork
+The underwater colmap fork at https://cau-git.rz.uni-kiel.de/inf-ag-koeser/colmap_underwater.git is used as a library, integrated via git subtree.
 ## Updating
-To upate the included colmap copy the desired version into the colmap/ subfolder.
+Use squashing pull from git subtree, such that local changes can be preserved and upstream changes merged.
+`git subtree pull --prefix lib/colmap  https://cau-git.rz.uni-kiel.de/inf-ag-koeser/colmap_underwater.git underwater --squash'
+
 Currently also the `colmap` target inside `colmap/CMakeLists.txt` needs to be edited as follows
 ```cmake
 add_library(colmap INTERFACE)
