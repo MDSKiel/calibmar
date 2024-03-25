@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Calibmar
+Comment=Underwater Camera Calibration
+Exec=calibmar
+Icon=calibmar
+Terminal=false
+Categories=Graphics;3DGraphics;
+Keywords=calibration;underwater;camera
+Type=Application

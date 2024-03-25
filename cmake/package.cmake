@@ -2,6 +2,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Calibmar is a camera and underwater housi
 set(CPACK_VERBATIM_VARIABLES TRUE)
 set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
 set(CPACK_PACKAGE_CONTACT "fse@informatik.uni-kiel.de")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://cau-git.rz.uni-kiel.de/inf-ag-koeser/calibmar")
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libopencv-dev (>= 4.0), qtbase5-dev (>= 5.14), libfreeimage-dev, libgoogle-glog-dev,  libatlas-base-dev, libceres-dev, libboost-program-options-dev")
 include(CPack)

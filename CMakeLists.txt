@@ -13,6 +13,11 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Release")
 endif()        
 
+# Install application menu entry under Linux.
+if(UNIX AND NOT APPLE)
+    install(FILES "cmake/calibmar.desktop" DESTINATION "share/applications")
+endif()
+
 add_subdirectory(lib)
 add_subdirectory(src/app)
 add_subdirectory(src/calibmar)
