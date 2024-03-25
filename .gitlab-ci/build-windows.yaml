@@ -11,7 +11,7 @@ windows:build-test:
     - mkdir build
     - cd build
     - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON
-    - ninja -j 1 # build server is not the strongest
+    - ninja
     - ctest -C Release -j 8 # because the combined build artifacts created are way over the size limit, test and pack here and only upload the zip
     - cpack -G ZIP -B package
   artifacts:
@@ -26,7 +26,7 @@ windows:build-CUDA:
     - mkdir build_CUDA
     - cd build_CUDA
     - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES=all-major -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" -DX_VCPKG_APPLOCAL_DEPS_INSTALL=ON
-    - ninja -j 1 
+    - ninja
     - cpack -G ZIP -B package
   artifacts:
     paths:

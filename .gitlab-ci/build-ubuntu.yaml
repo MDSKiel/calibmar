@@ -14,7 +14,7 @@ ubuntu:build:
     - mkdir build
     - cd build
     - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=OFF
-    - ninja -j 1 # build server is not the strongest
+    - ninja
   artifacts:
     paths:
       - "build/"
@@ -27,7 +27,7 @@ ubuntu:build-CUDA:
     - mkdir build_CUDA
     - cd build_CUDA
     - cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DCUDA_ENABLED=ON -DCMAKE_CUDA_ARCHITECTURES=all-major
-    - ninja -j 1
+    - ninja
   artifacts:
     paths:
       - "build_CUDA/"
