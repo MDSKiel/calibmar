@@ -1,6 +1,4 @@
 # escape=`
-# this is the Dockerfile version only
-LABEL image-version="1.0" 
 ARG WINDOWS_SERVER_VERSION=2022
 
 FROM mcr.microsoft.com/windows/servercore:ltsc${WINDOWS_SERVER_VERSION}
@@ -53,6 +51,8 @@ RUN `
 COPY vcpkg c:/vcpkg
 RUN setx VCPKG_ROOT C:\VCPKG
 
+# this is the Dockerfile version only
+LABEL image-version="1.0" 
 
 # Entry point for developer command prompt and PowerShell
 ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "powershell.exe", "-NoLogo", "-ExecutionPolicy", "Bypass"]
