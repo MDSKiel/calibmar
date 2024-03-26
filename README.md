@@ -8,7 +8,11 @@ Features include:
 - Camera and stereo camera calibration 
 - Calibration guidance implementation of '[Calibration Wizard](https://doi.org/10.1109/iccv.2019.00158)'
 - [COLMAP](https://colmap.github.io/) compliant camera models
------------------
+
+## Install
+
+Binaries for Windows and Linux are available at https://cau-git.rz.uni-kiel.de/inf-ag-koeser/calibmar/-/releases.
+
 ## Build from Source
 
 ### CUDA
@@ -56,6 +60,7 @@ Configure and compile Calibmar:
     ninja
 
 ### Windows
+
 For Windows it is recommended to use [vcpkg](https://github.com/microsoft/vcpkg). You will also need Visual Studio Build Tools.
 
     git clone https://github.com/microsoft/vcpkg
