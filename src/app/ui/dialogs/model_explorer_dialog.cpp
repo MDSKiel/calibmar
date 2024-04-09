@@ -98,6 +98,7 @@ namespace calibmar {
     image_widget_ = new ImageWidget(area);
     target_image_ = std::make_unique<Pixmap>(source_image_->Clone());
     image_widget_->SetImage(std::move(std::make_unique<Pixmap>(source_image_->Clone())));
+    area->setMinimumSize(550, 550);
     area->setWidget(image_widget_);
     // side
     QWidget* side = new QWidget();

@@ -1,6 +1,8 @@
 target_sources(calibmar_app PRIVATE
 	file_calibration_dialog.cpp
 	file_calibration_dialog.h
+	housing_diagram_dialog.cpp
+	housing_diagram_dialog.h
 	license_dialog.cpp
 	license_dialog.h
 	model_explorer_dialog.cpp

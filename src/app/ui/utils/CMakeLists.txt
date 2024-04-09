@@ -9,6 +9,8 @@ target_sources(calibmar_app PRIVATE
 	files_calibration_runner.h
 	heatmap.cpp
 	heatmap.h
+	housing_diagram.cpp
+	housing_diagram.h
 	image_flow_layout.cpp
 	image_flow_layout.h
 	livestream_calibration_runner.cpp

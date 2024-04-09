@@ -21,6 +21,8 @@ target_sources(calibmar_app PRIVATE
 	extraction_image_widget.h
 	extraction_images_widget.cpp
 	extraction_images_widget.h
+	housing_diagram_widget.cpp
+	housing_diagram_widget.h
 	housing_selector_widget.cpp
 	housing_selector_widget.h
 	housing_widget.cpp

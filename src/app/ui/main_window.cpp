@@ -8,11 +8,13 @@
 #include "calibmar/readers/filesystem_reader.h"
 #include "calibmar/readers/livestream_reader.h"
 #include "calibmar/version.h"
+#include "ui/dialogs/housing_diagram_dialog.h"
 #include "ui/dialogs/license_dialog.h"
 #include "ui/dialogs/model_explorer_dialog.h"
 #include "ui/dialogs/stereo_file_calibration_dialog.h"
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/dialogs/test_widget_dialog.h"
+
 #include "ui/utils/calibration_target_visualization.h"
 #include "ui/utils/files_calibration_runner.h"
 #include "ui/utils/livestream_calibration_runner.h"
@@ -258,6 +260,10 @@ namespace calibmar {
     QMenu* toolsMenu = menuBar()->addMenu("&Tools");
     toolsMenu->addAction("&Camera Model Explorer", this, []() {
       ModelExplorerDialog dialog;
+      dialog.exec();
+    });
+    toolsMenu->addAction("&Interactive Housing Diagram", this, []() {
+      HousingDiagramDialog dialog;
       dialog.exec();
     });
 
