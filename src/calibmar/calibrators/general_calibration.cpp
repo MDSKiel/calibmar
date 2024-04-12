@@ -1,4 +1,5 @@
 #include "general_calibration.h"
+#include "calibmar/core/undistort.h"
 
 #include <colmap/estimators/absolute_pose.h>
 #include <colmap/estimators/cost_functions.h>
@@ -20,24 +21,6 @@ namespace {
             H(2, i) * H(0, j) + H(0, i) * H(2, j),  // hi3 hj1 + hi1 hj3
             H(2, i) * H(1, j) + H(1, i) * H(2, j),  // hi3 hj2 + hi2 hj3
             H(2, i) * H(2, j)};                     // hi3 hj3
-  }
-
-  colmap::Camera CreateUndistortedCamera(colmap::Camera camera) {
-    colmap::Camera undistort_camera = colmap::Camera::CreateFromModelId(
-        colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, camera.width, camera.height);
-
-    undistort_camera.SetPrincipalPointX(camera.PrincipalPointX());
-    undistort_camera.SetPrincipalPointY(camera.PrincipalPointY());
-
-    if (camera.FocalLengthIdxs().size() == 1) {
-      undistort_camera.SetFocalLength(camera.FocalLength());
-    }
-    else {
-      undistort_camera.SetFocalLengthX(camera.FocalLengthX());
-      undistort_camera.SetFocalLengthY(camera.FocalLengthY());
-    }
-
-    return undistort_camera;
   }
 
   void AddObservationToProblem(ceres::Problem& problem, colmap::Camera& camera, colmap::Rigid3d& pose, Eigen::Vector3d& point3D,
@@ -218,7 +201,7 @@ namespace calibmar::general_calibration {
       }
     }
     else {
-      colmap::Camera undistort_camera = CreateUndistortedCamera(camera);
+      colmap::Camera undistort_camera = undistort::CreateUndistortedCamera(camera);
 
       for (size_t i = 0; i < image_points.size(); i++) {
         undistorted_points[i].reserve(image_points[i].size());

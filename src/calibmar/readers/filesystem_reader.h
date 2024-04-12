@@ -1,6 +1,7 @@
 #pragma once
 
 #include "calibmar/readers/image_reader.h"
+#include <shared_mutex>
 
 namespace calibmar {
   // ImageReader implementation for reading images from the filesystem
@@ -8,7 +9,7 @@ namespace calibmar {
    public:
     struct Options {
       std::string image_directory = "";
-      Pixmap::ReadMode image_read_mode = Pixmap::ReadMode::GRAYSCALE;
+      Pixmap::ReadMode image_read_mode = Pixmap::ReadMode::COLOR;
       bool init_image_size = true;
     };
 
@@ -29,5 +30,6 @@ namespace calibmar {
 
     int image_width_;
     int image_height_;
+    std::shared_mutex mutex_;
   };
 }

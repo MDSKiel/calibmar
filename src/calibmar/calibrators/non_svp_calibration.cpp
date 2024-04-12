@@ -4,19 +4,18 @@
 #include <colmap/estimators/cost_functions.h>
 #include <colmap/estimators/pose.h>
 #include <colmap/geometry/pose.h>
-#include <colmap/image/undistortion.h>
 #include <colmap/math/matrix.h>
 #include <colmap/scene/projection.h>
 #include <colmap/sensor/models_refrac.h>
 #include <opencv2/calib3d.hpp>
 
+#include "calibmar/core/undistort.h"
+
 namespace {
 
   colmap::Camera UndistortPoints(colmap::Camera& camera, const std::vector<Eigen::Vector2d>& points_2D,
                                  std::vector<Eigen::Vector2d>& undistorted_points) {
-    colmap::UndistortCameraOptions undistort_options;
-    undistort_options.blank_pixels = 1.0;
-    colmap::Camera undistorted_camera = colmap::UndistortCamera(undistort_options, camera);
+    colmap::Camera undistorted_camera = calibmar::undistort::CreateUndistortedCamera(camera);
 
     for (Eigen::Vector2d point : points_2D) {
       Eigen::Vector2d point_word = camera.CamFromImg(point);

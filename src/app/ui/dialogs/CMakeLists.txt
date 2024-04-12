@@ -12,4 +12,6 @@ target_sources(calibmar_app PRIVATE
 	stream_calibration_dialog.cpp
 	stream_calibration_dialog.h
 	test_widget_dialog.cpp
-	test_widget_dialog.h)
+	test_widget_dialog.h
+	undistortion_dialog.cpp
+	undistortion_dialog.h)

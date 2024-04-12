@@ -23,6 +23,10 @@ namespace calibmar {
       image_data.create(pixmap.Data().rows, pixmap.Data().cols, CV_8U);
       cv::cvtColor(pixmap.Data(), image_data, cv::COLOR_BGR2GRAY);
     }
+    else {
+      image_data = image_data.clone();  // because colmap::Bitmap will take ownership of the data and deallocate on destruction a
+                                        // copy is required in any case
+    }
 
     FIBITMAP* bitmap = FreeImage_ConvertFromRawBitsEx(false, image_data.data, FREE_IMAGE_TYPE::FIT_BITMAP, pixmap.Width(),
                                                       pixmap.Height(), image_data.step, 8, 0, 0, 0, true);

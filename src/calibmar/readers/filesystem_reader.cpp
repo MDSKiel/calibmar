@@ -29,11 +29,15 @@ namespace calibmar {
   }
 
   bool FilesystemImageReader::HasNext() {
+    // read lock
+    std::shared_lock lock(mutex_);
     return file_index_ < image_paths_.size();
   }
 
   FilesystemImageReader::Status FilesystemImageReader::Next(Image& image, Pixmap& pixmap) {
-    if (!HasNext()) {
+    // write lock
+    std::unique_lock lock(mutex_);
+    if (file_index_ >= image_paths_.size()) {
       return Status::NO_MORE_IMAGES;
     }
 
@@ -41,7 +45,7 @@ namespace calibmar {
     image.SetName(path);
     file_index_++;
 
-    if (!pixmap.Read(path)) {
+    if (!pixmap.Read(path, options_.image_read_mode)) {
       return Status::READ_ERROR;
     }
 

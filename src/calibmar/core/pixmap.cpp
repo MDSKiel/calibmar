@@ -1,6 +1,8 @@
 #include "calibmar/core/pixmap.h"
 
+#include "pixmap.h"
 #include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 
 namespace calibmar {
 
@@ -56,5 +58,9 @@ namespace calibmar {
     data_ = image;
 
     return true;
+  }
+
+  bool Pixmap::Write(const std::string& path) {
+    return cv::imwrite(path, data_);
   }
 }

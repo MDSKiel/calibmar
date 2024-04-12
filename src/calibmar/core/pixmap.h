@@ -7,7 +7,11 @@ namespace calibmar {
   // Pixmap is a pixel based image representation. Currently a wrapper around cv::Mat.
   class Pixmap {
    public:
-    enum class ReadMode { GRAYSCALE = cv::ImreadModes::IMREAD_GRAYSCALE, COLOR = cv::ImreadModes::IMREAD_COLOR };
+    enum class ReadMode {
+      GRAYSCALE = cv::ImreadModes::IMREAD_GRAYSCALE,
+      COLOR = cv::ImreadModes::IMREAD_COLOR,
+      COLOR_AS_SOURCE = cv::ImreadModes::IMREAD_ANYCOLOR
+    };
 
     Pixmap();
     // Copy constructor, does not actually copy. Uses cv::Mat to act like a smart pointer.
@@ -24,6 +28,8 @@ namespace calibmar {
 
     // Read from file
     bool Read(const std::string& path, const ReadMode mode = ReadMode::COLOR);
+    // Write to file
+    bool Write(const std::string& path);
     // Assign existing cv::Mat. Uses the cv::Mat(cv::Mat) constructor, that does not copy the data.
     // Returns false if the mat is not two dimensional, not 8 bit color or grayscale
     bool Assign(const cv::Mat& mat);

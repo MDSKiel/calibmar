@@ -8,4 +8,6 @@ target_sources(calibmar PRIVATE
 	pixmap.h
 	camera_models.h
 	report.cpp
-	report.h)
+	report.h
+	undistort.cpp
+	undistort.h)

@@ -14,6 +14,7 @@
 #include "ui/dialogs/stereo_file_calibration_dialog.h"
 #include "ui/dialogs/stream_calibration_dialog.h"
 #include "ui/dialogs/test_widget_dialog.h"
+#include "ui/dialogs/undistortion_dialog.h"
 
 #include "ui/utils/calibration_target_visualization.h"
 #include "ui/utils/files_calibration_runner.h"
@@ -264,6 +265,10 @@ namespace calibmar {
     });
     toolsMenu->addAction("&Interactive Housing Diagram", this, []() {
       HousingDiagramDialog dialog;
+      dialog.exec();
+    });
+    toolsMenu->addAction("&Undistort Images", this, []() {
+      UndistortionDialog dialog;
       dialog.exec();
     });
 

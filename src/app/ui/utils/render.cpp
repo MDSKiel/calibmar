@@ -4,7 +4,9 @@
 #include <opencv2/core/eigen.hpp>
 #include <opencv2/imgproc.hpp>
 
-#include "colmap/sensor/models.h"
+#include <colmap/sensor/models.h>
+
+#include "calibmar/core/undistort.h"
 
 namespace calibmar {
   namespace render {
@@ -78,19 +80,7 @@ namespace calibmar {
         throw std::runtime_error("input and output size must match!");
       }
 
-      colmap::Camera undistort_camera = colmap::Camera::CreateFromModelId(
-          colmap::kInvalidCameraId, colmap::PinholeCameraModel::model_id, 1, distortion_camera.width, distortion_camera.height);
-      undistort_camera.SetPrincipalPointX(distortion_camera.PrincipalPointX());
-      undistort_camera.SetPrincipalPointY(distortion_camera.PrincipalPointY());
-
-      if (distortion_camera.FocalLengthIdxs().size() == 1) {
-        undistort_camera.SetFocalLength(distortion_camera.FocalLength());
-      }
-      else {
-        undistort_camera.SetFocalLengthX(distortion_camera.FocalLengthX());
-        undistort_camera.SetFocalLengthY(distortion_camera.FocalLengthY());
-      }
-
+      colmap::Camera undistort_camera = undistort::CreateUndistortedCamera(distortion_camera);
       cv::Mat map(distortion_camera.width, distortion_camera.height, CV_32FC2);
 
       for (int y = 0; y < input.Height(); y++) {
