@@ -1,3 +1,5 @@
+> **NOTE**: This repository is hosted on [Gitlab](https://cau-git.rz.uni-kiel.de/inf-ag-koeser/calibmar) and mirrored to [Github](https://github.com/MDSKiel/calibmar). Please use Github for [issues](https://github.com/MDSKiel/calibmar/issues) and get the [releases](https://cau-git.rz.uni-kiel.de/inf-ag-koeser/calibmar/-/releases) on Gitlab.
+
 # Calibmar
 
 Calibmar is a camera and underwater housing calibration tool.
