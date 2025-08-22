@@ -7,7 +7,8 @@
 namespace calibmar {
 
   void StereoCalibrator::Options::Check() {
-    if (!use_intrinsics_guess && (image_size.first == 0 || image_size.second == 0)) {
+    if (!use_intrinsics_guess &&
+        (image_size1.first == 0 || image_size1.second == 0 || image_size2.first == 0 || image_size2.second == 0)) {
       throw std::runtime_error("Image size must be set!.");
     }
   }
@@ -36,12 +37,12 @@ namespace calibmar {
     }
 
     if (!options_.use_intrinsics_guess) {
-      camera1.width = options_.image_size.first;
-      camera1.height = options_.image_size.second;
-      camera1.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
-      camera2.width = options_.image_size.first;
-      camera2.height = options_.image_size.second;
-      camera2.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model).model_name);
+      camera1.width = options_.image_size1.first;
+      camera1.height = options_.image_size1.second;
+      camera1.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model1).model_name);
+      camera2.width = options_.image_size2.first;
+      camera2.height = options_.image_size2.second;
+      camera2.model_id = colmap::CameraModelNameToId(calibmar::CameraModel::CameraModels().at(options_.camera_model2).model_name);
     }
 
     std::vector<std::vector<Eigen::Vector2d>> pointSets2D_1, pointSets2D_2;

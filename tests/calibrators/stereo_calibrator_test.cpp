@@ -83,12 +83,14 @@ BOOST_AUTO_TEST_CASE(BasicStereoCalibration) {
   Calibration calibration2;
   StereoCalibrator::Options options;
 
-  options.camera_model = CameraModelType::SimplePinholeCameraModel;
-  options.image_size = {1280, 1024};
+  options.camera_model1 = CameraModelType::SimplePinholeCameraModel;
+  options.camera_model2 = CameraModelType::SimplePinholeCameraModel;
+  options.image_size1 = {1280, 1024};
+  options.image_size2 = {1280, 1024};
   std::vector<double> expected_params = {1372.5, 1280 / 2.0, 1024 / 2.0};
   colmap::Rigid3d relative_pose(Eigen::Quaterniond(Eigen::AngleAxisd(-5 * (M_PI / 180), Eigen::Vector3d::UnitY())), {0.5, 0, 0});
-  PrepareCalibration(calibration1, options.image_size, options.camera_model, expected_params, colmap::Rigid3d{});
-  PrepareCalibration(calibration2, options.image_size, options.camera_model, expected_params, colmap::Inverse(relative_pose));
+  PrepareCalibration(calibration1, options.image_size1, options.camera_model1, expected_params, colmap::Rigid3d{});
+  PrepareCalibration(calibration2, options.image_size2, options.camera_model2, expected_params, colmap::Inverse(relative_pose));
   StereoCalibrator calibrator(options);
 
   calibrator.Calibrate(calibration1, calibration2);
@@ -104,4 +106,38 @@ BOOST_AUTO_TEST_CASE(BasicStereoCalibration) {
   BOOST_TEST(abs(actual_params2[1] - expected_params[1]) < tolerance);
   BOOST_TEST(abs(actual_params2[2] - expected_params[2]) < tolerance);
   BOOST_TEST(ElementWiseClose(relative_pose.ToMatrix(), actual_relative_pose.ToMatrix(), 0.01));
+}
+
+BOOST_AUTO_TEST_CASE(StereoCalibrationDifferentCameras) {
+  Calibration calibration1;
+  Calibration calibration2;
+  StereoCalibrator::Options options;
+
+  options.camera_model1 = CameraModelType::SimplePinholeCameraModel;
+  options.camera_model2 = CameraModelType::SimpleRadialCameraModel;
+  options.image_size1 = {1280, 1024};
+  options.image_size2 = {800, 600};
+  std::vector<double> expected_params1 = {1372.5, 1280 / 2.0, 1024 / 2.0};
+  std::vector<double> expected_params2 = {850, 800 / 2.0, 600 / 2.0, 1.2};
+  colmap::Rigid3d expected_relative_pose(Eigen::Quaterniond(Eigen::AngleAxisd(-5 * (M_PI / 180), Eigen::Vector3d::UnitY())),
+                                         {0.5, 0, 0});
+  PrepareCalibration(calibration1, options.image_size1, options.camera_model1, expected_params1, colmap::Rigid3d{});
+  PrepareCalibration(calibration2, options.image_size2, options.camera_model2, expected_params2,
+                     colmap::Inverse(expected_relative_pose));
+  StereoCalibrator calibrator(options);
+
+  calibrator.Calibrate(calibration1, calibration2);
+
+  std::vector<double> actual_params1 = calibration1.Camera().params;
+  std::vector<double> actual_params2 = calibration2.Camera().params;
+  colmap::Rigid3d actual_relative_pose = calibration2.CameraToWorldStereo().value();
+  double tolerance = 0.35;
+  BOOST_TEST(abs(actual_params1[0] - expected_params1[0]) < tolerance);
+  BOOST_TEST(abs(actual_params1[1] - expected_params1[1]) < tolerance);
+  BOOST_TEST(abs(actual_params1[2] - expected_params1[2]) < tolerance);
+  BOOST_TEST(abs(actual_params2[0] - expected_params2[0]) < tolerance);
+  BOOST_TEST(abs(actual_params2[1] - expected_params2[1]) < tolerance);
+  BOOST_TEST(abs(actual_params2[2] - expected_params2[2]) < tolerance);
+  BOOST_TEST(abs(actual_params2[3] - expected_params2[3]) < tolerance);
+  BOOST_TEST(ElementWiseClose(expected_relative_pose.ToMatrix(), actual_relative_pose.ToMatrix(), 0.01));
 }

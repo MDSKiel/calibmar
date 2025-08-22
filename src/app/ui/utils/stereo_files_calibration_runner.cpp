@@ -49,7 +49,8 @@ namespace calibmar {
     reader_options2.image_directory = options_.images_directory2;
     FilesystemImageReader reader1(reader_options1);
     FilesystemImageReader reader2(reader_options2);
-    std::pair<int, int> image_size{reader1.ImagesWidth(), reader1.ImagesHeight()};
+    std::pair<int, int> image_size1{reader1.ImagesWidth(), reader1.ImagesHeight()};
+    std::pair<int, int> image_size2{reader2.ImagesWidth(), reader2.ImagesHeight()};
 
     ChessboardFeatureExtractor::Options extractor_options;
     extractor_options.chessboard_columns = options_.calibration_target_options.chessboard_columns;
@@ -66,13 +67,15 @@ namespace calibmar {
     colmap::Camera camera1;
     colmap::Camera camera2;
     if (options_.initial_camera_parameters.has_value()) {
-      camera1 = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters->first);
-      camera2 = CameraModel::InitCamera(options_.camera_model, image_size, options_.initial_camera_parameters->second);
+      camera1 = CameraModel::InitCamera(options_.camera_model, image_size1, options_.initial_camera_parameters->first);
+      camera2 = CameraModel::InitCamera(options_.camera_model, image_size2, options_.initial_camera_parameters->second);
       calibrator_options.use_intrinsics_guess = true;
     }
     else {
-      calibrator_options.camera_model = options_.camera_model;
-      calibrator_options.image_size = image_size;
+      calibrator_options.camera_model1 = options_.camera_model;
+      calibrator_options.camera_model2 = options_.camera_model;
+      calibrator_options.image_size1 = image_size1;
+      calibrator_options.image_size2 = image_size2;
     }
 
     calibration1.SetCamera(camera1);
