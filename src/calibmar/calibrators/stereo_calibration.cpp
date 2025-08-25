@@ -65,6 +65,10 @@ namespace {
     }
 
     size_t n = abs_poses1.size();
+    if (n == 1) {
+      return abs_poses1[0] * colmap::Inverse(abs_poses2[0]);
+    }
+
     for (size_t i = 0; i < n; i++) {
       colmap::Rigid3d& pose1 = abs_poses1[i];
       colmap::Rigid3d& pose2 = abs_poses2[i];

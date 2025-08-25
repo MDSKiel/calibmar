@@ -49,61 +49,76 @@ namespace calibmar {
     reader_options2.image_directory = options_.images_directory2;
     FilesystemImageReader reader1(reader_options1);
     FilesystemImageReader reader2(reader_options2);
-    std::pair<int, int> image_size1{reader1.ImagesWidth(), reader1.ImagesHeight()};
-    std::pair<int, int> image_size2{reader2.ImagesWidth(), reader2.ImagesHeight()};
-
-    ChessboardFeatureExtractor::Options extractor_options;
-    extractor_options.chessboard_columns = options_.calibration_target_options.chessboard_columns;
-    extractor_options.chessboard_rows = options_.calibration_target_options.chessboard_rows;
-    extractor_options.square_size = options_.calibration_target_options.square_size;
-    ChessboardFeatureExtractor extractor(extractor_options);
-    calibration1.SetPoints3D(extractor.Points3D());
-    calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
-    calibration2.SetPoints3D(extractor.Points3D());
-    calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
-
-    StereoCalibrator::Options calibrator_options;
-    calibrator_options.estimate_pose_only = options_.estimate_pose_only;
-    colmap::Camera camera1;
-    colmap::Camera camera2;
-    if (options_.initial_camera_parameters.has_value()) {
-      camera1 = CameraModel::InitCamera(options_.camera_model, image_size1, options_.initial_camera_parameters->first);
-      camera2 = CameraModel::InitCamera(options_.camera_model, image_size2, options_.initial_camera_parameters->second);
-      calibrator_options.use_intrinsics_guess = true;
-    }
-    else {
-      calibrator_options.camera_model1 = options_.camera_model;
-      calibrator_options.camera_model2 = options_.camera_model;
-      calibrator_options.image_size1 = image_size1;
-      calibrator_options.image_size2 = image_size2;
-    }
-
-    calibration1.SetCamera(camera1);
-    calibration2.SetCamera(camera2);
-
-    StereoCalibrator calibrator(calibrator_options);
-    std::unique_ptr<TargetVisualizer> target_visualizer = std::make_unique<ChessboardTargetVisualizer>(
-        options_.calibration_target_options.chessboard_columns, options_.calibration_target_options.chessboard_rows);
-
-    calibration_widget_->SetTargetVisualizer(std::move(target_visualizer));
 
     try {
+      // If the directories contain no images, requesting width/height can fail
+      std::pair<int, int> image_size1{reader1.ImagesWidth(), reader1.ImagesHeight()};
+      std::pair<int, int> image_size2{reader2.ImagesWidth(), reader2.ImagesHeight()};
+
+      ChessboardFeatureExtractor::Options extractor_options;
+      extractor_options.chessboard_columns = options_.calibration_target_options.chessboard_columns;
+      extractor_options.chessboard_rows = options_.calibration_target_options.chessboard_rows;
+      extractor_options.square_size = options_.calibration_target_options.square_size;
+      ChessboardFeatureExtractor extractor(extractor_options);
+      calibration1.SetPoints3D(extractor.Points3D());
+      calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
+      calibration2.SetPoints3D(extractor.Points3D());
+      calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
+
+      StereoCalibrator::Options calibrator_options;
+      calibrator_options.estimate_pose_only = options_.estimate_pose_only;
+      colmap::Camera camera1;
+      colmap::Camera camera2;
+      if (options_.initial_camera_parameters1.has_value()) {
+        camera1 = CameraModel::InitCamera(options_.camera_model1, image_size1, options_.initial_camera_parameters1.value());
+        calibrator_options.use_intrinsics_guess = true;
+      }
+      else {
+        calibrator_options.camera_model1 = options_.camera_model1;
+        calibrator_options.image_size1 = image_size1;
+      }
+
+      if (options_.initial_camera_parameters2.has_value()) {
+        camera2 = CameraModel::InitCamera(options_.camera_model2, image_size2, options_.initial_camera_parameters2.value());
+        calibrator_options.use_intrinsics_guess = true;
+      }
+      else {
+        calibrator_options.camera_model2 = options_.camera_model2;
+        calibrator_options.image_size2 = image_size1;
+      }
+
+      calibration1.SetCamera(camera1);
+      calibration2.SetCamera(camera2);
+
+      StereoCalibrator calibrator(calibrator_options);
+      std::unique_ptr<TargetVisualizer> target_visualizer = std::make_unique<ChessboardTargetVisualizer>(
+          options_.calibration_target_options.chessboard_columns, options_.calibration_target_options.chessboard_rows);
+
+      calibration_widget_->SetTargetVisualizer(std::move(target_visualizer));
+
       while (reader1.HasNext() && reader2.HasNext()) {
         Image image1, image2;
         std::unique_ptr<calibmar::ExtractionImageWidget::Data> data1 = ReadAndExtractImage(reader1, extractor, image1);
         std::unique_ptr<calibmar::ExtractionImageWidget::Data> data2 = ReadAndExtractImage(reader2, extractor, image2);
+
+        // currently ignore read errors. Check visualization, when reenabling.
+        // files that can not be read are assumed to be unrelated, i.e. calibration files and are skipped
+        while (data1->status == ExtractionImageWidget::Status::READ_ERROR && reader1.HasNext()) {
+          data1 = ReadAndExtractImage(reader1, extractor, image1);
+        }
+        while (data2->status == ExtractionImageWidget::Status::READ_ERROR && reader2.HasNext()) {
+          data2 = ReadAndExtractImage(reader2, extractor, image2);
+        }
+        if (data1->status == ExtractionImageWidget::Status::READ_ERROR ||
+            data2->status == ExtractionImageWidget::Status::READ_ERROR) {
+          continue;
+        }
 
         if (data1->status == ExtractionImageWidget::Status::SUCCESS && data2->status == ExtractionImageWidget::Status::SUCCESS) {
           size_t id = calibration1.AddImage(image1);
           data1->image_data = calibration1.Image(id);
           id = calibration2.AddImage(image2);
           data2->image_data = calibration2.Image(id);
-        }
-
-        // currently ignore read errors for visu. Check visualization, when reenabling.
-        if (data1->status == ExtractionImageWidget::Status::READ_ERROR ||
-            data2->status == ExtractionImageWidget::Status::READ_ERROR) {
-          continue;
         }
 
         QMetaObject::invokeMethod(calibration_widget_, [calibration_widget = calibration_widget_, data1 = std::move(data1),

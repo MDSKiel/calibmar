@@ -31,9 +31,13 @@ namespace calibmar {
 
     colmap::Camera& camera1 = calibration1.Camera();
     colmap::Camera& camera2 = calibration2.Camera();
-    if (options_.use_intrinsics_guess &&
-        (camera1.model_id == colmap::CameraModelId::kInvalid || camera2.model_id == colmap::CameraModelId::kInvalid)) {
-      throw std::runtime_error("Intrinsics guess specified, but camera not initialized.");
+    if (options_.use_intrinsics_guess) {
+      if (camera1.model_id == colmap::CameraModelId::kInvalid || camera2.model_id == colmap::CameraModelId::kInvalid) {
+        throw std::runtime_error("Intrinsics guess specified, but camera not initialized.");
+      }
+      if (!camera1.VerifyParams() || !camera2.VerifyParams()) {
+        throw std::runtime_error("Invalid camera parameters given!");
+      }
     }
 
     if (!options_.use_intrinsics_guess) {
