@@ -4,15 +4,23 @@
 
 namespace calibmar {
 
-  CalibrationTargetOptionsWidget::CalibrationTargetOptionsWidget(QWidget* parent) : QGroupBox(parent) {
+  CalibrationTargetOptionsWidget::CalibrationTargetOptionsWidget(QWidget* parent, int available_targets) : QGroupBox(parent) {
     setTitle("Calibration Target");
 
     QLabel* target_type_label = new QLabel(this);
     target_type_label->setText("Calibration Target Type");
     target_type_combobox_ = new QComboBox(this);
-    target_type_combobox_->addItem("Chessboard");
-    target_type_combobox_->addItem("Aruco Grid Board");
-    target_type_combobox_->addItem("3D Target");
+
+    if (available_targets & TargetType::Chessboard) {
+      target_type_combobox_->addItem("Chessboard");
+    }
+    if (available_targets & TargetType::ArucoBoard) {
+      target_type_combobox_->addItem("Aruco Grid Board");
+    }
+    if (available_targets & TargetType::Sift) {
+      target_type_combobox_->addItem("3D Target");
+    }
+
     target_type_combobox_->setCurrentIndex(0);
 
     target3D_target_widget_ = new Target3DTargetOptionsWidget(this);

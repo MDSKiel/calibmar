@@ -12,11 +12,13 @@ namespace calibmar {
    public:
     struct Options {
       // Aruco marker type to detect
-      ArucoMarkerTypes aruco_type = ArucoMarkerTypes::DICT_4X4_50;
+      ArucoMarkerTypes aruco_type = ArucoMarkerTypes::DICT_4X4;
       // Origin of the Aruco grid, i.e. where is ID 0
       ArucoGridOrigin grid_origin = ArucoGridOrigin::TopLeft;
       // Direction of the ascending IDs
       ArucoGridDirection grid_direction = ArucoGridDirection::Horizontal;
+      // The first id on the board
+      int start_id = 0;
       // Aurco grid columns
       int marker_cols = 1;
       // Aurco grid rows
@@ -49,6 +51,8 @@ namespace calibmar {
 
     std::map<uint32_t, Eigen::Vector3d> points3D_;
     cv::Ptr<cv::aruco::GridBoard> board_;
+
+    int MapMarkerCornerToPointId(int marker_id, int corner_idx);
   };
 
   inline const std::map<uint32_t, Eigen::Vector3d>& ArucoBoardFeatureExtractor::Points3D() {

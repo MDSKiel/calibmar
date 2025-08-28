@@ -114,11 +114,8 @@ namespace calibmar {
     stereo_parameters_layout->addWidget(only_estimate_pose_checkbox_);
 
     // chessboard target
-    QGroupBox* chessboard_groupbox = new QGroupBox("Chessboard target");
-    QVBoxLayout* chessboard_layout = new QVBoxLayout(chessboard_groupbox);
-    calibration_target_options_ = new ChessboardTargetOptionsWidget(chessboard_groupbox);
-    chessboard_layout->addWidget(calibration_target_options_);
-    chessboard_layout->setContentsMargins(0, 0, 0, 0);
+    calibration_target_options_ = new CalibrationTargetOptionsWidget(
+        this, CalibrationTargetOptionsWidget::Chessboard | CalibrationTargetOptionsWidget::ArucoBoard);
 
     // run button
     QHBoxLayout* horizontalLayout_run = new QHBoxLayout();
@@ -138,7 +135,7 @@ namespace calibmar {
     layout->addWidget(camera_model1_groupbox);
     layout->addWidget(camera_model2_groupbox);
     layout->addWidget(stereo_calibration_groupbox);
-    layout->addWidget(chessboard_groupbox);
+    layout->addWidget(calibration_target_options_);
     layout->addLayout(horizontalLayout_run);
     setWindowTitle("Stereo Calibrate from Files");
 
@@ -172,7 +169,7 @@ namespace calibmar {
       use_initial_parameters_checkbox2_->setChecked(false);
     }
 
-    calibration_target_options_->SetChessBoardTargetOptions(options.calibration_target_options);
+    calibration_target_options_->SetCalibrationTargetOptions(options.calibration_target_options);
   }
 
   StereoFileCalibrationDialog::Options StereoFileCalibrationDialog::GetOptions() {
@@ -191,7 +188,7 @@ namespace calibmar {
 
     options.images_directory1 = directory_edit1_->text().toStdString();
     options.images_directory2 = directory_edit2_->text().toStdString();
-    options.calibration_target_options = calibration_target_options_->ChessboardTargetOptions();
+    options.calibration_target_options = calibration_target_options_->CalibrationTargetOptions();
     return options;
   }
 
@@ -245,10 +242,24 @@ namespace calibmar {
       use_initial_parameters_checkbox2_->setChecked(true);
     }
 
-    ChessboardFeatureExtractor::Options calibration_target_options;
-    calibration_target_options.chessboard_columns = parameters.columns;
-    calibration_target_options.chessboard_rows = parameters.rows;
-    calibration_target_options.square_size = parameters.square_size;
-    calibration_target_options_->SetChessBoardTargetOptions(calibration_target_options);
+    CalibrationTargetOptionsWidget::Options target_options;
+    switch (parameters.calibration_target) {
+      case CalibrationTargetType::Chessboard:
+        target_options = ChessboardFeatureExtractor::Options{parameters.rows, parameters.columns, parameters.square_size};
+        break;
+      case CalibrationTargetType::ArucoGridBoard:
+        target_options = ArucoBoardFeatureExtractor::Options{parameters.aruco_type,
+                                                             ArucoGridOrigin::TopLeft,
+                                                             ArucoGridDirection::Horizontal,
+                                                             0,
+                                                             parameters.columns,
+                                                             parameters.rows,
+                                                             parameters.square_size,
+                                                             parameters.spacing,
+                                                             1};
+        break;
+    }
+
+    calibration_target_options_->SetCalibrationTargetOptions(target_options);
   }
 }

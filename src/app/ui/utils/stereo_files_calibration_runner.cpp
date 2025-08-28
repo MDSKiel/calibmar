@@ -34,6 +34,39 @@ namespace {
 
     return std::move(data);
   }
+
+  void SetupCalibration(
+      std::variant<calibmar::ChessboardFeatureExtractor::Options, calibmar::ArucoBoardFeatureExtractor::Options>& target_options,
+      calibmar::Calibration& calibration1, calibmar::Calibration& calibration2,
+      std::unique_ptr<calibmar::FeatureExtractor>& extractor, std::unique_ptr<calibmar::TargetVisualizer>& target_visualizer) {
+    using namespace calibmar;
+
+    ChessboardFeatureExtractor::Options* chessboard_options =
+        std::get_if<calibmar::ChessboardFeatureExtractor::Options>(&target_options);
+
+    if (chessboard_options) {
+      chessboard_options->fast = false;
+      std::unique_ptr<ChessboardFeatureExtractor> chessboard_extractor =
+          std::make_unique<ChessboardFeatureExtractor>(*chessboard_options);
+      calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(*chessboard_options));
+      calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(*chessboard_options));
+      calibration1.SetPoints3D(chessboard_extractor->Points3D());
+      calibration2.SetPoints3D(chessboard_extractor->Points3D());
+      extractor = std::move(chessboard_extractor);
+      target_visualizer = std::make_unique<ChessboardTargetVisualizer>(chessboard_options->chessboard_columns,
+                                                                       chessboard_options->chessboard_rows);
+    }
+    else {
+      ArucoBoardFeatureExtractor::Options& aruco_options = std::get<ArucoBoardFeatureExtractor::Options>(target_options);
+      std::unique_ptr<ArucoBoardFeatureExtractor> aurco_extractor = std::make_unique<ArucoBoardFeatureExtractor>(aruco_options);
+      calibration1.SetPoints3D(aurco_extractor->Points3D());
+      calibration2.SetPoints3D(aurco_extractor->Points3D());
+      calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(aruco_options));
+      calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(aruco_options));
+      extractor = std::move(aurco_extractor);
+      target_visualizer = std::make_unique<ArucoBoardTargetVisualizer>();
+    }
+  }
 }
 
 namespace calibmar {
@@ -55,15 +88,21 @@ namespace calibmar {
       std::pair<int, int> image_size1{reader1.ImagesWidth(), reader1.ImagesHeight()};
       std::pair<int, int> image_size2{reader2.ImagesWidth(), reader2.ImagesHeight()};
 
-      ChessboardFeatureExtractor::Options extractor_options;
-      extractor_options.chessboard_columns = options_.calibration_target_options.chessboard_columns;
-      extractor_options.chessboard_rows = options_.calibration_target_options.chessboard_rows;
-      extractor_options.square_size = options_.calibration_target_options.square_size;
-      ChessboardFeatureExtractor extractor(extractor_options);
-      calibration1.SetPoints3D(extractor.Points3D());
-      calibration1.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
-      calibration2.SetPoints3D(extractor.Points3D());
-      calibration2.SetCalibrationTargetInfo(report::GenerateCalibrationTargetInfo(options_.calibration_target_options));
+      std::variant<calibmar::ChessboardFeatureExtractor::Options, calibmar::ArucoBoardFeatureExtractor::Options> target_options;
+      if (std::holds_alternative<ChessboardFeatureExtractor::Options>(options_.calibration_target_options)) {
+        target_options = std::get<ChessboardFeatureExtractor::Options>(options_.calibration_target_options);
+      }
+      else if (std::holds_alternative<ArucoBoardFeatureExtractor::Options>(options_.calibration_target_options)) {
+        target_options = std::get<ArucoBoardFeatureExtractor::Options>(options_.calibration_target_options);
+      }
+      else {
+        throw std::runtime_error("Unsupported calibration target type!");
+      }
+
+      std::unique_ptr<FeatureExtractor> extractor;
+      std::unique_ptr<TargetVisualizer> target_visualizer;
+
+      SetupCalibration(target_options, calibration1, calibration2, extractor, target_visualizer);
 
       StereoCalibrator::Options calibrator_options;
       calibrator_options.estimate_pose_only = options_.estimate_pose_only;
@@ -91,23 +130,21 @@ namespace calibmar {
       calibration2.SetCamera(camera2);
 
       StereoCalibrator calibrator(calibrator_options);
-      std::unique_ptr<TargetVisualizer> target_visualizer = std::make_unique<ChessboardTargetVisualizer>(
-          options_.calibration_target_options.chessboard_columns, options_.calibration_target_options.chessboard_rows);
 
       calibration_widget_->SetTargetVisualizer(std::move(target_visualizer));
 
       while (reader1.HasNext() && reader2.HasNext()) {
         Image image1, image2;
-        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data1 = ReadAndExtractImage(reader1, extractor, image1);
-        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data2 = ReadAndExtractImage(reader2, extractor, image2);
+        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data1 = ReadAndExtractImage(reader1, *extractor, image1);
+        std::unique_ptr<calibmar::ExtractionImageWidget::Data> data2 = ReadAndExtractImage(reader2, *extractor, image2);
 
         // currently ignore read errors. Check visualization, when reenabling.
         // files that can not be read are assumed to be unrelated, i.e. calibration files and are skipped
         while (data1->status == ExtractionImageWidget::Status::READ_ERROR && reader1.HasNext()) {
-          data1 = ReadAndExtractImage(reader1, extractor, image1);
+          data1 = ReadAndExtractImage(reader1, *extractor, image1);
         }
         while (data2->status == ExtractionImageWidget::Status::READ_ERROR && reader2.HasNext()) {
-          data2 = ReadAndExtractImage(reader2, extractor, image2);
+          data2 = ReadAndExtractImage(reader2, *extractor, image2);
         }
         if (data1->status == ExtractionImageWidget::Status::READ_ERROR ||
             data2->status == ExtractionImageWidget::Status::READ_ERROR) {

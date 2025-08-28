@@ -159,24 +159,25 @@ namespace {
 }
 
 namespace calibmar::stereo_calibration {
-  void CalibrateStereoCameras(std::vector<std::vector<Eigen::Vector3d>>& object_points,
+  void CalibrateStereoCameras(std::vector<std::vector<Eigen::Vector3d>>& object_points1,
+                              std::vector<std::vector<Eigen::Vector3d>>& object_points2,
                               const std::vector<std::vector<Eigen::Vector2d>>& image_points1,
                               const std::vector<std::vector<Eigen::Vector2d>>& image_points2, colmap::Camera& camera1,
                               colmap::Camera& camera2, bool use_intrinsic_guess, bool fix_intrinsics,
                               colmap::Rigid3d& relative_pose, std::vector<colmap::Rigid3d>& poses,
                               StereoStdDeviations* std_deviations) {
-    if (object_points.size() != image_points1.size() || image_points1.size() != image_points2.size()) {
+    if (object_points1.size() != image_points1.size() || object_points2.size() != image_points2.size()) {
       throw std::runtime_error("Object and image point sizes must match!");
     }
 
     std::vector<colmap::Rigid3d> poses2;
     if (!fix_intrinsics) {
-      general_calibration::CalibrateCamera(object_points, image_points1, camera1, use_intrinsic_guess, poses);
-      general_calibration::CalibrateCamera(object_points, image_points2, camera2, use_intrinsic_guess, poses2);
+      general_calibration::CalibrateCamera(object_points1, image_points1, camera1, use_intrinsic_guess, poses);
+      general_calibration::CalibrateCamera(object_points2, image_points2, camera2, use_intrinsic_guess, poses2);
     }
     else {
-      EstimatePosesForCamera(camera1, object_points, image_points1, poses);
-      EstimatePosesForCamera(camera2, object_points, image_points2, poses2);
+      EstimatePosesForCamera(camera1, object_points1, image_points1, poses);
+      EstimatePosesForCamera(camera2, object_points2, image_points2, poses2);
     }
 
     relative_pose = EstimateRelativePose(poses, poses2);
@@ -184,12 +185,18 @@ namespace calibmar::stereo_calibration {
     ceres::Problem problem;
     colmap::Rigid3d identity;
 
-    for (size_t i = 0; i < object_points.size(); i++) {
-      AddImageToProblem(problem, camera1, poses[i], identity, image_points1[i], object_points[i]);
+    for (size_t i = 0; i < object_points1.size(); i++) {
+      if (object_points1[i].size() != image_points1[i].size()) {
+        throw std::runtime_error("Object and image points sizes dont match for an image!");
+      }
+      AddImageToProblem(problem, camera1, poses[i], identity, image_points1[i], object_points1[i]);
     }
-    for (size_t i = 0; i < object_points.size(); i++) {
+    for (size_t i = 0; i < object_points2.size(); i++) {
+      if (object_points2[i].size() != image_points2[i].size()) {
+        throw std::runtime_error("Object and image points sizes dont match for an image!");
+      }
       // camera1 poses are absolute poses
-      AddImageToProblem(problem, camera2, poses[i], relative_pose, image_points2[i], object_points[i]);
+      AddImageToProblem(problem, camera2, poses[i], relative_pose, image_points2[i], object_points2[i]);
     }
 
     // Keep first "relative" pose constant since camera1 is origin of rig

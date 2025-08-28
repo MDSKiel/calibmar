@@ -16,7 +16,9 @@ namespace calibmar {
                          ArucoSiftFeatureExtractor::Options, SiftFeatureExtractor::Options>
         Options;
 
-    CalibrationTargetOptionsWidget(QWidget* parent = nullptr);
+    enum TargetType { Chessboard = 1, ArucoBoard = 2, Sift = 4, All = Chessboard | ArucoBoard | Sift };
+
+    CalibrationTargetOptionsWidget(QWidget* parent = nullptr, int available_targets = TargetType::All);
 
     void SetCalibrationTargetOptions(const Options& options);
     Options CalibrationTargetOptions();

@@ -26,7 +26,7 @@ BOOST_AUTO_TEST_CASE(BasicArucoBoardExtraction) {
   options.marker_rows = 7;
   options.marker_size = 10;
   options.marker_spacing = 10;
-  options.aruco_type = ArucoMarkerTypes::DICT_6X6_50;
+  options.aruco_type = ArucoMarkerTypes::DICT_6X6;
   MemoryImageReader reader({MemoryImageReader::Images::ArucoGridBoard});
   ArucoBoardFeatureExtractor extractor(options);
 

@@ -65,19 +65,23 @@ namespace calibmar {
     std_devs.std_deviations_intrinsics2 = &std_dev_camera2;
     // extrinsics std devs are currently not used, because their interpretation is unclear
 
-    stereo_calibration::CalibrateStereoCameras(pointSets3D_1, pointSets2D_1, pointSets2D_2, camera1, camera2,
+    stereo_calibration::CalibrateStereoCameras(pointSets3D_1, pointSets3D_2, pointSets2D_1, pointSets2D_2, camera1, camera2,
                                                options_.use_intrinsics_guess, options_.estimate_pose_only, relative_pose, poses,
                                                &std_devs);
 
     std::vector<colmap::Rigid3d> poses2;
     poses2.reserve(poses.size());
-    for (const auto& pose1 : poses) {
+    for (size_t i = 0; i < poses.size(); i++) {
       // calculate poses of the second camera
-      poses2.push_back(relative_pose * pose1);
+      const auto& pose1 = poses[i];
+      auto pose2 = relative_pose * pose1;
+      poses2.push_back(pose2);
+      calibration1.Image(i).SetPose(pose1);
+      calibration2.Image(i).SetPose(pose2);
     }
 
     double rms1 = general_calibration::CalculateOverallRMS(pointSets3D_1, pointSets2D_1, poses, camera1, per_view_rms[0]);
-    double rms2 = general_calibration::CalculateOverallRMS(pointSets3D_1, pointSets2D_2, poses2, camera2, per_view_rms[1]);
+    double rms2 = general_calibration::CalculateOverallRMS(pointSets3D_2, pointSets2D_2, poses2, camera2, per_view_rms[1]);
 
     calibration1.SetCalibrationRms(rms1);
     calibration1.SetPerViewRms(per_view_rms[0]);

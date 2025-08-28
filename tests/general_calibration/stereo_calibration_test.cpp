@@ -61,7 +61,8 @@ namespace {
 
   void SetupData(colmap::Camera& camera1, colmap::Camera& camera2, std::vector<std::vector<Eigen::Vector2d>>& image_points1,
                  std::vector<std::vector<Eigen::Vector2d>>& image_points2,
-                 std::vector<std::vector<Eigen::Vector3d>>& object_points, const colmap::Rigid3d& relative_pose,
+                 std::vector<std::vector<Eigen::Vector3d>>& object_points1,
+                 std::vector<std::vector<Eigen::Vector3d>>& object_points2, const colmap::Rigid3d& relative_pose,
                  const CameraTestData& model) {
     camera1.model_id = model.model_id;
     camera2.model_id = model.model_id;
@@ -77,7 +78,8 @@ namespace {
     size_t n = test_poses.size();
     image_points1.resize(n);
     image_points2.resize(n);
-    object_points.resize(n);
+    object_points1.resize(n);
+    object_points2.resize(n);
     for (size_t i = 0; i < n; i++) {
       auto& test_pose = test_poses[i];
       Eigen::Quaterniond rot(test_pose[3], test_pose[0], test_pose[1], test_pose[2]);
@@ -85,7 +87,8 @@ namespace {
       colmap::Rigid3d pose(rot.normalized(), trans);
       GenerateImagePoints(camera1, colmap::Rigid3d(), pose, points3D, image_points1[i], 0);
       GenerateImagePoints(camera2, relative_pose, pose, points3D, image_points2[i], 0);
-      object_points[i] = points3D;
+      object_points1[i] = points3D;
+      object_points2[i] = points3D;
     }
   }
 }
@@ -103,7 +106,7 @@ BOOST_DATA_TEST_CASE(StereoCalibration_FullCalibration, boost::unit_test::data::
   std::vector<std::vector<Eigen::Vector3d>> object_points;
   colmap::Rigid3d estimated_pose;
   std::vector<colmap::Rigid3d> absolute_poses;
-  SetupData(camera1, camera2, image_points1, image_points2, object_points, relative_pose, model);
+  SetupData(camera1, camera2, image_points1, image_points2, object_points, object_points, relative_pose, model);
   calibration_camera1.model_id = camera1.model_id;
   calibration_camera1.width = camera1.width;
   calibration_camera1.height = camera1.height;
@@ -111,7 +114,7 @@ BOOST_DATA_TEST_CASE(StereoCalibration_FullCalibration, boost::unit_test::data::
   calibration_camera2.width = camera2.width;
   calibration_camera2.height = camera2.height;
 
-  stereo_calibration::CalibrateStereoCameras(object_points, image_points1, image_points2, calibration_camera1,
+  stereo_calibration::CalibrateStereoCameras(object_points, object_points, image_points1, image_points2, calibration_camera1,
                                              calibration_camera2, false, false, estimated_pose, absolute_poses);
 
   // Zero noise should be very close to GT
@@ -130,10 +133,10 @@ BOOST_DATA_TEST_CASE(StereoCalibration_PoseOnly, boost::unit_test::data::make(st
   colmap::Rigid3d estimated_pose;
   std::vector<colmap::Rigid3d> absolute_poses;
 
-  SetupData(camera1, camera2, image_points1, image_points2, object_points, relative_pose, model);
+  SetupData(camera1, camera2, image_points1, image_points2, object_points, object_points, relative_pose, model);
 
-  stereo_calibration::CalibrateStereoCameras(object_points, image_points1, image_points2, camera1, camera2, true, true,
-                                             estimated_pose, absolute_poses);
+  stereo_calibration::CalibrateStereoCameras(object_points, object_points, image_points1, image_points2, camera1, camera2, true,
+                                             true, estimated_pose, absolute_poses);
 
   BOOST_TEST(ElementWiseClose(estimated_pose.ToMatrix(), relative_pose.ToMatrix(), 0.001));
 }
@@ -158,7 +161,7 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength_Stereo, boost::unit_
   std::vector<std::vector<Eigen::Vector3d>> object_points;
   colmap::Rigid3d estimated_pose;
   std::vector<colmap::Rigid3d> absolute_poses;
-  SetupData(camera1, camera2, image_points1, image_points2, object_points, relative_pose, model);
+  SetupData(camera1, camera2, image_points1, image_points2, object_points, object_points, relative_pose, model);
   calibration_camera1.model_id = camera1.model_id;
   calibration_camera1.width = camera1.width;
   calibration_camera1.height = camera1.height;
@@ -173,7 +176,7 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength_Stereo, boost::unit_
   std_devs.std_deviations_intrinsics1 = &intrinsics1;
   std_devs.std_deviations_intrinsics2 = &intrinsics2;
 
-  stereo_calibration::CalibrateStereoCameras(object_points, image_points1, image_points2, calibration_camera1,
+  stereo_calibration::CalibrateStereoCameras(object_points, object_points, image_points1, image_points2, calibration_camera1,
                                              calibration_camera2, false, false, estimated_pose, absolute_poses, &std_devs);
 
   int intrinsics_size = model.params.size();
@@ -183,4 +186,42 @@ BOOST_DATA_TEST_CASE(IntrinsicsDeviationMatchesParamsLength_Stereo, boost::unit_
   BOOST_TEST(std_devs.std_deviations_extrinsics2->size() == extrinsics_size);
   BOOST_TEST(std_devs.std_deviations_intrinsics1->size() == intrinsics_size);
   BOOST_TEST(std_devs.std_deviations_intrinsics2->size() == intrinsics_size);
+}
+
+BOOST_DATA_TEST_CASE(StereoCalibration_AsymetricPoints, boost::unit_test::data::make(stereo_camera_models), model) {
+  // This test is somewhat unrealistic, since it will project points out of the images
+  colmap::Camera camera1;
+  colmap::Camera camera2;
+  colmap::Rigid3d relative_pose(Eigen::Quaterniond(Eigen::AngleAxisd(5.0 * (M_PI / 180), Eigen::Vector3d::UnitY())), {0.5, 0, 0});
+  colmap::Camera calibration_camera1;
+  colmap::Camera calibration_camera2;
+  std::vector<std::vector<Eigen::Vector2d>> image_points1;
+  std::vector<std::vector<Eigen::Vector2d>> image_points2;
+  std::vector<std::vector<Eigen::Vector3d>> object_points1;
+  std::vector<std::vector<Eigen::Vector3d>> object_points2;
+  colmap::Rigid3d estimated_pose;
+  std::vector<colmap::Rigid3d> absolute_poses;
+  SetupData(camera1, camera2, image_points1, image_points2, object_points1, object_points2, relative_pose, model);
+  calibration_camera1.model_id = camera1.model_id;
+  calibration_camera1.width = camera1.width;
+  calibration_camera1.height = camera1.height;
+  calibration_camera2.model_id = camera2.model_id;
+  calibration_camera2.width = camera2.width;
+  calibration_camera2.height = camera2.height;
+
+  for (int i = 0; i < image_points2.size(); i++) {
+    for (size_t i = 0; i < 10; i++) {
+      // Remove some points only from one camera
+      image_points2[i].pop_back();
+      object_points2[i].pop_back();
+    }
+  }
+
+  stereo_calibration::CalibrateStereoCameras(object_points1, object_points2, image_points1, image_points2, calibration_camera1,
+                                             calibration_camera2, false, false, estimated_pose, absolute_poses);
+
+  // Zero noise should be very close to GT
+  BOOST_TEST(ElementWiseClose(calibration_camera1.params, camera1.params, 0.0001));
+  BOOST_TEST(ElementWiseClose(calibration_camera2.params, camera2.params, 0.0001));
+  BOOST_TEST(ElementWiseClose(estimated_pose.ToMatrix(), relative_pose.ToMatrix(), 0.0001));
 }

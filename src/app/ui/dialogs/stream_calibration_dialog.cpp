@@ -271,6 +271,7 @@ namespace calibmar {
         options.calibration_target_options = ArucoBoardFeatureExtractor::Options{p.aruco_type,
                                                                                  ArucoGridOrigin::TopLeft,
                                                                                  ArucoGridDirection::Horizontal,
+                                                                                 0,
                                                                                  p.columns,
                                                                                  p.rows,
                                                                                  p.square_size,

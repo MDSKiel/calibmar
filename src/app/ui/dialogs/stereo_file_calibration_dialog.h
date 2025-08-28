@@ -11,7 +11,7 @@ namespace calibmar {
   class StereoFileCalibrationDialog : public QDialog {
    public:
     struct Options {
-      ChessboardFeatureExtractor::Options calibration_target_options;
+      CalibrationTargetOptionsWidget::Options calibration_target_options;
       CameraModelType camera_model1;
       CameraModelType camera_model2;
       std::optional<std::vector<double>> initial_camera_parameters1;
@@ -40,6 +40,6 @@ namespace calibmar {
     QCheckBox* only_estimate_pose_checkbox_;
     InitialParametersWidget* initial_parameters_1_;
     InitialParametersWidget* initial_parameters_2_;
-    ChessboardTargetOptionsWidget* calibration_target_options_;
+    CalibrationTargetOptionsWidget* calibration_target_options_;
   };
 }

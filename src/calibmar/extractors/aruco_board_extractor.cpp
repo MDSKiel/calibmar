@@ -1,16 +1,16 @@
 #include "calibmar/extractors/aruco_board_extractor.h"
 
 namespace {
-  inline int MapCornerToPointId(int marker_id, int corner_idx) {
-    return marker_id * 4 + corner_idx;
+  bool CloseToBorder(const cv::Point2f& corner, int min_distance, int image_width, int image_height) {
+    return corner.x < min_distance || corner.y < min_distance || corner.x > image_width - min_distance ||
+           corner.y > image_height - min_distance;
   }
+
 }
 
 namespace calibmar {
   ArucoBoardFeatureExtractor::ArucoBoardFeatureExtractor(const Options& options) : options_(options) {
-    // assuming marker ids start at 0
-    // 4 corners per marker, clockwise starting top left
-    uint32_t marker_corner_id = 0;
+    // 4 corners per marker
     int size = options.marker_cols * options.marker_rows;
 
     int width = options.marker_cols;
@@ -40,12 +40,14 @@ namespace calibmar {
             marker_row = options.grid_direction == ArucoGridDirection::Horizontal ? (height - 1) - row : (width - 1) - col;
             break;
         }
-        int marker_id = marker_col + marker_row * (options.grid_direction == ArucoGridDirection::Horizontal ? width : height);
+        int marker_id = options.start_id + marker_col +
+                        marker_row * (options.grid_direction == ArucoGridDirection::Horizontal ? width : height);
 
-        points3D_[MapCornerToPointId(marker_id, 0)] = Eigen::Vector3d(x, y, 0);
-        points3D_[MapCornerToPointId(marker_id, 1)] = Eigen::Vector3d(x + options_.marker_size, y, 0);
-        points3D_[MapCornerToPointId(marker_id, 2)] = Eigen::Vector3d(x + options_.marker_size, y + options_.marker_size, 0);
-        points3D_[MapCornerToPointId(marker_id, 3)] = Eigen::Vector3d(x, y + options_.marker_size, 0);
+        points3D_[MapMarkerCornerToPointId(marker_id, 0)] = Eigen::Vector3d(x, y, 0);
+        points3D_[MapMarkerCornerToPointId(marker_id, 1)] = Eigen::Vector3d(x + options_.marker_size, y, 0);
+        points3D_[MapMarkerCornerToPointId(marker_id, 2)] =
+            Eigen::Vector3d(x + options_.marker_size, y + options_.marker_size, 0);
+        points3D_[MapMarkerCornerToPointId(marker_id, 3)] = Eigen::Vector3d(x, y + options_.marker_size, 0);
       }
     }
   }
@@ -65,6 +67,9 @@ namespace calibmar {
     std::vector<std::vector<cv::Point2f>> rejected_candidates;
     cv::Ptr<cv::aruco::DetectorParameters> parameters = std::make_shared<cv::aruco::DetectorParameters>();
     parameters->markerBorderBits = options_.border_bits;
+    parameters->maxErroneousBitsInBorderRate = 0.0;
+    // this does currently not seem to work as intended with opencv so this is implemented here
+    parameters->minDistanceToBorder = 0;
     parameters->cornerRefinementMethod = cv::aruco::CORNER_REFINE_APRILTAG;
     if (is_apriltag) {
       // The opencv implementation of AprilTag seems to work differently
@@ -90,25 +95,53 @@ namespace calibmar {
     image.ClearCorrespondences();
     std::map<int, std::vector<Eigen::Vector2d>> aruco_keypoints;
 
+    int min_distance_to_border = (int)(std::min(pixmap.Width(), pixmap.Height()) * 0.008);
+    int max_id = options_.marker_cols * options_.marker_rows + options_.start_id - 1;
     for (const auto& marker_id_idx : id_to_idx) {
-      std::vector<Eigen::Vector2d> corners;
+      if (marker_id_idx.first > max_id || marker_id_idx.first < options_.start_id) {
+        // sanity check to prevent detections we know to be wrong
+        continue;
+      }
       size_t i = marker_id_idx.second;
+
+      bool close_to_border = false;
+      for (const auto& corner : marker_corners[i]) {
+        if (CloseToBorder(corner, min_distance_to_border, pixmap.Width(), pixmap.Height())) {
+          close_to_border = true;
+          break;
+        }
+      }
+      if (close_to_border) {
+        continue;
+      }
+
+      std::vector<Eigen::Vector2d> corners;
       corners.reserve(marker_corners[i].size());
       for (size_t j = 0; j < marker_corners[i].size(); j++) {
         // for apriltag the opencv detector sets the origin to the bottom right,
         // which is inconsistent with Aruco, so shift them to match top left origin
         size_t j2 = is_apriltag ? (j + 2) % 4 : j;  // 2, 3, 0, 1 : 0, 1, 2, 3
         const auto& corner = marker_corners[i][j2];
-        Eigen::Vector2d point2D(corner.x, corner.y);
+        // OpenCV usually uses the convetion of 0,0 being the pixel center, while colmap uses 0.5,0.5 as center
+        Eigen::Vector2d point2D(corner.x + 0.5, corner.y + 0.5);
         corners.push_back(point2D);
         size_t idx = image.AddPoint2D(point2D);
-        image.SetPoint3DforPoint2D(MapCornerToPointId(marker_ids[i], j), idx);
+        image.SetPoint3DforPoint2D(MapMarkerCornerToPointId(marker_ids[i], j), idx);
       }
 
       aruco_keypoints.emplace(marker_ids[i], corners);
     }
+
+    if (image.Points2D().size() == 0) {
+      return Status::DETECTION_ERROR;
+    }
+
     image.SetArucoKeypoints(aruco_keypoints);
 
     return Status::SUCCESS;
+  }
+
+  int ArucoBoardFeatureExtractor::MapMarkerCornerToPointId(int marker_id, int corner_idx) {
+    return (marker_id - options_.start_id) * 4 + corner_idx;
   }
 }

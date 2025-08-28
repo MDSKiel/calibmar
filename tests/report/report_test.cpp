@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetAruco) {
 
   // the exported yaml should be importable
   BOOST_TEST(parameters.calibration_target == CalibrationTargetType::Target3DAruco);
-  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_4X4_50);
+  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_4X4);
   BOOST_TEST(parameters.aruco_scale_factor == 3.2);
 }
 
@@ -131,7 +131,7 @@ BOOST_AUTO_TEST_CASE(CameraYAML_Import_Export_3DTargetArucoGridBoard) {
 
   // the exported yaml should be importable
   BOOST_TEST(parameters.calibration_target == CalibrationTargetType::ArucoGridBoard);
-  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_6X6_100);
+  BOOST_TEST(parameters.aruco_type == ArucoMarkerTypes::DICT_6X6);
   BOOST_TEST(parameters.columns == 5);
   BOOST_TEST(parameters.rows == 7);
   BOOST_TEST(parameters.square_size == 0.026);

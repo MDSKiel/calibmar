@@ -41,7 +41,7 @@ namespace calibmar {
     // Spacing between aruco board markers
     double spacing = 0.01;
     // Aruco marker type of auto-calibration target or aruco board
-    ArucoMarkerTypes aruco_type = ArucoMarkerTypes::DICT_4X4_50;
+    ArucoMarkerTypes aruco_type = ArucoMarkerTypes::DICT_4X4;
     // Origin of the markers for a aruco grid board (i.e. where on the board is marker id 0)
     ArucoGridOrigin grid_origin = ArucoGridOrigin::TopLeft;
     // Direction of ascending ids for a aruco grid board
