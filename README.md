@@ -82,3 +82,14 @@ Configure and compile Calibmar:
     cmake --build . --config Release
 
 CMake Presets are available which are supported by several IDEs. Presets for windows expect the environment variable `VCPKG_ROOT` to point to the vcpkg root directory.
+
+### Cite
+If you found this work to be useful in your own research, please considering citing:
+```
+@InProceedings{seegraeber2025calibration,
+  author    = {Felix Seegräber and Mengun She and Felix Woelk and Kevin Köser},
+  booktitle = {ICCV Joint Workshop on Marine Vision},
+  title     = {{A Calibration Tool for Refractive Underwater Vision}},
+  year      = {2025},
+}
+```
