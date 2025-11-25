@@ -32,6 +32,19 @@ ubuntu:build-CUDA:
     paths:
       - "build_CUDA/"
 
+ubuntu:build-doc:
+  tags:
+    - ubuntu
+  image: calibmar:1.1 # requires pip
+  stage: build
+  script:
+    - cd doc
+    - pip install -r requirements.txt
+    - make html
+  artifacts:
+    paths:
+      - "doc/build"
+
 ubuntu:test:
   tags:
     - ubuntu

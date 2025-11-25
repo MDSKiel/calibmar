@@ -18,13 +18,15 @@ namespace calibmar {
     QLabel* columns_label = new QLabel(this);
     columns_label->setText("Number of Marker Columns");
     columns_edit_ = new QSpinBox(this);
-    columns_edit_->setRange(4, 100);
+    columns_edit_->setRange(1, 100);
+    columns_edit_->setValue(4);
     columns_edit_->setSingleStep(1);
 
     QLabel* rows_label = new QLabel(this);
     rows_label->setText("Number of Marker Rows");
     rows_edit_ = new QSpinBox(this);
-    rows_edit_->setRange(4, 100);
+    rows_edit_->setRange(1, 100);
+    rows_edit_->setValue(4);
     rows_edit_->setSingleStep(1);
 
     QLabel* board_origin_label = new QLabel("Board Origin", this);

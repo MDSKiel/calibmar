@@ -10,3 +10,5 @@ build/
 .vscode/
 .vs/
 
+# Doc Build
+.venv/

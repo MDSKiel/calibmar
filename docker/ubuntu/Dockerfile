@@ -1,7 +1,7 @@
 ARG UBUNTU_VERSION=22.04
 ARG NVIDIA_CUDA_VERSION=12.3.1
 
-FROM nvidia/cuda:${NVIDIA_CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} as builder
+FROM nvidia/cuda:${NVIDIA_CUDA_VERSION}-devel-ubuntu${UBUNTU_VERSION} AS builder
 
 # Prevent stop building ubuntu at time zone selection.
 ENV DEBIAN_FRONTEND=noninteractive
@@ -35,5 +35,8 @@ RUN apt-get update && \
 RUN apt-get install wget curl && \
     wget -qO- "https://cmake.org/files/v3.28/cmake-3.28.3-linux-x86_64.tar.gz" | tar --strip-components=1 -xz -C /usr/local
 
+# For building the documentation
+RUN apt-get install -y python3-pip
+
 # this is the Dockerfile version only
-LABEL image-version="1.0" 
+LABEL image-version="1.1" 

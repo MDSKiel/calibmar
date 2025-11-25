@@ -62,7 +62,7 @@ namespace calibmar {
 
   int FilesystemImageReader::ImagesWidth() {
     if (options_.init_image_size && image_width_ == -1) {
-      throw std::runtime_error("Could not init image size!");
+      throw std::runtime_error("Could not find any image files! (Could not init image size!)");
     }
 
     return image_width_;
@@ -70,7 +70,7 @@ namespace calibmar {
 
   int FilesystemImageReader::ImagesHeight() {
     if (options_.init_image_size && image_height_ == -1) {
-      throw std::runtime_error("Could not init image size!");
+      throw std::runtime_error("Could not find any image files! (Could not init image size!)");
     }
 
     return image_height_;
