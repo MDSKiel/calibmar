@@ -25,9 +25,9 @@ namespace calibmar {
     std::unique_ptr<std::thread> worker_thread_;
 
     colmap::Camera camera_;
-    std::unique_ptr<Pixmap> source_image_;
     std::unique_ptr<Pixmap> target_image_;
     ImageWidget* image_widget_;
+    QGridLayout* common_sliders_side_layout_;
     QGridLayout* camera_sliders_side_layout_;
     CameraModelWidget* camera_model_;
     QGridLayout* housing_sliders_side_layout_;
@@ -36,6 +36,9 @@ namespace calibmar {
     std::atomic_bool cancel_;
     std::mutex value_lock_;
     std::vector<double> rotations_;
+
     double distance_;
+    double fov_;
+    double checker_size_;
   };
 }

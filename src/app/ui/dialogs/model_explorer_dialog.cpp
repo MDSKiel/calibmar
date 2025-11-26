@@ -2,23 +2,46 @@
 #include "ui/utils/render.h"
 #include "ui/widgets/zoomable_scroll_area.h"
 
+#include <colmap/math/math.h>
 #include <colmap/util/misc.h>
+
 #include <opencv2/imgproc.hpp>
 
 #include <thread>
 
 namespace {
-  void CreateChessboardImage(int width, int height, int square_size, cv::Mat* mat) {
-    *mat = cv::Mat::zeros(height, width, CV_8UC1);
+  double FocalLengthFromFOV(int edge_length_px, double fov_degrees) {
+    return (edge_length_px / 2.0) / tan(colmap::DegToRad(fov_degrees / 2.0));
+  }
 
-    bool white = true;
-    for (size_t y = 0; y < height; y += square_size) {
-      for (size_t x = 0; x < width; x += square_size) {
-        uchar color = white ? 255 : 0;
-        (*mat)(cv::Rect(x, y, square_size, square_size)) = color;
-        white = !white;
+  inline bool SampleCheckerboard(double x, double y, double scale = 0.1) {
+    uint32_t a = (x + 100000) / scale;
+    uint32_t b = (y + 100000) / scale;
+
+    return (a % 2) != (b % 2);
+  }
+
+  void RenderCheckerboard(calibmar::Pixmap& img, colmap::Camera& camera, double distance, double checker_size) {
+    if (camera.IsCameraRefractive()) {
+      Eigen::Vector3d point3D;
+      Eigen::Vector3d normal{0, 0, 1.0};
+      double d;
+      for (int y = 0; y < img.Height(); y++) {
+        for (int x = 0; x < img.Width(); x++) {
+          colmap::Ray3D ray = camera.CamFromImgRefrac({x, y});
+          colmap::RayPlaneIntersection(ray.ori, ray.dir, normal, distance, &d);
+          point3D = ray.ori + ray.dir * d;
+          img.Data().at<uchar>(y, x) = SampleCheckerboard(point3D.x(), point3D.y(), checker_size) ? (uchar)255 : (uchar)0;
+        }
       }
-      white = !white;
+    }
+    else {
+      for (int y = 0; y < img.Height(); y++) {
+        for (int x = 0; x < img.Width(); x++) {
+          Eigen::Vector2d cam_point = camera.CamFromImg({x, y}) * distance;
+          img.Data().at<uchar>(y, x) = SampleCheckerboard(cam_point.x(), cam_point.y(), checker_size) ? (uchar)255 : (uchar)0;
+        }
+      }
     }
   }
 
@@ -85,10 +108,9 @@ namespace {
 }
 
 namespace calibmar {
-  ModelExplorerDialog::ModelExplorerDialog(QWidget* parent) : QDialog(parent), camera_changed_(false), cancel_(false) {
+  ModelExplorerDialog::ModelExplorerDialog(QWidget* parent)
+      : QDialog(parent), camera_changed_(false), cancel_(false), distance_(1), fov_(50), checker_size_(0.1) {
     setWindowTitle("Camera Model Explorer");
-    source_image_ = std::make_unique<Pixmap>();
-    CreateChessboardImage(500, 500, 500 / 20, &(source_image_->Data()));
 
     QVBoxLayout* layout = new QVBoxLayout(this);
     QSplitter* splitter = new QSplitter(this);
@@ -96,13 +118,15 @@ namespace calibmar {
     // image view
     ZoomableScrollArea* area = new ZoomableScrollArea();
     image_widget_ = new ImageWidget(area);
-    target_image_ = std::make_unique<Pixmap>(source_image_->Clone());
-    image_widget_->SetImage(std::move(std::make_unique<Pixmap>(source_image_->Clone())));
+    target_image_ = std::make_unique<Pixmap>();
+    target_image_->Assign(cv::Mat::zeros(500, 500, CV_8UC1));
+    image_widget_->SetImage(std::move(std::make_unique<Pixmap>(target_image_->Clone())));
     area->setMinimumSize(550, 550);
     area->setWidget(image_widget_);
     // side
     QWidget* side = new QWidget();
     QVBoxLayout* side_parent_layout = new QVBoxLayout(side);
+
     camera_sliders_side_layout_ = new QGridLayout();
     camera_model_ = new CameraModelWidget([this]() {
       this->SetupCameraModelSliders();
@@ -118,14 +142,16 @@ namespace calibmar {
     housing_model_->SetHousingType({});
     camera_model_->SetCameraModel(CameraModelType::SimpleRadialCameraModel);
 
-    QLabel* size_label = new QLabel(QString::fromStdString("Image Size: " + std::to_string(source_image_->Width()) + "x" +
-                                                           std::to_string(source_image_->Height())));
+    common_sliders_side_layout_ = new QGridLayout();
+    SetupSlider("FOV", &fov_, 20, 120, value_lock_, common_sliders_side_layout_, camera_changed_);
+    SetupSlider("Distance", &distance_, 0.25, 10, value_lock_, common_sliders_side_layout_, camera_changed_);
+    SetupSlider("Checker Size", &checker_size_, 0.1, 0.999, value_lock_, common_sliders_side_layout_, camera_changed_);
 
+    side_parent_layout->addLayout(common_sliders_side_layout_);
     side_parent_layout->addWidget(camera_model_);
     side_parent_layout->addLayout(camera_sliders_side_layout_);
     side_parent_layout->addWidget(housing_model_);
     side_parent_layout->addLayout(housing_sliders_side_layout_);
-    side_parent_layout->addWidget(size_label);
 
     side_parent_layout->addStretch();
 
@@ -147,7 +173,7 @@ namespace calibmar {
   void ModelExplorerDialog::SetupCameraModelSliders() {
     std::lock_guard lock_camera(value_lock_);
     CameraModelType camera_type = camera_model_->CameraModel();
-    camera_ = CameraModel::InitCamera(camera_type, {source_image_->Width(), source_image_->Height()}, source_image_->Width());
+    camera_ = CameraModel::InitCamera(camera_type, {target_image_->Width(), target_image_->Height()}, target_image_->Width());
 
     // remove existing camera side widgets
     int num_widgets = camera_sliders_side_layout_->count();
@@ -183,17 +209,6 @@ namespace calibmar {
       camera_.refrac_model_id = colmap::CameraRefracModelId::kInvalid;
       return;
     }
-
-    if (camera_.FocalLengthIdxs().size() == 1) {
-      SetupSlider("f", &camera_.params[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    }
-    else {
-      SetupSlider("fx", &camera_.params[0], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
-      SetupSlider("fy", &camera_.params[1], 10.0, 2000, value_lock_, housing_sliders_side_layout_, camera_changed_);
-    }
-
-    distance_ = 1;
-    SetupSlider("distance", &distance_, 0.25, 30, value_lock_, housing_sliders_side_layout_, camera_changed_);
 
     QFrame* divider = new QFrame();
     divider->setFrameShape(QFrame::HLine);
@@ -236,14 +251,17 @@ namespace calibmar {
 
       colmap::Camera camera;
       double distance;
+      double checker_size;
       if (camera_changed_) {
         {
           std::lock_guard lock(value_lock_);
           camera = camera_;
+          camera.SetFocalLength(FocalLengthFromFOV(camera.width, fov_));
           distance = distance_;
+          checker_size = checker_size_;
         }
 
-        render::DistortPixmap(*source_image_, *target_image_, camera, distance);
+        RenderCheckerboard(*target_image_, camera, distance, checker_size);
 
         // swap images
         image_widget_->setUpdatesEnabled(false);
@@ -253,7 +271,6 @@ namespace calibmar {
         image_widget_->setUpdatesEnabled(true);
         camera_changed_ = false;
       }
-
       std::this_thread::sleep_until(end);
     }
   }
