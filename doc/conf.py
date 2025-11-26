@@ -1,3 +1,6 @@
+import re
+from pathlib import Path
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -6,10 +9,18 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+version_string = None
+with open(Path(__file__).parent.joinpath("../CMakeLists.txt"), "r") as f:
+    version_string = re.search(
+        r"project\(calibmar\s*VERSION\s(\S*)\s", f.read(), re.S
+    ).group(1)
+if version_string is None:
+    raise "Could not determine version from CMakeLists.txt"
+
 project = "Calibmar"
 copyright = "2025, Felix Seegräber"
 author = "Felix Seegräber"
-version = "1.0"
+version = version_string
 release = version
 
 # -- General configuration ---------------------------------------------------
@@ -23,7 +34,7 @@ myst_enable_extensions = [
     "smartquotes",
     "strikethrough",
     "tasklist",
-    "linkify"
+    "linkify",
 ]
 
 myst_heading_anchors = 3
