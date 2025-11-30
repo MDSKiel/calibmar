@@ -197,8 +197,9 @@ namespace calibmar {
             data->status == ExtractionImageWidget::Status::IMAGE_DIMENSION_MISSMATCH) {
           QMetaObject::invokeMethod(calibration_widget_,
                                     [calibration_widget = calibration_widget_, data = std::move(data)]() mutable {
+            std::string key = data->image_name;
             calibration_widget->AddExtractionItem(
-                new ExtractionImageWidget(std::move(data), calibration_widget->TargetVisualizer()));
+                new ExtractionImageWidget(std::move(data), calibration_widget->TargetVisualizer()), key);
           });
         }
       }
@@ -225,6 +226,9 @@ namespace calibmar {
     QMetaObject::invokeMethod(calibration_widget_,
                               [calibration_widget = calibration_widget_, last_pixmap = std::move(last_pixmap_), &calibration,
                                reconstruction]() mutable {
+      const std::vector<Image>& imgs = calibration.Images();
+      const std::vector<double>& per_view_rms = calibration.PerViewRms();
+      calibration_widget->SetPerViewRms(imgs, per_view_rms);
       calibration_widget->EndCalibration(new CalibrationResultWidget(calibration, std::move(last_pixmap), reconstruction));
     });
 

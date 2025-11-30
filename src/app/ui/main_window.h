@@ -30,6 +30,7 @@ namespace calibmar {
     void BeginNewCalibration();
     void EndNewCalibration();
     void DisplayExtractionImage(const std::string& image_name, const TargetVisualizer& target_visualizer);
+    const std::vector<std::string> SortExtractionItems(const CalibrationWidget::SortOrder& sort_order);
 
     QScrollArea* scroll_area_;
     QVBoxLayout* main_layout_;

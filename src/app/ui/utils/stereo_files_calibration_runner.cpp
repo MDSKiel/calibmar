@@ -171,7 +171,7 @@ namespace calibmar {
           grid->addWidget(image_widget2, 0, 1);
           frame->setLayout(grid);
 
-          calibration_widget->AddExtractionItem(frame);
+          calibration_widget->AddExtractionItem(frame, image_widget1->ImageName() + image_widget2->ImageName());
         });
       }
 
@@ -202,6 +202,14 @@ namespace calibmar {
       layout->addWidget(new QLabel("<h2>Camera 2</h2>"));
       layout->addWidget(new CalibrationResultWidget(calibration2));
 
+      std::vector<std::vector<calibmar::Image>*> images;
+      std::vector<std::vector<double>*> rms;
+      images.push_back(&calibration1.Images());
+      images.push_back(&calibration2.Images());
+      rms.push_back(&calibration1.PerViewRms());
+      rms.push_back(&calibration2.PerViewRms());
+
+      calibration_widget->SetPerViewRms(images, rms);
       calibration_widget->EndCalibration(frame);
     });
 

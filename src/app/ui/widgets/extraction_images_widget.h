@@ -16,13 +16,18 @@ namespace calibmar {
         QWidget* parent = nullptr,
         const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback = nullptr);
 
-    void AddImage(QWidget* widget);
+    void AddExtractionItem(QWidget* widget, const std::string& key);
+
+    void SetOrder(const std::vector<std::string>& order);
+    void SetPerViewRMS(const std::unordered_map<std::string, double>& per_view_rms);
 
    protected:
     virtual void mouseDoubleClickEvent(QMouseEvent* event) override;
+    virtual void contextMenuEvent(QContextMenuEvent* event) override;
 
    private:
     ImageFlowLayout* main_layout_;
     const std::function<void(const std::string&, const TargetVisualizer&)> double_click_callback_;
+    std::unordered_map<std::string, QWidget*> items_;
   };
 }

@@ -310,7 +310,7 @@ namespace calibmar {
 
         std::vector<ExtractionImageWidget*> imgs = extraction_widget->RemoveExtractionImagesWidgets();
         for (auto widget : imgs) {
-          calibration_widget->AddExtractionItem(widget);
+          calibration_widget->AddExtractionItem(widget, widget->ImageName());
         }
 
         delete extraction_widget;
@@ -331,6 +331,7 @@ namespace calibmar {
       QMetaObject::invokeMethod(calibration_widget_,
                                 [calibration_widget = this->calibration_widget_, last_pixmap = std::move(last_pixmap_),
                                  &calibration, reconstruction]() mutable {
+        calibration_widget->SetPerViewRms(calibration.Images(), calibration.PerViewRms());
         calibration_widget->EndCalibration(new CalibrationResultWidget(calibration, std::move(last_pixmap), reconstruction));
       });
 

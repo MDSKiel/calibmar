@@ -5,17 +5,18 @@
 
 #include "ui/widgets/image_widget.h"
 
+#include <iomanip>
+#include <sstream>
+
 namespace {
-  QLabel* CreateImageNameLabel(std::string& image_name, int width) {
+  QString CreateImageNameLabel(std::string& image_name, int width, QWidget* font_metric_widget) {
     // Assumes a file path
     std::size_t found = image_name.find_last_of("/\\");
     QString name =
         found == std::string::npos ? QString::fromStdString(image_name) : QString::fromStdString(image_name.substr(found + 1));
 
-    QLabel* name_label = new QLabel();
-    name = name_label->fontMetrics().elidedText(name, Qt::TextElideMode::ElideLeft, width - 20);
-    name_label->setText(name);
-    return name_label;
+    name = font_metric_widget->fontMetrics().elidedText(name, Qt::TextElideMode::ElideLeft, width - 20);
+    return name;
   }
 
   QWidget* CreateErrorWidget(const std::string& error, int widget_width) {
@@ -112,11 +113,14 @@ namespace calibmar {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->addWidget(content);
 
+    title_ = new QLabel();
     if (!data->image_name.empty()) {
-      QWidget* name = CreateImageNameLabel(data->image_name, widget_width_);
-      layout->addWidget(name);
-      layout->setAlignment(name, Qt::AlignHCenter | Qt::AlignBottom);
+      title_->setText(CreateImageNameLabel(data->image_name, widget_width_, title_));
     }
+    layout->addWidget(title_);
+    layout->setAlignment(title_, Qt::AlignHCenter | Qt::AlignBottom);
+
+    this->setObjectName("ExtractionImageWidget");
   }
 
   const TargetVisualizer& ExtractionImageWidget::TargetVisualizer() {
@@ -125,6 +129,13 @@ namespace calibmar {
 
   const std::string& ExtractionImageWidget::ImageName() {
     return image_name_;
+  }
+
+  const void ExtractionImageWidget::SetRMS(double rms) {
+    std::stringstream stream;
+    stream << std::fixed << std::setprecision(2) << "RMS: " << rms;
+    this->setToolTip(QString::fromStdString(stream.str()));
+    // title_->setText(CreateImageNameLabel(stream.str(), widget_width_, title_));
   }
 
   ExtractionImageWidget::Status ExtractionImageWidget::ConvertStatus(FeatureExtractor::Status status) {

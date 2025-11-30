@@ -26,6 +26,7 @@ namespace calibmar {
 
     const class TargetVisualizer& TargetVisualizer();
     const std::string& ImageName();
+    const void SetRMS(double rms);
 
     static Status ConvertStatus(FeatureExtractor::Status status);
     static Status ConvertStatus(ImageReader::Status status);
@@ -36,5 +37,6 @@ namespace calibmar {
     std::string image_name_;
     int widget_width_;
     const class TargetVisualizer& target_visualizer_;
+    QLabel* title_;
   };
 }

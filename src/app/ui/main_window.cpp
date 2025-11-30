@@ -91,7 +91,8 @@ namespace calibmar {
 
     LiveStreamExtractionWidget* extraction_widget = new LiveStreamExtractionWidget(this);
     CalibrationWidget* calibration_widget = new CalibrationWidget(
-        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
+        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&MainWindow::SortExtractionItems, this, std::placeholders::_1));
     calibration_widget->setVisible(false);
     main_layout_->addWidget(calibration_widget);
     main_layout_->addWidget(extraction_widget);
@@ -123,7 +124,8 @@ namespace calibmar {
     last_directory_ = file_calibration_options_.images_directory;
 
     CalibrationWidget* calibration_widget = new CalibrationWidget(
-        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
+        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&MainWindow::SortExtractionItems, this, std::placeholders::_1));
     main_layout_->addWidget(calibration_widget);
 
     std::unique_ptr<FilesCalibrationRunner> runner =
@@ -154,7 +156,8 @@ namespace calibmar {
     last_directory_ = stereo_calibration_options_.images_directory2;
 
     CalibrationWidget* calibration_widget = new CalibrationWidget(
-        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2));
+        this, std::bind(&MainWindow::DisplayExtractionImage, this, std::placeholders::_1, std::placeholders::_2),
+        std::bind(&MainWindow::SortExtractionItems, this, std::placeholders::_1));
     main_layout_->addWidget(calibration_widget);
 
     std::unique_ptr<StereoFilesCalibrationRunner> runner =
@@ -347,5 +350,62 @@ namespace calibmar {
     area->setWidget(lbl);
     layout->addWidget(area);
     dialog.exec();
+  }
+
+  const std::vector<std::string> MainWindow::SortExtractionItems(const CalibrationWidget::SortOrder& sort_order) {
+    std::vector<std::pair<std::string, double>> items;
+    if (calibration_stereo_) {
+      // stereo calibration exists
+      const auto& per_view_rms_ = calibration_->PerViewRms();
+      const auto& per_view_rms_stereo_ = calibration_stereo_->PerViewRms();
+
+      for (int i = 0; i < calibration_stereo_->Images().size(); i++) {
+        std::string key = calibration_->Image(i).Name() + calibration_stereo_->Image(i).Name();
+        double rms = std::max(per_view_rms_[i], per_view_rms_stereo_[i]);
+        items.push_back({key, rms});
+      }
+    }
+    else {
+      const auto& per_view_rms_ = calibration_->PerViewRms();
+      for (int i = 0; i < calibration_->Images().size(); i++) {
+        items.push_back({calibration_->Image(i).Name(), per_view_rms_[i]});
+      }
+    }
+
+    // by default sort name descending
+    std::function<bool(const std::pair<std::string, double>&, const std::pair<std::string, double>&)> compare =
+        [](const std::pair<std::string, double>& first, const std::pair<std::string, double>& second) {
+      return first.first > second.first;
+    };
+    switch (sort_order) {
+      case CalibrationWidget::SortOrder::NameAsc:
+        compare = [](const std::pair<std::string, double>& first, const std::pair<std::string, double>& second) {
+          return first.first < second.first;
+        };
+        break;
+      case CalibrationWidget::SortOrder::RmsAsc:
+        compare = [](const std::pair<std::string, double>& first, const std::pair<std::string, double>& second) {
+          return first.second < second.second;
+        };
+        break;
+      case CalibrationWidget::SortOrder::RmsDesc:
+        compare = [](const std::pair<std::string, double>& first, const std::pair<std::string, double>& second) {
+          return first.second > second.second;
+        };
+        break;
+      // default is name descending
+      case CalibrationWidget::SortOrder::NameDesc:
+      default:
+        break;
+    }
+
+    std::sort(items.begin(), items.end(), compare);
+
+    std::vector<std::string> sorted_keys;
+    for (auto&& pair : items) {
+      sorted_keys.push_back(pair.first);
+    }
+
+    return sorted_keys;
   }
 }
